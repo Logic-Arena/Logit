@@ -4,10 +4,10 @@ import { socket } from '../lib/socket';
 import { useRoomStore } from '../store/useRoomStore';
 import { useChatStore } from '../store/useChatStore';
 import { useToast } from './useToast';
-import type { Room, RoomUser, ChatMessage } from '../types/room';
+import type { Room, RoomUser, ChatMessage, VoteOption } from '../types/room';
 
 export function useRoomEvents() {
-  const { setRoom, updateRoom, setPhase, setVoteTally } = useRoomStore();
+  const { setRoom, updateRoom, setPhase, setVoteTally, updateUserVote } = useRoomStore();
   const { addMessage, clearMessages } = useChatStore();
   const navigate = useNavigate();
   const toast = useToast();
@@ -38,8 +38,9 @@ export function useRoomEvents() {
       setPhase(phase, topic);
     };
 
-    const onVoteUpdated = (tally: { pro: number; con: number }) => {
-      setVoteTally(tally);
+    const onVoteUpdated = ({ pro, con, socketId, vote }: { pro: number; con: number; socketId: string; vote: VoteOption }) => {
+      setVoteTally({ pro, con });
+      updateUserVote(socketId, vote);
     };
 
     const onNewMessage = ({ message }: { message: ChatMessage }) => {
@@ -71,5 +72,5 @@ export function useRoomEvents() {
       s.off('new_message', onNewMessage);
       s.off('error', onError);
     };
-  }, [setRoom, updateRoom, setPhase, setVoteTally, addMessage, clearMessages, navigate, toast]);
+  }, [setRoom, updateRoom, setPhase, setVoteTally, updateUserVote, addMessage, clearMessages, navigate, toast]);
 }

@@ -1,0 +1,11 @@
+{
+  "name": "logit",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "concurrently --names \"BACK,FRONT\" --prefix-colors \"blue,green\" \"npm run dev --prefix logic-arena-backend\" \"npm run dev --prefix logic-arena-frontend\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
+}
