@@ -23,6 +23,7 @@ export interface ChatMessage {
   userId: string;
   username: string;
   userRole: UserRole;
+  vote: VoteOption | null;
   content: string;
   timestamp: string;
 }

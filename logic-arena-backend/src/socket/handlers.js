@@ -110,6 +110,7 @@ export function registerHandlers(io, socket) {
       userId: user.userId,
       username: user.username,
       userRole: user.userRole,
+      vote: user.vote,
       content,
       timestamp: new Date(),
     };
