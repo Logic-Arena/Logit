@@ -137,5 +137,5 @@ export function castVote(roomId, socketId, vote) {
     else if (u.vote === 'con') con++;
   }
 
-  return { pro, con };
+  return { pro, con, socketId, vote };
 }

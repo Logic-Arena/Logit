@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Room, Phase, VoteTally } from '../types/room';
+import type { Room, Phase, VoteTally, VoteOption } from '../types/room';
 
 interface RoomState {
   room: Room | null;
@@ -12,6 +12,7 @@ interface RoomState {
   setVoteTally: (tally: VoteTally) => void;
   setMySocketId: (id: string) => void;
   resetRoom: () => void;
+  updateUserVote: (socketId: string, vote: VoteOption) => void;
 }
 
 export const useRoomStore = create<RoomState>((set) => ({
@@ -42,4 +43,12 @@ export const useRoomStore = create<RoomState>((set) => ({
   setMySocketId: (id) => set({ mySocketId: id }),
 
   resetRoom: () => set({ room: null, mySocketId: '', voteTally: { pro: 0, con: 0 } }),
+
+  updateUserVote: (socketId, vote) =>
+    set((state) => {
+      if (!state.room) return {};
+      const users = { ...state.room.users };
+      if (users[socketId]) users[socketId] = { ...users[socketId], vote };
+      return { room: { ...state.room, users } };
+    }),
 }));
