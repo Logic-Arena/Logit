@@ -28,6 +28,7 @@ export function DebatePage() {
   const { room, mySocketId, resetRoom } = useRoomStore();
   const didJoin = useRef(false);
   const [isVoteModalOpen, setIsVoteModalOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Set up socket id tracking
   useSocket();
@@ -141,8 +142,14 @@ export function DebatePage() {
         />
       )}
 
+      {/* Sidebar backdrop (mobile only) */}
+      <div
+        className={`sidebar-backdrop${sidebarOpen ? ' is-open' : ''}`}
+        onClick={() => setSidebarOpen(false)}
+      />
+
       {/* Sidebar */}
-      <div className="debate-sidebar">
+      <div className={`debate-sidebar${sidebarOpen ? ' is-open' : ''}`}>
         <UserList room={room} mySocketId={mySocketId} />
 
         {showReopenVoteButton && (
@@ -163,6 +170,19 @@ export function DebatePage() {
 
       {/* Main */}
       <div className="debate-main">
+        {/* Mobile Header (사이드바 토글 + 주제 미리보기) */}
+        <div className="debate-mobile-header">
+          <button
+            className="sidebar-toggle-btn"
+            onClick={() => setSidebarOpen(v => !v)}
+          >
+            👥 {Object.keys(room.users).length}명
+          </button>
+          {showTopicBanner && (
+            <span className="debate-mobile-header__topic">{room.topic}</span>
+          )}
+        </div>
+
         {showTopicBanner && <TopicBanner topic={room.topic!} />}
         <ChatPanel
           roomId={room.id}
