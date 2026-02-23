@@ -175,11 +175,33 @@ export function DebatePage() {
             className="sidebar-toggle-btn"
             onClick={() => setSidebarOpen(v => !v)}
           >
-            👥 {Object.keys(room.users).length}명
+            참가자{Object.keys(room.users).length}명
           </button>
           {showTopicBanner && (
             <span className="debate-mobile-header__topic">{room.topic}</span>
           )}
+        </div>
+
+        {/* Mobile Participants Strip */}
+        <div className="mobile-participants-strip">
+          {Object.entries(room.users)
+            .filter(([, u]) => u.userRole !== 'observer')
+            .map(([socketId, user]) => {
+              const vote = room.phase === 'voting' ? user.vote : null;
+              const isMe = socketId === mySocketId;
+              return (
+                <span
+                  key={socketId}
+                  className={[
+                    'participant-chip',
+                    vote ? `participant-chip--${vote}` : '',
+                    isMe ? 'participant-chip--me' : '',
+                  ].filter(Boolean).join(' ')}
+                >
+                  {isMe ? `나 (${user.username})` : user.username}
+                </span>
+              );
+            })}
         </div>
 
         {showTopicBanner && <TopicBanner topic={room.topic!} />}
