@@ -184,25 +184,58 @@ export function DebatePage() {
 
         {/* Mobile Participants Strip */}
         <div className="mobile-participants-strip">
-          {Object.entries(room.users)
-            .filter(([, u]) => u.userRole !== 'observer')
-            .map(([socketId, user]) => {
-              const vote = room.phase === 'voting' ? user.vote : null;
-              const isMe = socketId === mySocketId;
-              return (
-                <span
-                  key={socketId}
-                  className={[
-                    'participant-chip',
-                    vote ? `participant-chip--${vote}` : '',
-                    isMe ? 'participant-chip--me' : '',
-                  ].filter(Boolean).join(' ')}
-                >
-                  {isMe ? `나 (${user.username})` : user.username}
-                </span>
-              );
-            })}
+          <div className="mps-side mps-side--pro">
+            {Object.entries(room.users)
+              .filter(([, u]) => u.userRole !== 'observer' && (room.phase !== 'voting' || u.vote !== 'con'))
+              .map(([socketId, user]) => {
+                const vote = room.phase === 'voting' ? user.vote : null;
+                const isMe = socketId === mySocketId;
+                return (
+                  <span
+                    key={socketId}
+                    className={[
+                      'participant-chip',
+                      vote ? `participant-chip--${vote}` : '',
+                      isMe ? 'participant-chip--me' : '',
+                    ].filter(Boolean).join(' ')}
+                  >
+                    {isMe ? `나 (${user.username})` : user.username}
+                  </span>
+                );
+              })}
+          </div>
+          <div className="mps-side mps-side--con">
+            {Object.entries(room.users)
+              .filter(([, u]) => u.userRole !== 'observer' && room.phase === 'voting' && u.vote === 'con')
+              .map(([socketId, user]) => {
+                const isMe = socketId === mySocketId;
+                return (
+                  <span
+                    key={socketId}
+                    className={[
+                      'participant-chip',
+                      'participant-chip--con',
+                      isMe ? 'participant-chip--me' : '',
+                    ].filter(Boolean).join(' ')}
+                  >
+                    {isMe ? `나 (${user.username})` : user.username}
+                  </span>
+                );
+              })}
+          </div>
         </div>
+
+        {/* Mobile Start Button (host only, waiting phase) */}
+        {showHostControls && (
+          <div className="mobile-start-bar">
+            <button
+              className="mobile-start-bar__btn"
+              onClick={() => socket.emit('start_debate', { roomId: room.id })}
+            >
+              토론 시작
+            </button>
+          </div>
+        )}
 
         {showTopicBanner && <TopicBanner topic={room.topic!} />}
         <ChatPanel
