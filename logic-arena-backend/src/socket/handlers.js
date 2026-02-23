@@ -101,7 +101,10 @@ export function registerHandlers(io, socket) {
     const user = room.users[socket.id];
     if (!user) return socket.emit('error', { message: '방에 입장하지 않았습니다' });
 
-    if (user.userRole !== 'observer' && user.vote === null) {
+    if (user.userRole === 'observer') {
+      return socket.emit('error', { message: '관전자는 채팅할 수 없습니다' });
+    }
+    if (user.vote === null) {
       return socket.emit('error', { message: '투표 후 채팅이 가능합니다' });
     }
 
