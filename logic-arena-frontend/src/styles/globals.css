@@ -543,6 +543,8 @@ input, textarea { font-family: inherit; font-size: inherit; color: inherit; }
   color: var(--color-text);
   outline: none;
   transition: border-color var(--transition);
+  /* iOS Safari: 16px 미만이면 포커스 시 자동 줌인 발생 */
+  font-size: 16px;
 }
 .chat-input:focus { border-color: var(--color-primary); }
 .chat-input::placeholder { color: var(--color-text-muted); }
@@ -951,11 +953,6 @@ input, textarea { font-family: inherit; font-size: inherit; color: inherit; }
     text-align: center;
   }
 
-  /* iOS Safari: font-size < 16px 이면 포커스 시 자동 줌인 발생 방지 */
-  .chat-input,
-  .form-input {
-    font-size: 16px;
-  }
 }
 
 @media (max-width: 480px) {
