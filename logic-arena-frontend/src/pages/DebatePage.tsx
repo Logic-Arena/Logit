@@ -110,8 +110,17 @@ export function DebatePage() {
   const showReopenVoteButton = !isObserver && room.phase === 'voting' && !isVoteModalOpen;
   const showTopicBanner = room.phase === 'voting' && room.topic;
 
+  const isAiMode = room.mode === 'ai_debate';
+
   return (
     <div className="debate-page">
+      {/* AI Mode Banner (placeholder) */}
+      {isAiMode && (
+        <div className="ai-mode-banner">
+          AI 모드는 준비 중입니다. 현재는 자유토론으로 진행됩니다.
+        </div>
+      )}
+
       {/* Vote Modal */}
       {!isObserver && (
         <VoteModal

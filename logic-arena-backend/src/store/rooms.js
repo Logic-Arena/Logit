@@ -26,11 +26,12 @@ function serializeRoom(room) {
   };
 }
 
-export function createRoom({ title }) {
+export function createRoom({ title, mode = 'free_debate' }) {
   const id = uuidv4();
   const room = {
     id,
     title,
+    mode,
     topic: null,
     phase: 'waiting',
     createdAt: new Date(),

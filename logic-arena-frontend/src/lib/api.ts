@@ -1,4 +1,4 @@
-import type { Room } from '../types/room';
+import type { Room, RoomMode } from '../types/room';
 
 const BASE = import.meta.env.VITE_API_URL as string;
 
@@ -8,11 +8,11 @@ export async function getRooms(): Promise<Room[]> {
   return res.json();
 }
 
-export async function createRoom(title: string): Promise<Room> {
+export async function createRoom(title: string, mode: RoomMode = 'free_debate'): Promise<Room> {
   const res = await fetch(`${BASE}/rooms`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title }),
+    body: JSON.stringify({ title, mode }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
