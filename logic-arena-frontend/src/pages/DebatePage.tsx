@@ -124,13 +124,6 @@ export function DebatePage() {
 
   return (
     <div className="debate-page">
-      {/* AI Mode Banner */}
-      {isAiMode && (
-        <div className="ai-mode-banner">
-          AI 모드 — 사람 1명 + AI 1명으로 팀을 구성합니다. 투표로 입장을 선택하세요.
-        </div>
-      )}
-
       {/* Vote Modal */}
       {!isObserver && (
         <VoteModal
@@ -150,6 +143,12 @@ export function DebatePage() {
 
       {/* Sidebar */}
       <div className={`debate-sidebar${sidebarOpen ? ' is-open' : ''}`}>
+        {isAiMode && (
+          <div className="ai-mode-indicator">
+            <span className="ai-mode-indicator__dot" />
+            AI 대전 모드
+          </div>
+        )}
         <UserList room={room} mySocketId={mySocketId} />
 
         {showReopenVoteButton && (
