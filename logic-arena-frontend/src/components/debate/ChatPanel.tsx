@@ -23,12 +23,14 @@ export function ChatPanel({ roomId, myUserId, phase, myRole, myVote }: Props) {
   }, [messages]);
 
   const isDisabled =
-    phase === 'waiting' || (myRole !== 'observer' && myVote === null);
+    phase === 'waiting' || myRole === 'observer' || myVote === null;
 
   const disabledReason =
     phase === 'waiting'
       ? '토론이 시작되면 채팅할 수 있습니다'
-      : '투표 후 채팅 가능합니다';
+      : myRole === 'observer'
+        ? '관전자는 채팅할 수 없습니다'
+        : '투표 후 채팅 가능합니다';
 
   const handleSend = () => {
     const content = input.trim();
