@@ -15,7 +15,7 @@ export const ROOM_MODES: Record<RoomMode, {
   ai_debate: {
     key: 'ai_debate',
     label: 'AI 모드',
-    description: 'AI와 함께하는 토론 (준비 중)',
-    available: false,
+    description: 'AI와 함께 1:1로 토론하는 모드',
+    available: true,
   },
 } as const;
