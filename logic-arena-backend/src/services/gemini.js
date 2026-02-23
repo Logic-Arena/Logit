@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash-8b';
+const MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
 
 if (!process.env.GEMINI_API_KEY) {
   console.warn('[Gemini] WARNING: GEMINI_API_KEY is not set. All AI features will use fallback.');

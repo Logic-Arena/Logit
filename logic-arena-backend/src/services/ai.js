@@ -1,4 +1,4 @@
-const provider = process.env.AI_PROVIDER || 'gemini';
+const provider = process.env.AI_PROVIDER || 'openai';
 
 let service;
 if (provider === 'openai') {
