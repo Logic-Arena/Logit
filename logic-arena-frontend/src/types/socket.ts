@@ -22,5 +22,6 @@ export interface ServerToClientEvents {
   debate_started: (payload: { topic: string; phase: 'voting' }) => void;
   vote_updated: (payload: { pro: number; con: number }) => void;
   new_message: (payload: { message: ChatMessage }) => void;
+  topic_updated: (payload: { topic: string }) => void;
   error: (payload: { message: string }) => void;
 }

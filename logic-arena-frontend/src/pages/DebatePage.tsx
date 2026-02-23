@@ -96,6 +96,15 @@ export function DebatePage() {
     }
   }, [room?.phase]);
 
+  // Re-open vote modal when AI resets the topic (topic_updated event)
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const s = socket as any;
+    const onTopicUpdated = () => setIsVoteModalOpen(true);
+    s.on('topic_updated', onTopicUpdated);
+    return () => s.off('topic_updated', onTopicUpdated);
+  }, []);
+
   if (!room) {
     return <div className="loading">방에 접속 중...</div>;
   }
@@ -114,10 +123,10 @@ export function DebatePage() {
 
   return (
     <div className="debate-page">
-      {/* AI Mode Banner (placeholder) */}
+      {/* AI Mode Banner */}
       {isAiMode && (
         <div className="ai-mode-banner">
-          AI 모드는 준비 중입니다. 현재는 자유토론으로 진행됩니다.
+          AI 모드 — 사람 1명 + AI 1명으로 팀을 구성합니다. 투표로 입장을 선택하세요.
         </div>
       )}
 

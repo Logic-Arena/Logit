@@ -153,6 +153,7 @@ input, textarea { font-family: inherit; font-size: inherit; color: inherit; }
 .badge--host { background: rgba(245,158,11,0.15); color: var(--color-host); }
 .badge--participant { background: rgba(108,99,255,0.15); color: var(--color-primary); }
 .badge--observer { background: rgba(100,116,139,0.15); color: var(--color-observer); }
+.badge--ai { background: rgba(6,182,212,0.15); color: #06b6d4; }
 
 /* ── Toast ─────────────────────────────────────────────── */
 .toast-container {
@@ -507,6 +508,7 @@ input, textarea { font-family: inherit; font-size: inherit; color: inherit; }
 /* Bubble color (isMe-based) */
 .chat-msg--mine .chat-msg__bubble { background: var(--color-primary); color: #fff; }
 .chat-msg--theirs .chat-msg__bubble { background: var(--color-surface-2); color: var(--color-text); }
+.chat-msg--ai .chat-msg__bubble { background: rgba(6,182,212,0.12); color: var(--color-text); border: 1px solid rgba(6,182,212,0.25); }
 
 /* Vote badges */
 .badge--pro { background: rgba(34,197,94,0.15); color: var(--color-pro); }

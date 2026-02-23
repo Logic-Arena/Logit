@@ -1,4 +1,4 @@
-export type UserRole = 'host' | 'participant' | 'observer';
+export type UserRole = 'host' | 'participant' | 'observer' | 'ai';
 export type VoteOption = 'pro' | 'con';
 export type Phase = 'waiting' | 'voting';
 export type RoomMode = 'free_debate' | 'ai_debate';
