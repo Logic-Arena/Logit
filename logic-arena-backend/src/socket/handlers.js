@@ -13,7 +13,7 @@ import {
   addPastTopic,
   getPastTopics,
 } from '../store/rooms.js';
-import { generateTopic, generateAiResponse } from '../services/gemini.js';
+import { generateTopic, generateAiResponse } from '../services/ai.js';
 
 function handleLeaveRoomInternal(io, socket) {
   const { roomId } = socket.data;
