@@ -31,8 +31,15 @@
 /* ── Reset ─────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html, body, #root {
+html {
   height: 100%;
+  /* iOS Safari: 동적 주소창 포함한 실제 가용 높이 사용 */
+  height: -webkit-fill-available;
+}
+
+body, #root {
+  height: 100%;
+  min-height: -webkit-fill-available;
   font-family: 'Noto Sans KR', sans-serif;
   background: var(--color-bg);
   color: var(--color-text);
@@ -160,7 +167,7 @@ input, textarea { font-family: inherit; font-size: inherit; color: inherit; }
 /* ── Toast ─────────────────────────────────────────────── */
 .toast-container {
   position: fixed;
-  bottom: 24px;
+  bottom: calc(24px + env(safe-area-inset-bottom));
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -519,6 +526,8 @@ input, textarea { font-family: inherit; font-size: inherit; color: inherit; }
 
 .chat-input-area {
   padding: 12px 16px;
+  /* iOS 홈 인디케이터 영역만큼 추가 패딩 */
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
   border-top: 1px solid var(--color-border);
   display: flex;
   gap: 8px;
@@ -940,6 +949,12 @@ input, textarea { font-family: inherit; font-size: inherit; color: inherit; }
   .toast {
     white-space: normal;
     text-align: center;
+  }
+
+  /* iOS Safari: font-size < 16px 이면 포커스 시 자동 줌인 발생 방지 */
+  .chat-input,
+  .form-input {
+    font-size: 16px;
   }
 }
 
