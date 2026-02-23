@@ -9,6 +9,7 @@ const roleLabel: Record<string, string> = {
   host: '방장',
   participant: '참가자',
   observer: '관전자',
+  ai: 'AI',
 };
 
 const voteLabel: Record<string, string> = {
@@ -23,7 +24,7 @@ export function ChatMessage({ message, isMe }: Props) {
   });
 
   const positionClass = message.vote === 'con' ? 'chat-msg--con' : 'chat-msg--pro';
-  const colorClass = isMe ? 'chat-msg--mine' : 'chat-msg--theirs';
+  const colorClass = isMe ? 'chat-msg--mine' : message.userRole === 'ai' ? 'chat-msg--ai' : 'chat-msg--theirs';
 
   return (
     <div className={`chat-msg ${positionClass} ${colorClass}`}>

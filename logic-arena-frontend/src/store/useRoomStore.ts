@@ -13,6 +13,7 @@ interface RoomState {
   setMySocketId: (id: string) => void;
   resetRoom: () => void;
   updateUserVote: (socketId: string, vote: VoteOption) => void;
+  resetUserVotes: () => void;
 }
 
 export const useRoomStore = create<RoomState>((set) => ({
@@ -50,5 +51,14 @@ export const useRoomStore = create<RoomState>((set) => ({
       const users = { ...state.room.users };
       if (users[socketId]) users[socketId] = { ...users[socketId], vote };
       return { room: { ...state.room, users } };
+    }),
+
+  resetUserVotes: () =>
+    set((state) => {
+      if (!state.room) return {};
+      const users = Object.fromEntries(
+        Object.entries(state.room.users).map(([id, u]) => [id, { ...u, vote: null }])
+      );
+      return { room: { ...state.room, users }, voteTally: { pro: 0, con: 0 } };
     }),
 }));

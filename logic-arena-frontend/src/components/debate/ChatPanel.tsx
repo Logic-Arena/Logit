@@ -11,9 +11,10 @@ interface Props {
   phase: Phase;
   myRole: UserRole;
   myVote: VoteOption | null;
+  onSend?: (content: string) => void;
 }
 
-export function ChatPanel({ roomId, myUserId, phase, myRole, myVote }: Props) {
+export function ChatPanel({ roomId, myUserId, phase, myRole, myVote, onSend }: Props) {
   const messages = useChatStore((s) => s.messages);
   const [input, setInput] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -35,7 +36,11 @@ export function ChatPanel({ roomId, myUserId, phase, myRole, myVote }: Props) {
   const handleSend = () => {
     const content = input.trim();
     if (!content || isDisabled) return;
-    socket.emit('send_message', { roomId, content });
+    if (onSend) {
+      onSend(content);
+    } else {
+      socket.emit('send_message', { roomId, content });
+    }
     setInput('');
   };
 

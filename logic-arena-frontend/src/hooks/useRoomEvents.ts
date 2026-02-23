@@ -7,7 +7,7 @@ import { useToast } from './useToast';
 import type { Room, RoomUser, ChatMessage, VoteOption } from '../types/room';
 
 export function useRoomEvents() {
-  const { setRoom, updateRoom, setPhase, setVoteTally, updateUserVote } = useRoomStore();
+  const { setRoom, updateRoom, setPhase, setVoteTally, updateUserVote, resetUserVotes } = useRoomStore();
   const { addMessage, clearMessages } = useChatStore();
   const navigate = useNavigate();
   const toast = useToast();
@@ -47,6 +47,12 @@ export function useRoomEvents() {
       addMessage(message);
     };
 
+    const onTopicUpdated = ({ topic }: { topic: string }) => {
+      resetUserVotes();
+      setPhase('voting', topic);
+      toast('팀 구성이 맞지 않아 AI가 새로운 주제를 추천했습니다. 다시 투표해주세요.', 'info');
+    };
+
     const onError = ({ message }: { message: string }) => {
       toast(message, 'error');
     };
@@ -60,6 +66,7 @@ export function useRoomEvents() {
     s.on('debate_started', onDebateStarted);
     s.on('vote_updated', onVoteUpdated);
     s.on('new_message', onNewMessage);
+    s.on('topic_updated', onTopicUpdated);
     s.on('error', onError);
 
     return () => {
@@ -70,7 +77,8 @@ export function useRoomEvents() {
       s.off('debate_started', onDebateStarted);
       s.off('vote_updated', onVoteUpdated);
       s.off('new_message', onNewMessage);
+      s.off('topic_updated', onTopicUpdated);
       s.off('error', onError);
     };
-  }, [setRoom, updateRoom, setPhase, setVoteTally, updateUserVote, addMessage, clearMessages, navigate, toast]);
+  }, [setRoom, updateRoom, setPhase, setVoteTally, updateUserVote, resetUserVotes, addMessage, clearMessages, navigate, toast]);
 }

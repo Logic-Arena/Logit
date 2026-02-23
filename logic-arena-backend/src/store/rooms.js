@@ -36,6 +36,8 @@ export function createRoom({ title, mode = 'free_debate' }) {
     phase: 'waiting',
     createdAt: new Date(),
     users: new Map(),
+    aiChatHistory: [],
+    pastTopics: [],
   };
   rooms.set(id, room);
   return serializeRoom(room);
@@ -106,7 +108,7 @@ export function removeUserFromRoom(roomId, socketId) {
   return { user, room: serializeRoom(room), newHostSocketId };
 }
 
-export function startDebate(roomId, socketId) {
+export function startDebate(roomId, socketId, topicOverride = null) {
   const room = rooms.get(roomId);
   if (!room) return null;
 
@@ -114,7 +116,7 @@ export function startDebate(roomId, socketId) {
   if (!user || user.userRole !== 'host') return null;
   if (room.phase !== 'waiting') return null;
 
-  room.topic = pickRandomTopic();
+  room.topic = topicOverride ?? pickRandomTopic();
   room.phase = 'voting';
 
   return { topic: room.topic, room: serializeRoom(room) };
@@ -139,4 +141,44 @@ export function castVote(roomId, socketId, vote) {
   }
 
   return { pro, con, socketId, vote };
+}
+
+export function resetVotes(roomId) {
+  const room = rooms.get(roomId);
+  if (!room) return false;
+  for (const user of room.users.values()) {
+    user.vote = null;
+  }
+  return true;
+}
+
+export function setTopic(roomId, topic) {
+  const room = rooms.get(roomId);
+  if (!room) return false;
+  room.topic = topic;
+  return true;
+}
+
+export function addAiMessage(roomId, message) {
+  const room = rooms.get(roomId);
+  if (!room) return false;
+  room.aiChatHistory.push(message);
+  return true;
+}
+
+export function getAiHistory(roomId) {
+  const room = rooms.get(roomId);
+  return room ? [...room.aiChatHistory] : [];
+}
+
+export function addPastTopic(roomId, topic) {
+  const room = rooms.get(roomId);
+  if (!room) return false;
+  room.pastTopics.push(topic);
+  return true;
+}
+
+export function getPastTopics(roomId) {
+  const room = rooms.get(roomId);
+  return room ? [...room.pastTopics] : [];
 }

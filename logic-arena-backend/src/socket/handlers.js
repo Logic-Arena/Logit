@@ -6,7 +6,14 @@ import {
   castVote,
   getAllRooms,
   getRoom,
+  resetVotes,
+  setTopic,
+  addAiMessage,
+  getAiHistory,
+  addPastTopic,
+  getPastTopics,
 } from '../store/rooms.js';
+import { generateTopic, generateAiResponse } from '../services/gemini.js';
 
 function handleLeaveRoomInternal(io, socket) {
   const { roomId } = socket.data;
@@ -57,23 +64,40 @@ export function registerHandlers(io, socket) {
     handleLeaveRoomInternal(io, socket);
   });
 
-  socket.on('start_debate', ({ roomId }) => {
+  socket.on('start_debate', async ({ roomId }) => {
     if (socket.data.roomId !== roomId) {
       return socket.emit('error', { message: '해당 방에 입장하지 않았습니다' });
     }
 
-    const result = startDebate(roomId, socket.id);
-    if (!result) {
-      const room = getRoom(roomId);
-      if (!room) return socket.emit('error', { message: '방을 찾을 수 없습니다' });
-      if (room.phase !== 'waiting') return socket.emit('error', { message: '이미 토론이 시작되었습니다' });
+    const room = getRoom(roomId);
+    if (!room) return socket.emit('error', { message: '방을 찾을 수 없습니다' });
+    if (room.phase !== 'waiting') return socket.emit('error', { message: '이미 토론이 시작되었습니다' });
+
+    const myUser = room.users[socket.id];
+    if (!myUser || myUser.userRole !== 'host') {
       return socket.emit('error', { message: '방장만 시작할 수 있습니다' });
+    }
+
+    let topicOverride = null;
+    if (room.mode === 'ai_debate') {
+      const pastTopics = getPastTopics(roomId);
+      try {
+        topicOverride = await generateTopic(pastTopics);
+      } catch (err) {
+        console.error('[Gemini] Topic generation failed:', err);
+        return socket.emit('error', { message: 'AI 주제 추천에 실패했습니다' });
+      }
+    }
+
+    const result = startDebate(roomId, socket.id, topicOverride);
+    if (!result) {
+      return socket.emit('error', { message: '토론을 시작할 수 없습니다' });
     }
 
     io.to(roomId).emit('debate_started', { topic: result.topic, phase: 'voting' });
   });
 
-  socket.on('cast_vote', ({ roomId, vote }) => {
+  socket.on('cast_vote', async ({ roomId, vote }) => {
     if (socket.data.roomId !== roomId) {
       return socket.emit('error', { message: '해당 방에 입장하지 않았습니다' });
     }
@@ -84,9 +108,38 @@ export function registerHandlers(io, socket) {
     }
 
     io.to(roomId).emit('vote_updated', result);
+
+    // AI mode: check team composition when all humans have voted
+    const room = getRoom(roomId);
+    if (room && room.mode === 'ai_debate') {
+      const humanUsers = Object.values(room.users).filter((u) => u.userRole !== 'observer');
+      const allVoted = humanUsers.every((u) => u.vote !== null);
+
+      if (allVoted) {
+        const proCount = humanUsers.filter((u) => u.vote === 'pro').length;
+        const conCount = humanUsers.filter((u) => u.vote === 'con').length;
+
+        // Team composition invalid (both same side)
+        if (proCount !== 1 || conCount !== 1) {
+          const currentTopic = room.topic;
+          addPastTopic(roomId, currentTopic);
+          const pastTopics = getPastTopics(roomId);
+
+          try {
+            const newTopic = await generateTopic(pastTopics);
+            setTopic(roomId, newTopic);
+            resetVotes(roomId);
+            io.to(roomId).emit('topic_updated', { topic: newTopic });
+          } catch (err) {
+            console.error('[Gemini] Topic re-generation failed:', err);
+            socket.emit('error', { message: '새 주제 추천에 실패했습니다' });
+          }
+        }
+      }
+    }
   });
 
-  socket.on('send_message', ({ roomId, content }) => {
+  socket.on('send_message', async ({ roomId, content }) => {
     if (socket.data.roomId !== roomId) {
       return socket.emit('error', { message: '해당 방에 입장하지 않았습니다' });
     }
@@ -119,6 +172,39 @@ export function registerHandlers(io, socket) {
     };
 
     io.to(roomId).emit('new_message', { message });
+
+    // AI mode: generate AI response from the same team
+    if (room.mode === 'ai_debate') {
+      const senderVote = user.vote;
+      const aiHistory = getAiHistory(roomId);
+
+      addAiMessage(roomId, { username: user.username, content, vote: senderVote });
+
+      try {
+        const aiContent = await generateAiResponse({
+          topic: room.topic,
+          vote: senderVote,
+          chatHistory: aiHistory,
+          triggerMessage: content,
+        });
+
+        const aiUsername = senderVote === 'pro' ? 'AI (찬성)' : 'AI (반대)';
+        const aiMessage = {
+          id: uuidv4(),
+          userId: `ai_${senderVote}`,
+          username: aiUsername,
+          userRole: 'ai',
+          vote: senderVote,
+          content: aiContent,
+          timestamp: new Date(),
+        };
+
+        addAiMessage(roomId, { username: aiUsername, content: aiContent, vote: senderVote });
+        io.to(roomId).emit('new_message', { message: aiMessage });
+      } catch (err) {
+        console.error('[Gemini] AI response generation failed:', err);
+      }
+    }
   });
 
   socket.on('disconnect', () => {
