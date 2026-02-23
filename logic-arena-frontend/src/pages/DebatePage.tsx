@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { socket } from '../lib/socket';
 import { useSocket } from '../hooks/useSocket';
@@ -9,7 +9,7 @@ import { useToast } from '../hooks/useToast';
 
 import { TopicBanner } from '../components/debate/TopicBanner';
 import { UserList } from '../components/debate/UserList';
-import { VotingPanel } from '../components/debate/VotingPanel';
+import { VoteModal } from '../components/debate/VoteModal';
 import { HostControls } from '../components/debate/HostControls';
 import { ChatPanel } from '../components/debate/ChatPanel';
 import type { UserRole } from '../types/room';
@@ -27,6 +27,7 @@ export function DebatePage() {
   const { userId, username } = useUserStore();
   const { room, mySocketId, resetRoom } = useRoomStore();
   const didJoin = useRef(false);
+  const [isVoteModalOpen, setIsVoteModalOpen] = useState(false);
 
   // Set up socket id tracking
   useSocket();
@@ -88,6 +89,13 @@ export function DebatePage() {
     }
   }, [room, mySocketId, location.state, toast]);
 
+  // Auto-open vote modal when phase transitions to 'voting'
+  useEffect(() => {
+    if (room?.phase === 'voting') {
+      setIsVoteModalOpen(true);
+    }
+  }, [room?.phase]);
+
   if (!room) {
     return <div className="loading">방에 접속 중...</div>;
   }
@@ -99,17 +107,35 @@ export function DebatePage() {
   const isHost = myRole === 'host';
   const isObserver = myRole === 'observer';
   const showHostControls = isHost && room.phase === 'waiting';
-  const showVotingPanel = !isObserver && room.phase === 'voting';
+  const showReopenVoteButton = !isObserver && room.phase === 'voting' && !isVoteModalOpen;
   const showTopicBanner = room.phase === 'voting' && room.topic;
 
   return (
     <div className="debate-page">
+      {/* Vote Modal */}
+      {!isObserver && (
+        <VoteModal
+          roomId={room.id}
+          topic={room.topic}
+          myVote={myVote}
+          isOpen={isVoteModalOpen}
+          onClose={() => setIsVoteModalOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
       <div className="debate-sidebar">
         <UserList room={room} mySocketId={mySocketId} />
 
-        {showVotingPanel && (
-          <VotingPanel roomId={room.id} myVote={myVote} />
+        {showReopenVoteButton && (
+          <div className="vote-reopen">
+            <button
+              className="vote-reopen__btn"
+              onClick={() => setIsVoteModalOpen(true)}
+            >
+              {myVote ? '투표 결과 보기' : '투표하기'}
+            </button>
+          </div>
         )}
 
         {showHostControls && (
