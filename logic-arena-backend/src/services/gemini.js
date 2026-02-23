@@ -2,6 +2,12 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
+if (!process.env.GEMINI_API_KEY) {
+  console.warn('[Gemini] WARNING: GEMINI_API_KEY is not set. All AI features will use fallback.');
+} else {
+  console.log('[Gemini] API key loaded.');
+}
+
 const FALLBACK_TOPICS = [
   '인공지능이 인간의 일자리를 대체해야 한다',
   '사형제도는 폐지되어야 한다',
@@ -28,7 +34,9 @@ export async function generateTopic(previousTopics = []) {
     const result = await model.generateContent(prompt);
     return result.response.text().trim();
   } catch (err) {
-    console.error('[Gemini] generateTopic 실패, 폴백 주제 사용:', err.message);
+    console.error('[Gemini] generateTopic 실패, 폴백 주제 사용.');
+    console.error('[Gemini] Error detail:', err.message);
+    if (err.status) console.error('[Gemini] HTTP status:', err.status);
     const unused = FALLBACK_TOPICS.filter((t) => !previousTopics.includes(t));
     const pool = unused.length > 0 ? unused : FALLBACK_TOPICS;
     return pool[Math.floor(Math.random() * pool.length)];
