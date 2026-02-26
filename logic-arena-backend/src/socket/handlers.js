@@ -79,12 +79,12 @@ export function registerHandlers(io, socket) {
     }
 
     let topicOverride = null;
-    if (room.mode === 'ai_debate') {
+    if (room.topicMode === 'ai_auto') {
       const pastTopics = getPastTopics(roomId);
       try {
         topicOverride = await generateTopic(pastTopics);
       } catch (err) {
-        console.error('[Gemini] Topic generation failed:', err);
+        console.error('[AI] Topic generation failed:', err);
         return socket.emit('error', { message: 'AI 주제 추천에 실패했습니다' });
       }
     }
@@ -121,18 +121,24 @@ export function registerHandlers(io, socket) {
 
         // Team composition invalid (both same side)
         if (proCount !== 1 || conCount !== 1) {
-          const currentTopic = room.topic;
-          addPastTopic(roomId, currentTopic);
-          const pastTopics = getPastTopics(roomId);
+          if (room.topicMode === 'ai_auto') {
+            const currentTopic = room.topic;
+            addPastTopic(roomId, currentTopic);
+            const pastTopics = getPastTopics(roomId);
 
-          try {
-            const newTopic = await generateTopic(pastTopics);
-            setTopic(roomId, newTopic);
+            try {
+              const newTopic = await generateTopic(pastTopics);
+              setTopic(roomId, newTopic);
+              resetVotes(roomId);
+              io.to(roomId).emit('topic_updated', { topic: newTopic });
+            } catch (err) {
+              console.error('[AI] Topic re-generation failed:', err);
+              socket.emit('error', { message: '새 주제 추천에 실패했습니다' });
+            }
+          } else {
+            // manual: keep the same topic, just reset votes
             resetVotes(roomId);
-            io.to(roomId).emit('topic_updated', { topic: newTopic });
-          } catch (err) {
-            console.error('[Gemini] Topic re-generation failed:', err);
-            socket.emit('error', { message: '새 주제 추천에 실패했습니다' });
+            io.to(roomId).emit('topic_updated', { topic: room.topic });
           }
         }
       }
