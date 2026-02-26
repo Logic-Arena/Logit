@@ -28,6 +28,7 @@ export function DebatePage() {
   const { room, mySocketId, resetRoom } = useRoomStore();
   const didJoin = useRef(false);
   const [isVoteModalOpen, setIsVoteModalOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Set up socket id tracking
   useSocket();
@@ -123,13 +124,6 @@ export function DebatePage() {
 
   return (
     <div className="debate-page">
-      {/* AI Mode Banner */}
-      {isAiMode && (
-        <div className="ai-mode-banner">
-          AI 모드 — 사람 1명 + AI 1명으로 팀을 구성합니다. 투표로 입장을 선택하세요.
-        </div>
-      )}
-
       {/* Vote Modal */}
       {!isObserver && (
         <VoteModal
@@ -141,8 +135,20 @@ export function DebatePage() {
         />
       )}
 
+      {/* Sidebar backdrop (mobile only) */}
+      <div
+        className={`sidebar-backdrop${sidebarOpen ? ' is-open' : ''}`}
+        onClick={() => setSidebarOpen(false)}
+      />
+
       {/* Sidebar */}
-      <div className="debate-sidebar">
+      <div className={`debate-sidebar${sidebarOpen ? ' is-open' : ''}`}>
+        {isAiMode && (
+          <div className="ai-mode-indicator">
+            <span className="ai-mode-indicator__dot" />
+            AI 대전 모드
+          </div>
+        )}
         <UserList room={room} mySocketId={mySocketId} />
 
         {showReopenVoteButton && (
@@ -163,6 +169,74 @@ export function DebatePage() {
 
       {/* Main */}
       <div className="debate-main">
+        {/* Mobile Header (사이드바 토글 + 주제 미리보기) */}
+        <div className="debate-mobile-header">
+          <button
+            className="sidebar-toggle-btn"
+            onClick={() => setSidebarOpen(v => !v)}
+          >
+            참가자{Object.keys(room.users).length}명
+          </button>
+          {showTopicBanner && (
+            <span className="debate-mobile-header__topic">{room.topic}</span>
+          )}
+        </div>
+
+        {/* Mobile Participants Strip */}
+        <div className="mobile-participants-strip">
+          <div className="mps-side mps-side--pro">
+            {Object.entries(room.users)
+              .filter(([, u]) => u.userRole !== 'observer' && (room.phase !== 'voting' || u.vote !== 'con'))
+              .map(([socketId, user]) => {
+                const vote = room.phase === 'voting' ? user.vote : null;
+                const isMe = socketId === mySocketId;
+                return (
+                  <span
+                    key={socketId}
+                    className={[
+                      'participant-chip',
+                      vote ? `participant-chip--${vote}` : '',
+                      isMe ? 'participant-chip--me' : '',
+                    ].filter(Boolean).join(' ')}
+                  >
+                    {isMe ? `나 (${user.username})` : user.username}
+                  </span>
+                );
+              })}
+          </div>
+          <div className="mps-side mps-side--con">
+            {Object.entries(room.users)
+              .filter(([, u]) => u.userRole !== 'observer' && room.phase === 'voting' && u.vote === 'con')
+              .map(([socketId, user]) => {
+                const isMe = socketId === mySocketId;
+                return (
+                  <span
+                    key={socketId}
+                    className={[
+                      'participant-chip',
+                      'participant-chip--con',
+                      isMe ? 'participant-chip--me' : '',
+                    ].filter(Boolean).join(' ')}
+                  >
+                    {isMe ? `나 (${user.username})` : user.username}
+                  </span>
+                );
+              })}
+          </div>
+        </div>
+
+        {/* Mobile Start Button (host only, waiting phase) */}
+        {showHostControls && (
+          <div className="mobile-start-bar">
+            <button
+              className="mobile-start-bar__btn"
+              onClick={() => socket.emit('start_debate', { roomId: room.id })}
+            >
+              토론 시작
+            </button>
+          </div>
+        )}
+
         {showTopicBanner && <TopicBanner topic={room.topic!} />}
         <ChatPanel
           roomId={room.id}

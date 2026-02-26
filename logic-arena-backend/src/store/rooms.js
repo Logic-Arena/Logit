@@ -26,13 +26,14 @@ function serializeRoom(room) {
   };
 }
 
-export function createRoom({ title, mode = 'free_debate' }) {
+export function createRoom({ title, mode = 'free_debate', topicMode = 'ai_auto', topic = null }) {
   const id = uuidv4();
   const room = {
     id,
     title,
     mode,
-    topic: null,
+    topicMode,
+    topic,
     phase: 'waiting',
     createdAt: new Date(),
     users: new Map(),
@@ -116,7 +117,7 @@ export function startDebate(roomId, socketId, topicOverride = null) {
   if (!user || user.userRole !== 'host') return null;
   if (room.phase !== 'waiting') return null;
 
-  room.topic = topicOverride ?? pickRandomTopic();
+  room.topic = topicOverride ?? room.topic ?? pickRandomTopic();
   room.phase = 'voting';
 
   return { topic: room.topic, room: serializeRoom(room) };
