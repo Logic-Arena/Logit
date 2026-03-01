@@ -1,3 +1,2 @@
 ##jeongmineeeeeee
-##yap!
-##yap
+##minseo fixed
