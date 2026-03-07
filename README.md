@@ -55,3 +55,12 @@
 
 ## 관련 이슈
 - #이슈번호
+```
+
+---
+
+## 4. 의존성/설치물 커밋 정책
+- `node_modules`는 절대 커밋하지 않습니다.
+- 루트 및 하위 프로젝트의 `package.json`, `package-lock.json`은 커밋 대상입니다.
+- 의존성 변경 시에는 반드시 `package.json`과 lock 파일 변경을 함께 포함합니다.
+- 로컬 설치물(`node_modules`, 빌드 산출물, 캐시)은 `.gitignore`로 관리합니다.
