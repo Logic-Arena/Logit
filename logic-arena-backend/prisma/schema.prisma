@@ -1,0 +1,35 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  user_id          Int       @id @default(autoincrement())
+  provider         String
+  provider_user_id String?
+  login_id         String?   @unique
+  password         String?
+  email            String?   @unique
+  name             String
+  profile_image    String?
+  created_at       DateTime  @default(now())
+
+  stats            UserStats?
+}
+
+model UserStats {
+  user_id        Int      @id
+  tier           String   @default("브론즈 5")
+  rank_point     Int      @default(0)
+  score_average  Float    @default(0)
+  total_games    Int      @default(0)
+  win_count      Int      @default(0)
+  badges         Json     @default("[]")
+  updated_at     DateTime @updatedAt
+
+  user           User     @relation(fields: [user_id], references: [user_id])
+}
