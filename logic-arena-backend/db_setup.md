@@ -4,6 +4,7 @@
   "@prisma/client": "^7.5.0",
   "prisma": "^7.5.0",
 ```
+DB version: psql (PostgreSQL) 16.13
 ### id: root
 ### pw: 1234
 - - -
