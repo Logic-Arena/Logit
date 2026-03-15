@@ -1,5 +1,9 @@
 
 # DB setup
+```
+  "@prisma/client": "^7.5.0",
+  "prisma": "^7.5.0",
+```
 ### id: root
 ### pw: 1234
 - - -
