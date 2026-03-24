@@ -5,8 +5,8 @@
   "prisma": "^7.5.0",
 ```
 DB version: psql (PostgreSQL) 16.13
-### id: root
-### pw: 1234
+### id: postgres
+### pw: 0118
 - - -
 ### 1. postresql 다운로드
 ```bash
@@ -25,15 +25,15 @@ DB version: psql (PostgreSQL) 16.13
 ```
 #### db 접속 후:
 ```sql
-  CREATE DATABASE logit;
-  CREATE USER root WITH PASSWORD '1234';
-  GRANT ALL PRIVILEGES ON DATABASE logit TO root;
+  CREATE DATABASE debate_game_db;
+  CREATE USER postgres WITH PASSWORD '0118';
+  GRANT ALL PRIVILEGES ON DATABASE debate_game_db TO postgres;
   \q
 ```
 
 ### 4. backend .env 파일에 DB 연결 정보 추가
 ```bash
-  DATABASE_URL="postgresql://유저명:비밀번호@localhost:5432/DB명"
+  DATABASE_URL="postgresql://postgres:0118@localhost:5432/debate_game_db"
 
   EX) DATABASE_URL="postgresql://root:1234@localhost:5432/logit"
 ```
@@ -51,7 +51,7 @@ cd logic-arena-backend
 
 ### 6. public 스키마 권한 부여
 ```bash
-  sudo -u postgres psql -c "GRANT ALL ON SCHEMA public TO root;" logit
+  sudo -u postgres psql -c "GRANT ALL ON SCHEMA public TO postgres;" debate_game_db
 ```
 
 ### 7. migrate 실행(실제 테이블 생성)
