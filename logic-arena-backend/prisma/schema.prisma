@@ -1,6 +1,6 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
+  engineType = "library"
 }
 
 datasource db {
@@ -19,6 +19,7 @@ model User {
   created_at       DateTime  @default(now())
 
   stats            UserStats?
+  //User와 UserStats의 1:1관계설정
 }
 
 model UserStats {
@@ -32,4 +33,5 @@ model UserStats {
   updated_at     DateTime @updatedAt
 
   user           User     @relation(fields: [user_id], references: [user_id])
+  //User와 UserStats의 1:1관계설정
 }
