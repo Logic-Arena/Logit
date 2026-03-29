@@ -9,7 +9,7 @@ export function AuthCallbackPage() {
       localStorage.setItem('token', token);
       window.location.href = '/';
     } else {
-      alert('로그인 실패');
+      alert('로그인에 실패했습니다.');
       window.location.href = '/';
     }
   }, []);

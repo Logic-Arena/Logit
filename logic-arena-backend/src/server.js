@@ -33,7 +33,7 @@ app.use(passport.initialize());
 
 app.locals.io = io;
 
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 

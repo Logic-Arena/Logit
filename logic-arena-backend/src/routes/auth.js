@@ -16,6 +16,7 @@ import {
   findOrCreateKakaoUser,
   signupLocalUser,
   loginLocalUser,
+  serializeAuthUser,
   createAccessToken,
 } from '../services/authService.js';
 
@@ -28,7 +29,7 @@ passport.use(
       clientSecret: GOOGLE_CLIENT_SECRET,
       callbackURL: GOOGLE_CALLBACK_URL,
     },
-    async (accessToken, refreshToken, profile, done) => {
+    async (_accessToken, _refreshToken, profile, done) => {
       try {
         const user = await findOrCreateGoogleUser(profile);
         done(null, user);
@@ -56,19 +57,19 @@ router.get(
   }
 );
 
-router.get('/fail', (req, res) => {
+router.get('/fail', (_req, res) => {
   res.status(401).json({ message: '로그인에 실패했습니다.' });
 });
 
-router.get('/signup', (req, res) => {
+router.get('/signup', (_req, res) => {
   res.redirect(`${FRONTEND_URL}/auth/signup`);
 });
 
-router.get('/login', (req, res) => {
+router.get('/login', (_req, res) => {
   res.redirect(`${FRONTEND_URL}/auth/login`);
 });
 
-router.get('/me', (req, res) => {
+router.get('/me', (_req, res) => {
   res.json({ message: 'JWT 인증 미들웨어 연결이 필요합니다.' });
 });
 
@@ -85,14 +86,14 @@ router.post('/signup', async (req, res) => {
     const user = await signupLocalUser({ username, password, name, email });
     const token = createAccessToken(user);
 
-    res.status(201).json({
+    return res.status(201).json({
       message: '회원가입이 완료되었습니다.',
       token,
-      user,
+      user: serializeAuthUser(user),
     });
   } catch (error) {
-    res.status(400).json({
-      error: error.message || '회원가입에 실패했습니다.',
+    return res.status(400).json({
+      error: error instanceof Error ? error.message : '회원가입에 실패했습니다.',
     });
   }
 });
@@ -110,19 +111,19 @@ router.post('/login', async (req, res) => {
     const user = await loginLocalUser({ username, password });
     const token = createAccessToken(user);
 
-    res.json({
+    return res.json({
       message: '로그인에 성공했습니다.',
       token,
-      user,
+      user: serializeAuthUser(user),
     });
   } catch (error) {
-    res.status(400).json({
-      error: error.message || '로그인에 실패했습니다.',
+    return res.status(400).json({
+      error: error instanceof Error ? error.message : '로그인에 실패했습니다.',
     });
   }
 });
 
-router.get('/kakao', (req, res) => {
+router.get('/kakao', (_req, res) => {
   const kakaoAuthUrl =
     `https://kauth.kakao.com/oauth/authorize` +
     `?client_id=${KAKAO_REST_API_KEY}` +
@@ -133,7 +134,7 @@ router.get('/kakao', (req, res) => {
 });
 
 router.get('/kakao/callback', async (req, res) => {
-  const { code } = req.query;
+  const code = String(req.query.code ?? '');
 
   try {
     const tokenResponse = await axios.post(
@@ -143,9 +144,7 @@ router.get('/kakao/callback', async (req, res) => {
         client_id: KAKAO_REST_API_KEY,
         redirect_uri: KAKAO_CALLBACK_URL,
         code,
-        ...(KAKAO_CLIENT_SECRET
-          ? { client_secret: KAKAO_CLIENT_SECRET }
-          : {}),
+        ...(KAKAO_CLIENT_SECRET ? { client_secret: KAKAO_CLIENT_SECRET } : {}),
       }).toString(),
       {
         headers: {
@@ -168,7 +167,14 @@ router.get('/kakao/callback', async (req, res) => {
 
     res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}`);
   } catch (error) {
-    console.error('Kakao login error:', error.response?.data || error.message);
+    const message =
+      axios.isAxiosError(error) && error.response
+        ? JSON.stringify(error.response.data)
+        : error instanceof Error
+          ? error.message
+          : 'Unknown error';
+
+    console.error('Kakao login error:', message);
     res.redirect(`${FRONTEND_URL}/auth/callback?error=kakao_login_failed`);
   }
 });

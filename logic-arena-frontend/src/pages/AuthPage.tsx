@@ -52,10 +52,10 @@ export function AuthPage() {
         <section className="auth-hero">
           <p className="auth-hero__eyebrow">Logic Arena</p>
           <h1 className="auth-hero__title">
-            {isSignup ? '계정을 만들고 바로 토론에 참여해보세요.' : '로그인하고 바로 토론방에 들어가세요.'}
+            {isSignup ? '계정을 만들고 바로 토론에 참여해보세요.' : '로그인하고 바로 토론방에 들어가보세요.'}
           </h1>
           <p className="auth-hero__desc">
-            회원가입과 로그인 화면은 프론트에서 보여주고, 실제 인증만 백엔드 API로 요청합니다.
+            회원가입과 로그인 화면은 프론트엔드에서 보여주고, 실제 인증은 백엔드 API로 요청합니다.
           </p>
         </section>
 

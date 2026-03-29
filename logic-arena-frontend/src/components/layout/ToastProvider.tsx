@@ -1,17 +1,12 @@
-import { createContext, useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import type { ReactNode } from 'react';
+import { ToastContext } from './ToastContext';
 
 interface ToastItem {
   id: number;
   message: string;
   type: 'info' | 'error';
 }
-
-interface ToastContextValue {
-  show: (message: string, type?: 'info' | 'error') => void;
-}
-
-export const ToastContext = createContext<ToastContextValue | null>(null);
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
