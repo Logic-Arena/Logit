@@ -4,6 +4,7 @@ import { getRooms } from '../lib/api';
 import { socket } from '../lib/socket';
 import { RoomList } from '../components/lobby/RoomList';
 import { UserTierWidget } from '../components/lobby/UserTierWidget';
+import { LogicReportWidget } from '../components/lobby/LogicReportWidget';
 import { useSidebar } from '../context/SidebarContext';
 import type { Room } from '../types/room';
 
@@ -45,7 +46,6 @@ export function LobbyPage() {
         />
       )}
 
-      {/* 우측 메인 콘텐츠 */}
       <div className="page lobby-page">
         <div className="lobby-actions">
           <div className="lobby-actions__left">
@@ -53,7 +53,7 @@ export function LobbyPage() {
           </div>
           <button className="btn btn--primary" onClick={() => navigate('/rooms/new')}>
             + 새 방 만들기
-          </button> 
+          </button>
         </div>
 
         {loading ? (
@@ -61,6 +61,11 @@ export function LobbyPage() {
         ) : (
           <RoomList rooms={rooms} />
         )}
+      </div>
+
+      {/* 오른쪽: 논리 성장 리포트 */}
+      <div className="lobby-report">
+        <LogicReportWidget />
       </div>
     </div>
   );
