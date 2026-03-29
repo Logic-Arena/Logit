@@ -1,17 +1,27 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { getRooms } from '../lib/api';
 import { socket } from '../lib/socket';
 import { RoomList } from '../components/lobby/RoomList';
 import { UserTierWidget } from '../components/lobby/UserTierWidget';
-import { useSidebar } from '../context/SidebarContext';
+import { useSidebar } from '../hooks/useSidebar';
 import type { Room } from '../types/room';
+
+const API_URL = import.meta.env.VITE_API_URL as string;
 
 export function LobbyPage() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
   const { sidebarOpen, closeSidebar } = useSidebar();
   const navigate = useNavigate();
+
+  const handleGoogleLogin = () => {
+    window.location.href = `${API_URL}/auth/google`;
+  };
+
+  const handleKakaoLogin = () => {
+    window.location.href = `${API_URL}/auth/kakao`;
+  };
 
   useEffect(() => {
     getRooms()
@@ -32,35 +42,40 @@ export function LobbyPage() {
 
   return (
     <div className="lobby-layout">
-      {/* 데스크탑: 고정 사이드바 / 모바일: 드로어 */}
       <div className={`lobby-sidebar${sidebarOpen ? ' is-open' : ''}`}>
         <UserTierWidget />
       </div>
 
-      {/* 모바일 배경 오버레이 - 클릭 시 사이드바 닫힘 */}
-      {sidebarOpen && (
-        <div
-          className="lobby-sidebar-backdrop"
-          onClick={closeSidebar}
-        />
-      )}
+      {sidebarOpen && <div className="lobby-sidebar-backdrop" onClick={closeSidebar} />}
 
-      {/* 우측 메인 콘텐츠 */}
       <div className="page lobby-page">
         <div className="lobby-actions">
           <div className="lobby-actions__left">
-            <h1 className="page__title" style={{ margin: 0 }}>토론 목록</h1>
+            <h1 className="page__title" style={{ margin: 0 }}>
+              토론 목록
+            </h1>
           </div>
-          <button className="btn btn--primary" onClick={() => navigate('/rooms/new')}>
-            + 새 방 만들기
-          </button> 
+
+          <div className="lobby-actions__controls">
+            <button className="btn btn--primary" onClick={() => navigate('/rooms/new')}>
+              + 방 만들기
+            </button>
+            <Link className="btn btn--ghost" to="/auth/login">
+              자체 로그인
+            </Link>
+            <Link className="btn btn--ghost" to="/auth/signup">
+              회원가입
+            </Link>
+            <button className="btn btn--ghost" onClick={handleGoogleLogin}>
+              구글 로그인
+            </button>
+            <button className="btn btn--ghost" onClick={handleKakaoLogin}>
+              카카오 로그인
+            </button>
+          </div>
         </div>
 
-        {loading ? (
-          <div className="loading">불러오는 중...</div>
-        ) : (
-          <RoomList rooms={rooms} />
-        )}
+        {loading ? <div className="loading">불러오는 중...</div> : <RoomList rooms={rooms} />}
       </div>
     </div>
   );
