@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { login } from '../lib/api';
+import { loginLocal, createHybridUser } from '../lib/api';
 import { useUserStore } from '../store/useUserStore';
 import { useToast } from '../hooks/useToast';
+
+const API_URL = import.meta.env.VITE_API_URL as string;
 
 export function LoginPage() {
   const [loginId, setLoginId] = useState('');
@@ -10,8 +12,15 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   const setAuth = useUserStore((s) => s.setAuth);
+  const isLoggedIn = useUserStore((s) => s.isLoggedIn);
   const navigate = useNavigate();
   const showToast = useToast();
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      navigate('/', { replace: true });
+    }
+  }, [isLoggedIn, navigate]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -21,8 +30,9 @@ export function LoginPage() {
     }
     setLoading(true);
     try {
-      const { token, user } = await login(loginId, password);
-      setAuth(token, user);
+      const response = await loginLocal({ username: loginId, password });
+      const hybridUser = createHybridUser(response.user);
+      setAuth(response.token, hybridUser);
       navigate('/', { replace: true });
     } catch (err) {
       showToast(err instanceof Error ? err.message : '로그인에 실패했습니다', 'error');
@@ -88,7 +98,7 @@ export function LoginPage() {
           <button
             className="btn auth-social__btn auth-social__btn--google"
             type="button"
-            onClick={() => showToast('소셜 로그인은 준비 중입니다', 'error')}
+            onClick={() => window.location.href = `${API_URL}/auth/google`}
           >
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -101,7 +111,7 @@ export function LoginPage() {
           <button
             className="btn auth-social__btn auth-social__btn--kakao"
             type="button"
-            onClick={() => showToast('소셜 로그인은 준비 중입니다', 'error')}
+            onClick={() => window.location.href = `${API_URL}/auth/kakao`}
           >
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="#3C1E1E">
               <path d="M12 3C6.477 3 2 6.477 2 10.8c0 2.717 1.618 5.1 4.078 6.566L5 21l4.48-2.4A11.4 11.4 0 0012 18.6c5.523 0 10-3.477 10-7.8S17.523 3 12 3z"/>

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { signup } from '../lib/api';
+import { signupLocal, createHybridUser } from '../lib/api';
 import { useUserStore } from '../store/useUserStore';
 import { useToast } from '../hooks/useToast';
 
@@ -13,8 +13,15 @@ export function SignupPage() {
   const [loading, setLoading] = useState(false);
 
   const setAuth = useUserStore((s) => s.setAuth);
+  const isLoggedIn = useUserStore((s) => s.isLoggedIn);
   const navigate = useNavigate();
   const showToast = useToast();
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      navigate('/', { replace: true });
+    }
+  }, [isLoggedIn, navigate]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -32,8 +39,14 @@ export function SignupPage() {
     }
     setLoading(true);
     try {
-      const { token, user } = await signup(loginId, password, name, email || undefined);
-      setAuth(token, user);
+      const response = await signupLocal({
+        username: loginId,
+        password,
+        name,
+        email: email || undefined,
+      });
+      const hybridUser = createHybridUser(response.user);
+      setAuth(response.token, hybridUser);
       navigate('/', { replace: true });
     } catch (err) {
       showToast(err instanceof Error ? err.message : '회원가입에 실패했습니다', 'error');

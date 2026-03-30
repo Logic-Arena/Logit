@@ -15,7 +15,7 @@ function PillarIcon({ className }: { className?: string }) {
       aria-hidden="true"
     >
       <rect x="2" y="20" width="20" height="2" rx="1" fill="currentColor" />
-      <rect x="3"  y="6" width="3" height="14" rx="1" fill="currentColor" />
+      <rect x="3" y="6" width="3" height="14" rx="1" fill="currentColor" />
       <rect x="10.5" y="6" width="3" height="14" rx="1" fill="currentColor" />
       <rect x="18" y="6" width="3" height="14" rx="1" fill="currentColor" />
       <rect x="2" y="3" width="20" height="3" rx="1" fill="currentColor" />
