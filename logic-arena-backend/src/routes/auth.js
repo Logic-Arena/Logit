@@ -83,6 +83,12 @@ router.post('/signup', async (req, res) => {
       });
     }
 
+    if (password.length < 6) {
+      return res.status(400).json({
+        error: '비밀번호는 6자리 이상이어야 합니다.',
+      });
+    }
+
     const user = await signupLocalUser({ username, password, name, email });
     const token = createAccessToken(user);
 

@@ -1,0 +1,585 @@
+.analyticsPage {
+  background-color: #0d1117;
+  color: #e5e7eb;
+  padding: 24px;
+  font-family: "Noto Sans KR", sans-serif;
+  height: 100%;
+  overflow-y: auto;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+@media (min-width: 768px) {
+  .analyticsPage {
+    padding: 32px;
+  }
+}
+
+.container {
+  max-width: 72rem; /* 1152px, max-w-6xl */
+  width: 100%;
+  margin: 0 auto; /* explicitly requested center alignment */
+}
+
+/* Add spacing between immediate children of container like space-y-8 */
+.container > * + * {
+  margin-top: 2rem;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border-bottom: 1px solid #30363d;
+  padding-bottom: 24px;
+}
+
+@media (min-width: 768px) {
+  .header {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+.headerTitle {
+  font-size: 22px;
+  line-height: 1.3;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.025em; /* tracking-wide */
+  margin: 0;
+}
+
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 24px;
+}
+
+@media (min-width: 1024px) {
+  .kpiGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-column: span 6 / span 6; /* Increased from 5 to 7 */
+  }
+}
+
+.kpiCard {
+  background-color: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 0.75rem; /* rounded-xl */
+  padding: 24px;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: border-color 0.15s ease-in-out, background-color 0.15s ease-in-out;
+  height: 100%; /* Stretch to fill container */
+}
+
+.kpiCard:hover {
+  border-color: rgba(139, 92, 246, 0.5); /* #8B5CF6 with 50% opacity */
+}
+
+.kpiHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.kpiLabel {
+  color: #8b949e;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.kpiIcon {
+  font-size: 1.25rem;
+}
+
+.kpiValue {
+  font-size: 22px;
+  line-height: 1.2;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 8px;
+}
+
+.kpiTrendWrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kpiTrendUp {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  color: #4ade80; /* text-green-400 */
+}
+
+.kpiTrendValue {
+  color: #8b949e;
+  font-size: 14px;
+}
+
+.bentoGridWrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.bentoGrid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 24px;
+  width: 100%;
+}
+
+@media (min-width: 1024px) {
+  .bentoGrid {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+}
+
+.bentoGridContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+}
+
+.bentoRow {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 24px;
+  width: 100%;
+}
+
+@media (min-width: 1024px) {
+  .bentoRow {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    align-items: stretch; /* Ensure all children have the same height */
+  }
+}
+
+.chartCard {
+  background-color: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 0.75rem;
+  padding: 24px;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  min-height: 350px;
+  width: 100%;
+}
+
+.chartCardFlex {
+  flex: 1 1 auto;
+  min-height: 300px; /* Stronger hint for Recharts */
+  width: 100%;
+  position: relative;
+}
+
+@media (min-width: 1024px) {
+  .chartCard {
+    grid-column: span 7 / span 7; /* Lower row charts take 7/12 */
+    height: 400px; 
+  }
+  .chartCardRadar {
+    grid-column: span 5 / span 5; /* Radar takes 5/12 */
+    height: 400px;
+  }
+}
+
+.chartHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.chartHeaderWrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 24px;
+  justify-content: space-between;
+}
+
+.chartTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: #f3f4f6; /* text-gray-100 */
+  margin: 0;
+}
+
+.legend {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.legendIndicatorUser {
+  width: 12px;
+  height: 12px;
+  background-color: rgba(139, 92, 246, 0.2);
+  border: 2px solid #8b5cf6;
+  border-radius: 0.25rem;
+}
+
+.legendTextUser {
+  color: #c4b5fd;
+}
+
+.legendIndicatorAvg {
+  width: 12px;
+  height: 12px;
+  border: 2px dashed #4b5563;
+  border-radius: 0.25rem;
+}
+
+.legendTextAvg {
+  color: #9ca3af;
+}
+
+.recommendationContainer {
+  width: 100%;
+}
+
+@media (min-width: 1024px) {
+  .recommendationContainer {
+    grid-column: span 6 / span 6; /* Decreased from 7 to 5 */
+    display: flex;
+  }
+}
+
+.recommendationCard {
+  background: linear-gradient(to right, rgba(139, 92, 246, 0.1), rgba(168, 85, 247, 0.05));
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: 12px;
+  padding: 20px 24px; /* Slightly tighter vertical padding */
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  height: 100%; /* Fill container height to match KPIs */
+}
+
+@media (min-width: 768px) {
+  .recommendationCard {
+    flex-direction: column; /* Stack vertically to save horizontal space */
+    align-items: flex-start;
+  }
+  
+  .recommendationBtn {
+    align-self: flex-end; /* Move button to the bottom right */
+    margin-top: 8px;
+  }
+}
+
+.recommendationLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.recommendationHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.recommendationBadge {
+  font-weight: 700;
+  font-size: 12px;
+  color: #c4b5fd;
+  background-color: rgba(139, 92, 246, 0.15);
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  display: inline-block;
+  margin-right: 4px;
+  letter-spacing: -0.01em;
+}
+
+.recommendationDesc {
+  color: #e5e7eb;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.recommendationBtn {
+  background-color: #8b5cf6;
+  color: #ffffff;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background-color 0.15s;
+  border: none;
+  cursor: pointer;
+}
+
+.recommendationBtn:hover {
+  background-color: #7c3aed;
+}
+
+.controlBar {
+  background-color: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 0.75rem;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  position: sticky;
+  top: 16px;
+  z-index: 10;
+  backdrop-filter: blur(12px);
+  background-color: rgba(22, 27, 34, 0.95);
+}
+
+@media (min-width: 768px) {
+  .controlBar {
+    flex-direction: row;
+  }
+}
+
+.filterGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filterBtn {
+  padding: 6px 16px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.15s ease-in-out;
+  cursor: pointer;
+  border: none;
+}
+
+.filterBtnActive {
+  background-color: #8b5cf6;
+  color: #ffffff;
+}
+
+.filterBtnInactive {
+  background-color: #1e2235;
+  color: #9ca3af;
+}
+
+.filterBtnInactive:hover {
+  background-color: #374151;
+  color: #e5e7eb;
+}
+
+.controlsRight {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .controlsRight {
+    width: auto;
+  }
+}
+
+.searchContainer {
+  position: relative;
+  flex: 1 1 0%;
+}
+
+@media (min-width: 768px) {
+  .searchContainer {
+    width: 256px;
+  }
+}
+
+.searchIcon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #8b949e;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.searchInput {
+  width: 100%;
+  background-color: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 0.5rem;
+  padding: 8px 16px 8px 40px;
+  font-size: 14px;
+  color: #e5e7eb;
+  transition: border-color 0.15s;
+  outline: none;
+}
+
+.searchInput:focus {
+  border-color: #8b5cf6;
+}
+
+.selectWrapper {
+  position: relative;
+  flex: 1 1 0%;
+}
+
+@media (min-width: 768px) {
+  .selectWrapper {
+    width: 9rem; /* sm:w-36 */
+    flex: none;
+  }
+}
+
+.sortSelect {
+  width: 100%;
+  padding: 8px 32px 8px 16px;
+  background-color: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 0.5rem;
+  font-size: 14px;
+  color: #e5e7eb;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  transition: border-color 0.15s;
+}
+
+.sortSelect:focus {
+  border-color: #8b5cf6;
+}
+
+.selectArrow {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #8b949e;
+  pointer-events: none;
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reportGrid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 16px;
+}
+
+@media (min-width: 768px) {
+  .reportGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.reportCard {
+  background-color: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 0.75rem;
+  padding: 24px;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.reportCard:hover {
+  border-color: rgba(139, 92, 246, 0.5);
+  background-color: rgba(30, 34, 53, 0.5);
+}
+
+.reportCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.reportCardTopic {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e5e7eb;
+  margin-bottom: 4px;
+  margin-top: 0;
+}
+
+.reportCardDate {
+  font-size: 14px;
+  color: #8b949e;
+}
+
+.reportCardScoreWrap {
+  text-align: right;
+}
+
+.reportCardScore {
+  font-size: 22px;
+  font-weight: 700;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.reportCardMetricGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.metricBox {
+  background-color: #0d1117;
+  border-radius: 0.5rem;
+  padding: 12px;
+}
+
+.metricLabel {
+  font-size: 12px;
+  color: #8b949e;
+  margin-bottom: 4px;
+}
+
+.metricValue {
+  font-size: 14px;
+  color: #e5e7eb;
+}
+
+.metricValueHighlight {
+  color: #4ade80;
+  font-weight: 500;
+}
+
+.categoryChip {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 9999px;
+}
