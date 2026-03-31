@@ -1,10 +1,12 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { AppLayout } from './components/layout/AppLayout';
 import { ToastProvider } from './components/layout/ToastProvider';
-import { LobbyPage } from './pages/LobbyPage';
-import { CreateRoomPage } from './pages/CreateRoomPage';
-import { RoomEntryPage } from './pages/RoomEntryPage';
 import { DebatePage } from './pages/DebatePage';
+import { AuthCallbackPage } from './pages/AuthCallbackPage';
+import { AuthPage } from './pages/AuthPage';
+import { CreateRoomPage } from './pages/CreateRoomPage';
+import { LobbyPage } from './pages/LobbyPage';
+import { RoomEntryPage } from './pages/RoomEntryPage';
 
 export default function App() {
   return (
@@ -16,6 +18,9 @@ export default function App() {
             <Route path="rooms/new" element={<CreateRoomPage />} />
             <Route path="rooms/:roomId" element={<RoomEntryPage />} />
             <Route path="rooms/:roomId/debate" element={<DebatePage />} />
+            <Route path="auth/login" element={<AuthPage />} />
+            <Route path="auth/signup" element={<AuthPage />} />
+            <Route path="auth/callback" element={<AuthCallbackPage />} />
           </Route>
         </Routes>
       </ToastProvider>
