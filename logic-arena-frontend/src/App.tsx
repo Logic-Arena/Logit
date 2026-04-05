@@ -10,6 +10,7 @@ import { CreateRoomPage } from './pages/CreateRoomPage';
 import { RoomEntryPage } from './pages/RoomEntryPage';
 import { DebatePage } from './pages/DebatePage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
+import { MyPage } from './pages/MyPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
 
 
@@ -33,6 +34,7 @@ export default function App() {
               <Route path="rooms/:roomId" element={<RoomEntryPage />} />
               <Route path="rooms/:roomId/debate" element={<DebatePage />} />
               <Route path="analytics" element={<AnalyticsPage />} />
+              <Route path="mypage" element={<MyPage />} />
             </Route>
           </Route>
         </Routes>

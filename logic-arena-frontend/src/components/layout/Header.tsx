@@ -33,7 +33,9 @@ export function Header() {
       <div className="header-user">
         {user && (
           <>
-            <span className="header-user__name">{user.name}</span>
+            <Link to="/mypage" className="header-user__name">
+              {user.name}
+            </Link>
             <button
               id="header-logout-btn"
               className="btn btn--ghost header-user__logout"

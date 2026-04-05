@@ -24,7 +24,9 @@ export function DebatePage() {
   const navigate = useNavigate();
   const toast = useToast();
 
-  const { userId, username } = useUserStore();
+  const { user: currentUser } = useUserStore();
+  const userId = currentUser?.id;
+  const username = currentUser?.name;
   const { room, mySocketId, resetRoom } = useRoomStore();
   const didJoin = useRef(false);
   const [isVoteModalOpen, setIsVoteModalOpen] = useState(false);
@@ -50,7 +52,7 @@ export function DebatePage() {
     const onConnect = () => {
       if (didJoin.current) return;
       didJoin.current = true;
-      socket.emit('join_room', { roomId, userId, username, userRole });
+      socket.emit('join_room', { roomId, userId: userId!, username: username!, userRole });
     };
 
     socket.on('connect', onConnect);
@@ -58,7 +60,7 @@ export function DebatePage() {
     // If already connected when this effect runs
     if (socket.connected && !didJoin.current) {
       didJoin.current = true;
-      socket.emit('join_room', { roomId, userId, username, userRole });
+      socket.emit('join_room', { roomId, userId: userId!, username: username!, userRole });
     }
 
     return () => {
@@ -241,7 +243,7 @@ export function DebatePage() {
         <ChatPanel
           roomId={room.id}
           mySocketId={mySocketId}
-          myUserId={userId}
+          myUserId={userId!}
           phase={room.phase}
           myRole={myRole}
           myVote={myVote}

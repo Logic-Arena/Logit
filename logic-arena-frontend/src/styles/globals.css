@@ -2137,6 +2137,12 @@ textarea {
   font-size: 13px;
   font-weight: 500;
   color: var(--color-text-muted);
+  text-decoration: none;
+  transition: color var(--transition);
+}
+
+.header-user__name:hover {
+  color: var(--color-primary);
 }
 
 .header-user__logout {

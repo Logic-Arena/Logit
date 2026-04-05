@@ -15,7 +15,7 @@ import {
 } from 'recharts';
 import styles from './AnalyticsPage.module.css';
 
-/* ─── 타입 ─────────────────────────────────────────────── */
+/* ─── 타입 ─────────────────────────────────────────────────── */
 type Grade = 'A' | 'B' | 'C';
 type Category = '전체' | '사회' | '과학' | '정치' | '자유';
 type SortKey = '최신순' | '높은 점수순' | '낮은 점수순';
@@ -33,7 +33,7 @@ interface ReportItem {
   needsImprovement: string;
 }
 
-/* ─── 상수 ─────────────────────────────────────────────── */
+/* ─── 상수 ─────────────────────────────────────────────────── */
 const GRADE_COLOR: Record<Grade, string> = {
   A: '#7b74ff',
   B: '#00f5a0',
@@ -57,7 +57,7 @@ function getGrade(score: number): Grade {
   return 'C';
 }
 
-/* ─── 목 데이터 ─────────────────────────────────────────── */
+/* ─── 목 데이터 ─────────────────────────────────────────────── */
 const RADAR_DATA = [
   { axis: '근거 제시', userValue: 82, avgValue: 65 },
   { axis: '반박 능력', userValue: 68, avgValue: 55 },
@@ -74,43 +74,42 @@ const LINE_DATA = [
   { date: '03/08', score: 78, topic: '원전 에너지 확대 정책' },
   { date: '03/13', score: 88, topic: '기본소득제 도입 찬반' },
 ];
-// KPI_DATA 배열 수정
+
 const KPI_DATA = [
-  { 
-    label: '평균 점수', 
-    value: '76점', 
-    trend: '+4점', 
-    trendUp: true, 
+  {
+    label: '평균 점수',
+    value: '76점',
+    trend: '+4점',
+    trendUp: true,
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M7.5 14.25v2.25m3-4.5v4.5m3-6.75v6.75m3-9v9M6 20.25h12A2.25 2.25 0 0 0 20.25 18V6A2.25 2.25 0 0 0 18 3.75H6A2.25 2.25 0 0 0 3.75 6v12A2.25 2.25 0 0 0 6 20.25Z" />
       </svg>
-    )
+    ),
   },
-  { 
-    label: '총 토론 횟수', 
-    value: '34회', 
-    trend: '+2회 (이번 주)', 
-    trendUp: true, 
+  {
+    label: '총 토론 횟수',
+    value: '34회',
+    trend: '+2회 (이번 주)',
+    trendUp: true,
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 0 1-.825-.242m9.345-8.334a2.126 2.126 0 0 0-.476-.095 48.64 48.64 0 0 0-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0 0 11.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
       </svg>
-    )
+    ),
   },
-  { 
-    label: '최근 성장률', 
-    value: '12%', 
-    trend: '상위 15%', 
-    trendUp: true, 
+  {
+    label: '최근 성장률',
+    value: '12%',
+    trend: '상위 15%',
+    trendUp: true,
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941" />
       </svg>
-    )
+    ),
   },
 ];
-
 
 const RECOMMENDED_TRAINING = {
   title: '반박 논리 보충 및 감정적 어조 순화',
@@ -187,7 +186,7 @@ const MOCK_REPORTS: ReportItem[] = [
   },
 ];
 
-/* ─── 커스텀 툴팁 (AreaChart) ──────────────────────────── */
+/* ─── 커스텀 툴팁 (AreaChart) ──────────────────────────────── */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function CustomLineTooltip({ active, payload }: any) {
   if (!active || !payload || !payload.length) return null;
@@ -200,37 +199,30 @@ function CustomLineTooltip({ active, payload }: any) {
   );
 }
 
-/* ─── 커스텀 Dot (AreaChart hover) ─────────────────────── */
+/* ─── 커스텀 Dot (AreaChart hover) ─────────────────────────── */
 function CustomDot(props: any) {
   const { cx, cy, key } = props;
   return <circle key={key} cx={cx} cy={cy} r={5} fill="#8B5CF6" stroke="#0D1117" strokeWidth={2} />;
 }
 
-
 function RadarCustomTick(props: any) {
   const { x, y, payload, textAnchor, index } = props;
-  
+
   let dy = 0;
   if (index === 0) dy = -10;
-  else if (index === 1 || index === 4) dy = 0; 
-  else dy = 10; 
+  else if (index === 1 || index === 4) dy = 0;
+  else dy = 10;
 
   return (
     <g transform={`translate(${x},${y})`}>
-      <text
-        textAnchor={textAnchor}
-        fill="#8B949E"
-        fontSize="12"
-        fontWeight="500"
-        dy={dy}
-      >
+      <text textAnchor={textAnchor} fill="#8B949E" fontSize="12" fontWeight="500" dy={dy}>
         <tspan>{payload.value}</tspan>
       </text>
     </g>
   );
 }
 
-/* ─── 하위 컴포넌트들 ───────────────────────────────────── */
+/* ─── 하위 컴포넌트들 ────────────────────────────────────────── */
 function KPICard({ data }: { data: typeof KPI_DATA[0] }) {
   return (
     <div className={styles.kpiCard}>
@@ -298,7 +290,6 @@ function ReportCard({ item }: { item: ReportItem }) {
           >
             {item.position}
           </span>
-          {/* 카테고리 컬러 칩 적용 */}
           <span className={`text-xs font-semibold px-2 py-1 rounded-md border ${catColor.bg} ${catColor.text} ${catColor.border}`}>
             {item.category}
           </span>
@@ -311,15 +302,11 @@ function ReportCard({ item }: { item: ReportItem }) {
         <div className="flex flex-col gap-1.5 min-w-0">
           <div className="flex items-center gap-2 text-sm max-w-full">
             <span className="text-xs font-bold text-[#3B82F6] bg-[#3B82F6]/10 px-2 py-0.5 rounded flex-shrink-0">Best</span>
-            <span className="text-gray-300 truncate" title={item.best}>
-              {item.best}
-            </span>
+            <span className="text-gray-300 truncate" title={item.best}>{item.best}</span>
           </div>
           <div className="flex items-center gap-2 text-sm max-w-full">
             <span className="text-xs font-bold text-[#F59E0B] bg-[#F59E0B]/10 px-2 py-0.5 rounded flex-shrink-0">Needs</span>
-            <span className="text-gray-300 truncate" title={item.needsImprovement}>
-              {item.needsImprovement}
-            </span>
+            <span className="text-gray-300 truncate" title={item.needsImprovement}>{item.needsImprovement}</span>
           </div>
         </div>
         <div className="flex justify-end mt-1">
@@ -332,15 +319,99 @@ function ReportCard({ item }: { item: ReportItem }) {
   );
 }
 
-/* ─── 메인 페이지 ───────────────────────────────────────── */
-export function AnalyticsPage() {
+/* ─── 섹션 컴포넌트 (MyPage 탭에서도 재사용) ─────────────────── */
+
+export function AnalyticsDashboardSection() {
+  return (
+    <div className={styles.bentoGridWrapper}>
+      <div className={styles.bentoGridContainer}>
+
+        {/* Top Row: KPIs & Recommendation */}
+        <div className={styles.bentoRow}>
+          <div className={styles.kpiGrid}>
+            {KPI_DATA.map(kpi => <KPICard key={kpi.label} data={kpi} />)}
+          </div>
+          <div className={styles.recommendationContainer}>
+            <RecommendationSection />
+          </div>
+        </div>
+
+        {/* Bottom Row: Charts */}
+        <div className={styles.bentoRow}>
+          {/* Area Chart */}
+          <div className={styles.chartCard}>
+            <div className={styles.chartHeader}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="#8B5CF6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+              <h2 className={styles.chartTitle}>논리 점수 성장 추이</h2>
+            </div>
+            <div className={styles.chartCardFlex}>
+              <ResponsiveContainer width="100%" height="100%" debounce={0}>
+                <AreaChart data={LINE_DATA} margin={{ top: 10, right: 20, bottom: 10, left: -20 }}>
+                  <defs>
+                    <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.4}/>
+                      <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke="#30363D" strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="date" tick={{ fill: '#8B949E', fontSize: 12 }} axisLine={false} tickLine={false} dy={10} />
+                  <YAxis domain={[0, 100]} tick={{ fill: '#8B949E', fontSize: 12 }} axisLine={false} tickLine={false} dx={-10} />
+                  <Tooltip content={<CustomLineTooltip />} cursor={{ stroke: '#8B5CF6', strokeWidth: 1, strokeDasharray: '4 4' }} />
+                  <Area
+                    type="monotone"
+                    dataKey="score"
+                    stroke="#8B5CF6"
+                    strokeWidth={3}
+                    fillOpacity={1}
+                    fill="url(#colorScore)"
+                    dot={<CustomDot />}
+                    activeDot={{ r: 7, fill: '#8B5CF6', stroke: '#0D1117', strokeWidth: 2 }}
+                    isAnimationActive={false}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Radar Chart */}
+          <div className={`${styles.chartCard} ${styles.chartCardRadar}`}>
+            <div className={styles.chartHeaderWrap}>
+              <div className="flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#8B5CF6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
+                </svg>
+                <h2 className={styles.chartTitle}>논리 밸런스 비교</h2>
+              </div>
+              <div className={styles.legend}>
+                <div className={styles.legendItem}><span className={styles.legendIndicatorUser}></span><span className={styles.legendTextUser}>나의 지표</span></div>
+                <div className={styles.legendItem}><span className={styles.legendIndicatorAvg}></span><span className={styles.legendTextAvg}>전체 평균</span></div>
+              </div>
+            </div>
+            <div className={styles.chartCardFlex}>
+              <ResponsiveContainer width="100%" height="100%" debounce={0}>
+                <RadarChart data={RADAR_DATA} margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
+                  <PolarGrid stroke="#30363D" />
+                  <PolarAngleAxis dataKey="axis" tick={<RadarCustomTick />} />
+                  <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: '#8B949E', fontSize: 10 }} tickCount={5} stroke="#30363D" />
+                  <Radar name="전체 평균" dataKey="avgValue" stroke="#8B949E" fill="#8B949E" fillOpacity={0.15} strokeWidth={1} strokeDasharray="4 4" isAnimationActive={false} />
+                  <Radar name="나의 점수" dataKey="userValue" stroke="#8B5CF6" fill="#8B5CF6" fillOpacity={0.25} strokeWidth={2} isAnimationActive={false} />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function AnalyticsHistorySection() {
   const [searchQuery, setSearchQuery] = useState('');
   const [category, setCategory] = useState<Category>('전체');
   const [sortKey, setSortKey] = useState<SortKey>('최신순');
 
   const filtered = useMemo(() => {
     let list = [...MOCK_REPORTS];
-
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
       list = list.filter((r) => r.topic.toLowerCase().includes(q));
@@ -351,213 +422,70 @@ export function AnalyticsPage() {
     if (sortKey === '높은 점수순') list.sort((a, b) => b.score - a.score);
     else if (sortKey === '낮은 점수순') list.sort((a, b) => a.score - b.score);
     else list.sort((a, b) => b.date.localeCompare(a.date));
-
     return list;
   }, [searchQuery, category, sortKey]);
 
   return (
+    <>
+      {/* 컨트롤 바 */}
+      <div className={styles.controlBar}>
+        <div className={styles.searchContainer}>
+          <svg className={styles.searchIcon} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.3-4.3" />
+          </svg>
+          <input
+            className={styles.searchInput}
+            type="text"
+            placeholder="토론 주제 키워드 검색..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <div className={styles.controlsRight}>
+          <div className={styles.selectWrapper}>
+            <select className={styles.sortSelect} value={category} onChange={(e) => setCategory(e.target.value as Category)}>
+              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <svg className={styles.selectArrow} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          </div>
+          <div className={styles.selectWrapper}>
+            <select className={styles.sortSelect} value={sortKey} onChange={(e) => setSortKey(e.target.value as SortKey)}>
+              {SORT_KEYS.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <svg className={styles.selectArrow} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          </div>
+        </div>
+      </div>
+
+      {/* 리포트 카드 리스트 */}
+      <div className={styles.reportGrid}>
+        {filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 bg-[#161B22] border border-[#30363D] border-dashed rounded-xl">
+            <svg className="text-[#8B949E] mb-4" xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <p className="text-[#8B949E] text-lg font-medium">검색 결과가 없습니다.</p>
+            <p className="text-[#8B949E]/70 text-sm mt-1">다른 키워드나 필터로 검색해보세요.</p>
+          </div>
+        ) : (
+          filtered.map((item) => <ReportCard key={item.id} item={item} />)
+        )}
+      </div>
+    </>
+  );
+}
+
+/* ─── 메인 페이지 ───────────────────────────────────────────── */
+export function AnalyticsPage() {
+  return (
     <div className={styles.analyticsPage}>
       <div className={styles.container}>
-        
-        {/* 헤더 */}
         <div className={styles.header}>
-          <div >
-            <h1 className={styles.headerTitle}>
-              나의 논리 성장 분석 대시보드
-            </h1>
+          <div>
+            <h1 className={styles.headerTitle}>나의 논리 성장 분석 대시보드</h1>
           </div>
         </div>
-
-        {/* ── Bento Grid ────────────────────────────────────────── */}
-        <div className={styles.bentoGridWrapper}>
-          <div className={styles.bentoGridContainer}>
-            
-            {/* Top Row: KPIs & Recommendation */}
-            <div className={styles.bentoRow}>
-              {/* 1. KPI Cards (span 5) */}
-              <div className={styles.kpiGrid}>
-                {KPI_DATA.map(kpi => <KPICard key={kpi.label} data={kpi} />)}
-              </div>
-
-              {/* 2. 오늘의 추천 훈련 (span 7) */}
-              <div className={styles.recommendationContainer}>
-                <RecommendationSection />
-              </div>
-            </div>
-            
-            {/* Bottom Row: Charts */}
-            <div className={styles.bentoRow}>
-              {/* 3. Area Chart - 성장 추이 (span 7) */}
-              <div className={styles.chartCard}>
-                <div className={styles.chartHeader}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="#8B5CF6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
-                  <h2 className={styles.chartTitle}>논리 점수 성장 추이</h2>
-                </div>
-                <div className={styles.chartCardFlex}>
-                  <ResponsiveContainer width="100%" height="100%" debounce={0}>
-                    <AreaChart data={LINE_DATA} margin={{ top: 10, right: 20, bottom: 10, left: -20 }}>
-                      <defs>
-                        <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.4}/>
-                          <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid stroke="#30363D" strokeDasharray="3 3" vertical={false} />
-                      <XAxis 
-                        dataKey="date" 
-                        tick={{ fill: '#8B949E', fontSize: 12 }} 
-                        axisLine={false} 
-                        tickLine={false} 
-                        dy={10}
-                      />
-                      <YAxis 
-                        domain={[0, 100]} 
-                        tick={{ fill: '#8B949E', fontSize: 12 }} 
-                        axisLine={false} 
-                        tickLine={false} 
-                        dx={-10}
-                      />
-                      <Tooltip 
-                        content={<CustomLineTooltip />} 
-                        cursor={{ stroke: '#8B5CF6', strokeWidth: 1, strokeDasharray: '4 4' }} 
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="score"
-                        stroke="#8B5CF6"
-                        strokeWidth={3}
-                        fillOpacity={1}
-                        fill="url(#colorScore)"
-                        dot={<CustomDot />}
-                        activeDot={{ r: 7, fill: '#8B5CF6', stroke: '#0D1117', strokeWidth: 2 }}
-                        isAnimationActive={false}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-
-              {/* 4. Radar Chart (span 5) */}
-              <div className={`${styles.chartCard} ${styles.chartCardRadar}`}>
-                <div className={styles.chartHeaderWrap}>
-                  <div className="flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#8B5CF6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
-                    </svg>
-                    <h2 className={styles.chartTitle}>논리 밸런스 비교</h2>
-                  </div>
-                  <div className={styles.legend}>
-                    <div className={styles.legendItem}><span className={styles.legendIndicatorUser}></span><span className={styles.legendTextUser}>나의 지표</span></div>
-                    <div className={styles.legendItem}><span className={styles.legendIndicatorAvg}></span><span className={styles.legendTextAvg}>전체 평균</span></div>
-                  </div>
-                </div>
-                <div className={styles.chartCardFlex}>
-                  <ResponsiveContainer width="100%" height="100%" debounce={0}>
-                    <RadarChart data={RADAR_DATA} margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
-                      <PolarGrid stroke="#30363D" />
-                      <PolarAngleAxis
-                        dataKey="axis"
-                        tick={<RadarCustomTick />}
-                      />
-                      <PolarRadiusAxis
-                        angle={90}
-                        domain={[0, 100]}
-                        tick={{ fill: '#8B949E', fontSize: 10 }}
-                        tickCount={5}
-                        stroke="#30363D"
-                      />
-                      <Radar
-                        name="전체 평균"
-                        dataKey="avgValue"
-                        stroke="#8B949E"
-                        fill="#8B949E"
-                        fillOpacity={0.15}
-                        strokeWidth={1}
-                        strokeDasharray="4 4"
-                        isAnimationActive={false}
-                      />
-                      <Radar
-                        name="나의 점수"
-                        dataKey="userValue"
-                        stroke="#8B5CF6"
-                        fill="#8B5CF6"
-                        fillOpacity={0.25}
-                        strokeWidth={2}
-                        isAnimationActive={false}
-                      />
-                    </RadarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ── 중단: 컨트롤 바 ─────────────────────────────────── */}
-        <div className={styles.controlBar}>
-          <div className={styles.searchContainer}>
-            <svg
-              className={styles.searchIcon}
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.3-4.3" />
-            </svg>
-            <input
-              className={styles.searchInput}
-              type="text"
-              placeholder="토론 주제 키워드 검색..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          
-          <div className={styles.controlsRight}>
-            <div className={styles.selectWrapper}>
-              <select
-                className={styles.sortSelect}
-                value={category}
-                onChange={(e) => setCategory(e.target.value as Category)}
-              >
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-              <svg className={styles.selectArrow} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-            </div>
-            <div className={styles.selectWrapper}>
-              <select
-                className={styles.sortSelect}
-                value={sortKey}
-                onChange={(e) => setSortKey(e.target.value as SortKey)}
-              >
-                {SORT_KEYS.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-              <svg className={styles.selectArrow} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-            </div>
-          </div>
-        </div>
-
-        {/* ── 하단: 리포트 카드 리스트 ────────────────────────── */}
-        <div className={styles.reportGrid}>
-          {filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 bg-[#161B22] border border-[#30363D] border-dashed rounded-xl">
-              <svg className="text-[#8B949E] mb-4" xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-              <p className="text-[#8B949E] text-lg font-medium">검색 결과가 없습니다.</p>
-              <p className="text-[#8B949E]/70 text-sm mt-1">다른 키워드나 필터로 검색해보세요.</p>
-            </div>
-          ) : (
-            filtered.map((item) => <ReportCard key={item.id} item={item} />)
-          )}
-        </div>
+        <AnalyticsDashboardSection />
+        <AnalyticsHistorySection />
       </div>
     </div>
   );
