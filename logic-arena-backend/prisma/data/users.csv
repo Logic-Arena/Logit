@@ -1,0 +1,7 @@
+user_id,provider,provider_user_id,login_id,password,email,name,profile_image,created_at
+1,local,,sowon_master,$2b$10$EixZAYVK1VzKNzM9fA3reO6Zpz.5w9S20SdfWz,sowon@logit.com,장소원,https://lh3.googleusercontent.com/a/default-user,2026-04-03T12:00:00Z
+2,local,,test_minimal,$2b$10$EixZAYVK1VzKNzM9fA3reO6Zpz.5w9S20SdfWz,,최소정보유저,,2026-04-02T11:00:00Z
+3,google,g_123456789,,,google_full@gmail.com,구글표준유저,https://api.dicebear.com/7.x/avataaars/svg?seed=master,2026-04-01T10:00:00Z
+4,google,g_987654321,,,google_no_email@gmail.com,구글이메일거부,https://lh3.googleusercontent.com/a/denied,2026-04-04T09:00:00Z
+5,kakao,k_1122334455,,,kakao_user@kakao.com,카카오유저,http://k.kakaocdn.net/dn/default.jpg,2026-04-05T15:30:00Z
+6,local,,long_name_user,$2b$10$EixZAYVK1VzKNzM9fA3reO6Zpz.5w9S20SdfWz,long@test.com,이름이아주아주아주아주긴사용자테스트,,2026-04-06T10:00:00Z
