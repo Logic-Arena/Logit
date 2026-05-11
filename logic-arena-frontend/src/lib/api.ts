@@ -1,14 +1,15 @@
 import type { Room, RoomMode, TopicMode } from '../types/room';
+import type { AuthUser } from '../store/useAuthStore';
+
+export type { AuthUser };
 
 const BASE = import.meta.env.VITE_API_URL as string;
 
-export interface AuthUser {
-  id: number;
-  provider: string;
-  username: string | null;
-  email: string | null;
-  name: string | null;
-  profile_image?: string | null;
+function authHeaders(): HeadersInit {
+  const token = localStorage.getItem('logic-arena-auth')
+    ? JSON.parse(localStorage.getItem('logic-arena-auth')!).state?.token
+    : null;
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 interface AuthResponse {
@@ -28,11 +29,16 @@ export async function createRoom(
   mode: RoomMode = 'free_debate',
   topicMode: TopicMode = 'ai_auto',
   topic?: string,
+  password?: string,
 ): Promise<Room> {
   const res = await fetch(`${BASE}/rooms`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title, mode, topicMode, ...(topic !== undefined && { topic }) }),
+    body: JSON.stringify({
+      title, mode, topicMode,
+      ...(topic !== undefined && { topic }),
+      ...(password !== undefined && { password }),
+    }),
   });
 
   if (!res.ok) {
@@ -60,6 +66,14 @@ export async function signupLocal(payload: {
     throw new Error((err as { error?: string }).error ?? '회원가입에 실패했습니다.');
   }
 
+  return res.json();
+}
+
+export async function getMe(): Promise<AuthUser> {
+  const res = await fetch(`${BASE}/auth/me`, {
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+  });
+  if (!res.ok) throw new Error('사용자 정보를 불러오지 못했습니다.');
   return res.json();
 }
 

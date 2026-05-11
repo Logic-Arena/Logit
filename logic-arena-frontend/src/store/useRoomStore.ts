@@ -1,64 +1,41 @@
 import { create } from 'zustand';
-import type { Room, Phase, VoteTally, VoteOption } from '../types/room';
+import type { Room, DebateResult, PlayerRole } from '../types/room';
+
+function deriveMyRole(room: Room, mySocketId: string): PlayerRole {
+  if (room.proPlayer?.socketId === mySocketId) return 'pro_player';
+  if (room.conPlayer?.socketId === mySocketId) return 'con_player';
+  return 'observer';
+}
 
 interface RoomState {
   room: Room | null;
+  myRole: PlayerRole | null;
   mySocketId: string;
-  voteTally: VoteTally;
-  // Actions
-  setRoom: (room: Room) => void;
+  debateResult: DebateResult | null;
+  setRoom: (room: Room, myRole?: PlayerRole) => void;
   updateRoom: (room: Room) => void;
-  setPhase: (phase: Phase, topic?: string) => void;
-  setVoteTally: (tally: VoteTally) => void;
   setMySocketId: (id: string) => void;
   resetRoom: () => void;
-  updateUserVote: (socketId: string, vote: VoteOption) => void;
-  resetUserVotes: () => void;
+  setDebateResult: (result: DebateResult) => void;
 }
 
 export const useRoomStore = create<RoomState>((set) => ({
   room: null,
+  myRole: null,
   mySocketId: '',
-  voteTally: { pro: 0, con: 0 },
+  debateResult: null,
 
-  setRoom: (room) => {
-    let pro = 0;
-    let con = 0;
-    for (const u of Object.values(room.users)) {
-      if (u.vote === 'pro') pro++;
-      else if (u.vote === 'con') con++;
-    }
-    set({ room, voteTally: { pro, con } });
-  },
+  setRoom: (room, myRole) =>
+    set(myRole !== undefined ? { room, myRole } : { room }),
 
-  updateRoom: (room) => set({ room }),
-
-  setPhase: (phase, topic) =>
-    set((state) => {
-      if (!state.room) return {};
-      return { room: { ...state.room, phase, topic: topic ?? state.room.topic } };
-    }),
-
-  setVoteTally: (tally) => set({ voteTally: tally }),
+  updateRoom: (room) => set((state) => ({
+    room,
+    myRole: state.mySocketId ? deriveMyRole(room, state.mySocketId) : state.myRole,
+  })),
 
   setMySocketId: (id) => set({ mySocketId: id }),
 
-  resetRoom: () => set({ room: null, mySocketId: '', voteTally: { pro: 0, con: 0 } }),
+  resetRoom: () => set({ room: null, myRole: null, mySocketId: '', debateResult: null }),
 
-  updateUserVote: (socketId, vote) =>
-    set((state) => {
-      if (!state.room) return {};
-      const users = { ...state.room.users };
-      if (users[socketId]) users[socketId] = { ...users[socketId], vote };
-      return { room: { ...state.room, users } };
-    }),
-
-  resetUserVotes: () =>
-    set((state) => {
-      if (!state.room) return {};
-      const users = Object.fromEntries(
-        Object.entries(state.room.users).map(([id, u]) => [id, { ...u, vote: null }])
-      );
-      return { room: { ...state.room, users }, voteTally: { pro: 0, con: 0 } };
-    }),
+  setDebateResult: (result) => set({ debateResult: result }),
 }));

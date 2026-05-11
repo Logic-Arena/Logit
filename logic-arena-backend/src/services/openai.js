@@ -17,63 +17,200 @@ const FALLBACK_TOPICS = [
   '대학 교육은 무상으로 제공되어야 한다',
 ];
 
-/**
- * @param {string[]} previousTopics - Already-used topics to avoid repetition
- * @returns {Promise<string>} - A new debate topic
- */
+async function ask(prompt) {
+  const res = await client.chat.completions.create({
+    model: MODEL,
+    messages: [{ role: 'user', content: prompt }],
+  });
+  return res.choices[0].message.content.trim();
+}
+
 export async function generateTopic(previousTopics = []) {
   try {
-    let prompt =
-      '찬반 토론이 가능한 주제를 한국어로 하나만 추천해주세요. 주제만 답해주세요, 다른 설명은 필요 없습니다.';
-
+    let prompt = '찬반 토론이 가능한 주제를 한국어로 하나만 추천해주세요. 주제만 답해주세요.';
     if (previousTopics.length > 0) {
-      prompt += `\n다음 주제들은 이미 사용했으므로 제외해주세요: ${previousTopics.join(', ')}`;
+      prompt += `\n이미 사용한 주제는 제외해주세요: ${previousTopics.join(', ')}`;
     }
-
-    const res = await client.chat.completions.create({
-      model: MODEL,
-      messages: [{ role: 'user', content: prompt }],
-    });
-    return res.choices[0].message.content.trim();
-  } catch (err) {
-    console.error('[OpenAI] generateTopic 실패, 폴백 주제 사용.');
-    console.error('[OpenAI] Error detail:', err.message);
+    return await ask(prompt);
+  } catch {
     const unused = FALLBACK_TOPICS.filter((t) => !previousTopics.includes(t));
     const pool = unused.length > 0 ? unused : FALLBACK_TOPICS;
     return pool[Math.floor(Math.random() * pool.length)];
   }
 }
 
-/**
- * @param {object} params
- * @param {string} params.topic - The debate topic
- * @param {'pro'|'con'} params.vote - AI's stance
- * @param {Array<{username: string, content: string, vote: 'pro'|'con'}>} params.chatHistory
- * @param {string} params.triggerMessage - The message the AI is responding to
- * @returns {Promise<string>} - AI response text
- */
-export async function generateAiResponse({ topic, vote, chatHistory, triggerMessage }) {
+export async function generateArgument({ topic, vote }) {
   const stance = vote === 'pro' ? '찬성' : '반대';
-
-  let historyText = '';
-  if (chatHistory.length > 0) {
-    historyText =
-      '\n\n대화 내역:\n' +
-      chatHistory
-        .slice(-10)
-        .map((m) => `${m.username}: ${m.content}`)
-        .join('\n');
+  const prompt =
+    `토론 주제: "${topic}"\n` +
+    `당신은 이 주제에 대해 ${stance} 입장입니다.\n` +
+    `${stance} 입장의 핵심 주장을 논리적으로 3-5문장으로 작성해주세요.`;
+  try {
+    return await ask(prompt);
+  } catch {
+    return `[AI ${stance}] ${topic}에 대한 ${stance} 주장을 준비 중입니다.`;
   }
+}
+
+export async function generateRebuttal({ topic, vote, opponentArguments }) {
+  const stance = vote === 'pro' ? '찬성' : '반대';
+  const opponentStance = vote === 'pro' ? '반대' : '찬성';
+  const opponentText = opponentArguments.filter(Boolean).join('\n\n');
+  const prompt =
+    `토론 주제: "${topic}"\n` +
+    `당신은 ${stance} 입장입니다.\n\n` +
+    `상대방(${opponentStance}) 주장:\n${opponentText}\n\n` +
+    `위 주장들에 대해 논리적으로 반론을 2-4문장으로 작성해주세요.`;
+  try {
+    return await ask(prompt);
+  } catch {
+    return `[AI ${stance}] 상대방 주장에 대한 반론을 준비 중입니다.`;
+  }
+}
+
+export async function generateDefense({ topic, vote, rebuttalContent }) {
+  const stance = vote === 'pro' ? '찬성' : '반대';
+  const opponentStance = vote === 'pro' ? '반대' : '찬성';
+  const prompt =
+    `토론 주제: "${topic}"\n` +
+    `당신은 ${stance} 입장입니다.\n\n` +
+    `상대방(${opponentStance})의 반론:\n${rebuttalContent}\n\n` +
+    `이 반론에 대해 당신의 입장을 변론해주세요. 2-4문장으로 작성해주세요.`;
+  try {
+    return await ask(prompt);
+  } catch {
+    return `[AI ${stance}] 변론을 준비 중입니다.`;
+  }
+}
+
+export async function generateCounter({ topic, vote, defenseContent }) {
+  const stance = vote === 'pro' ? '찬성' : '반대';
+  const opponentStance = vote === 'pro' ? '반대' : '찬성';
+  const prompt =
+    `토론 주제: "${topic}"\n` +
+    `당신은 ${stance} 입장입니다.\n\n` +
+    `상대방(${opponentStance})의 변론:\n${defenseContent}\n\n` +
+    `이 변론에 대해 재반론을 2-3문장으로 작성해주세요.`;
+  try {
+    return await ask(prompt);
+  } catch {
+    return `[AI ${stance}] 재반론을 준비 중입니다.`;
+  }
+}
+
+export async function generateCoaching({ topic, content }) {
+  const c = content;
+  const proP = [c.pro_argument, c.pro_p_rebuttal, c.pro_p_counter, c.con_p_defense_player, c.con_a_defense_player, c.pro_final].filter(Boolean).join('\n');
+  const conP = [c.con_argument, c.con_p_rebuttal, c.con_p_counter, c.pro_p_defense_player, c.pro_a_defense_player, c.con_final].filter(Boolean).join('\n');
+  const proAi = [c.pro_ai_argument, c.pro_a_rebuttal, c.pro_a_counter].filter(Boolean).join('\n');
+  const conAi = [c.con_ai_argument, c.con_a_rebuttal, c.con_a_counter].filter(Boolean).join('\n');
 
   const prompt =
-    `당신은 "${topic}" 주제에 대해 ${stance} 입장에서 토론하는 AI 참가자입니다.` +
+    `토론 주제: "${topic}"\n\n` +
+    `아래는 토론 참가자 4명의 전체 발언입니다.\n\n` +
+    (proP ? `【찬성P 발언】\n${proP}\n\n` : '') +
+    (conP ? `【반대P 발언】\n${conP}\n\n` : '') +
+    (proAi ? `【찬성AI 발언】\n${proAi}\n\n` : '') +
+    (conAi ? `【반대AI 발언】\n${conAi}\n\n` : '') +
+    `당신은 토론 코치입니다. 위 발언을 종합적으로 분석하여 필요한 참가자에게 핵심 피드백을 주세요.\n` +
+    `모든 참가자에게 줄 필요는 없습니다. 개선이 필요한 부분이 있는 참가자를 선택해 구체적으로 조언하세요.\n` +
+    `형식: 【참가자명에게】 조언 내용 (각 2-3문장, 한국어로)`;
+  try {
+    return await ask(prompt);
+  } catch {
+    return 'AI 훈수 분석 중 오류가 발생했습니다.';
+  }
+}
+
+export async function judgeDebate({ topic, content }) {
+  const summary = buildDebateSummary(content);
+  if (!summary) return makeDrawResult('토론 내용이 없어 무승부로 처리합니다.');
+
+  const prompt =
+    `토론 주제: "${topic}"\n\n` +
+    `${summary}\n\n` +
+    `당신은 공정한 토론 심판입니다. 위 전체 발언을 바탕으로 참가자 4명(찬성P, 반대P, 찬성AI, 반대AI)을 동일한 기준으로 채점하세요.\n\n` +
+    `채점 기준 (각 0~25점, 합계 100점):\n` +
+    `- 논리성: 주장의 논리적 일관성과 구조\n` +
+    `- 근거: 사실에 기반한 구체적 근거 제시\n` +
+    `- 설득력: 상대방과 청중을 설득하는 힘\n` +
+    `- 반론: 상대 주장에 대한 효과적인 반박\n\n` +
+    `반드시 아래 JSON 형식으로만 답하세요 (설명 없이 JSON만):\n` +
+    `{"winner":"pro또는con또는draw","summary":"전체 토론 총평 2-3문장","scores":[` +
+    `{"name":"찬성P","vote":"pro","type":"player","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"total":0,"rank":0,"advice":"조언"},` +
+    `{"name":"반대P","vote":"con","type":"player","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"total":0,"rank":0,"advice":"조언"},` +
+    `{"name":"찬성AI","vote":"pro","type":"ai","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"total":0,"rank":0,"advice":"조언"},` +
+    `{"name":"반대AI","vote":"con","type":"ai","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"total":0,"rank":0,"advice":"조언"}` +
+    `]}`;
+
+  try {
+    const raw = await ask(prompt);
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('JSON 파싱 실패');
+    const parsed = JSON.parse(jsonMatch[0]);
+    if (!parsed.scores || !Array.isArray(parsed.scores)) throw new Error('scores 없음');
+    // total 재계산, rank 정렬
+    parsed.scores.forEach((s) => {
+      s.total = (s.logic ?? 0) + (s.evidence ?? 0) + (s.persuasion ?? 0) + (s.rebuttal ?? 0);
+    });
+    const sorted = [...parsed.scores].sort((a, b) => b.total - a.total);
+    sorted.forEach((s, i) => { s.rank = i + 1; });
+    return parsed;
+  } catch {
+    return makeDrawResult('AI 판정에 실패하여 무승부로 처리합니다.');
+  }
+}
+
+function makeDrawResult(reason) {
+  const defaultScore = (name, vote, type) => ({
+    name, vote, type, logic: 0, evidence: 0, persuasion: 0, rebuttal: 0, total: 0, rank: 0, advice: reason,
+  });
+  return {
+    winner: 'draw',
+    summary: reason,
+    scores: [
+      defaultScore('찬성P', 'pro', 'player'),
+      defaultScore('반대P', 'con', 'player'),
+      defaultScore('찬성AI', 'pro', 'ai'),
+      defaultScore('반대AI', 'con', 'ai'),
+    ],
+  };
+}
+
+function buildDebateSummary(content) {
+  const c = content;
+  const sections = [];
+  const sec = (title, items) => {
+    const lines = items.filter(([, v]) => v).map(([k, v]) => `  - ${k}: ${v}`);
+    if (lines.length) sections.push(`【${title}】\n${lines.join('\n')}`);
+  };
+  sec('찬성P', [
+    ['주장', c.pro_argument], ['반론(vs반대P)', c.pro_p_rebuttal], ['재반론', c.pro_p_counter],
+    ['변론(vs반대P반론)', c.con_p_defense_player], ['변론(vs반대AI)', c.con_a_defense_player], ['최종', c.pro_final],
+  ]);
+  sec('반대P', [
+    ['주장', c.con_argument], ['반론(vs찬성P)', c.con_p_rebuttal], ['재반론', c.con_p_counter],
+    ['변론(vs찬성P반론)', c.pro_p_defense_player], ['변론(vs찬성AI)', c.pro_a_defense_player], ['최종', c.con_final],
+  ]);
+  sec('찬성AI', [
+    ['주장', c.pro_ai_argument], ['반론(vs반대)', c.pro_a_rebuttal], ['재반론', c.pro_a_counter],
+  ]);
+  sec('반대AI', [
+    ['주장', c.con_ai_argument], ['반론(vs찬성)', c.con_a_rebuttal], ['재반론', c.con_a_counter],
+  ]);
+  return sections.join('\n\n') || null;
+}
+
+// Legacy - kept for compatibility
+export async function generateAiResponse({ topic, vote, chatHistory, triggerMessage }) {
+  const stance = vote === 'pro' ? '찬성' : '반대';
+  const historyText = chatHistory.length > 0
+    ? '\n\n대화 내역:\n' + chatHistory.slice(-10).map((m) => `${m.username}: ${m.content}`).join('\n')
+    : '';
+  const prompt =
+    `당신은 "${topic}" 주제에 대해 ${stance} 입장에서 토론하는 AI입니다.` +
     historyText +
     `\n\n상대방 발언: "${triggerMessage}"\n\n` +
-    `위 발언에 대해 ${stance} 입장에서 논리적으로 1-3문장 이내로 간결하게 답변하세요.`;
-
-  const res = await client.chat.completions.create({
-    model: MODEL,
-    messages: [{ role: 'user', content: prompt }],
-  });
-  return res.choices[0].message.content.trim();
+    `위 발언에 대해 ${stance} 입장에서 1-3문장으로 답변하세요.`;
+  return await ask(prompt);
 }

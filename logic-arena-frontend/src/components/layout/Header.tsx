@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom';
 import { useSidebar } from '../../hooks/useSidebar';
+import { useAuthStore } from '../../store/useAuthStore';
 
 export function Header() {
   const { toggleSidebar } = useSidebar();
+  const user = useAuthStore((s) => s.user);
 
   return (
     <header className="app-header">
@@ -27,6 +29,14 @@ export function Header() {
       <Link to="/" className="app-header__logo">
         Logit
       </Link>
+
+      <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        {user && (
+          <Link to="/mypage" className="btn btn--ghost" style={{ padding: '7px 14px' }}>
+            마이페이지
+          </Link>
+        )}
+      </div>
     </header>
   );
 }

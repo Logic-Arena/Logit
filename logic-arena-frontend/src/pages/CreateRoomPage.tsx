@@ -7,9 +7,10 @@ import type { RoomMode, TopicMode } from '../types/room';
 
 export function CreateRoomPage() {
   const [title, setTitle] = useState('');
-  const [mode, setMode] = useState<RoomMode>('free_debate');
+  const [mode, setMode] = useState<RoomMode>('ai_debate');
   const [topicMode, setTopicMode] = useState<TopicMode>('ai_auto');
   const [topic, setTopic] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -34,6 +35,7 @@ export function CreateRoomPage() {
         mode,
         topicMode,
         topicMode === 'manual' ? topic.trim() : undefined,
+        password.trim() || undefined,
       );
       navigate(`/rooms/${room.id}`);
     } catch (err) {
@@ -109,6 +111,18 @@ export function CreateRoomPage() {
             />
           </div>
         )}
+
+        <div className="form-field">
+          <label className="form-label" htmlFor="password">비밀번호 (선택)</label>
+          <input
+            id="password"
+            className="form-input"
+            type="password"
+            placeholder="비밀번호 없음"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </div>
 
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
           <button type="button" className="btn btn--ghost" onClick={() => navigate('/')}>

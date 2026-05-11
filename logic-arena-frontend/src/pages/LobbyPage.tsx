@@ -5,6 +5,7 @@ import { socket } from '../lib/socket';
 import { RoomList } from '../components/lobby/RoomList';
 import { UserTierWidget } from '../components/lobby/UserTierWidget';
 import { useSidebar } from '../hooks/useSidebar';
+import { useAuthStore } from '../store/useAuthStore';
 import type { Room } from '../types/room';
 
 const API_URL = import.meta.env.VITE_API_URL as string;
@@ -14,6 +15,7 @@ export function LobbyPage() {
   const [loading, setLoading] = useState(true);
   const { sidebarOpen, closeSidebar } = useSidebar();
   const navigate = useNavigate();
+  const { user, logout } = useAuthStore();
 
   const handleGoogleLogin = () => {
     window.location.href = `${API_URL}/auth/google`;
@@ -57,21 +59,43 @@ export function LobbyPage() {
           </div>
 
           <div className="lobby-actions__controls">
-            <button className="btn btn--primary" onClick={() => navigate('/rooms/new')}>
+            <button
+              className="btn btn--primary"
+              onClick={() => user ? navigate('/rooms/new') : navigate('/auth/login')}
+            >
               + 방 만들기
             </button>
-            <Link className="btn btn--ghost" to="/auth/login">
-              자체 로그인
-            </Link>
-            <Link className="btn btn--ghost" to="/auth/signup">
-              회원가입
-            </Link>
-            <button className="btn btn--ghost" onClick={handleGoogleLogin}>
-              구글 로그인
-            </button>
-            <button className="btn btn--ghost" onClick={handleKakaoLogin}>
-              카카오 로그인
-            </button>
+            {user ? (
+              <>
+                <span className="lobby-user-greeting">
+                  {user.name ?? user.username ?? user.email}님
+                </span>
+                <button
+                  className="btn btn--ghost"
+                  onClick={() => {
+                    logout();
+                    navigate(0);
+                  }}
+                >
+                  로그아웃
+                </button>
+              </>
+            ) : (
+              <>
+                <Link className="btn btn--ghost" to="/auth/login">
+                  자체 로그인
+                </Link>
+                <Link className="btn btn--ghost" to="/auth/signup">
+                  회원가입
+                </Link>
+                <button className="btn btn--ghost" onClick={handleGoogleLogin}>
+                  구글 로그인
+                </button>
+                <button className="btn btn--ghost" onClick={handleKakaoLogin}>
+                  카카오 로그인
+                </button>
+              </>
+            )}
           </div>
         </div>
 
