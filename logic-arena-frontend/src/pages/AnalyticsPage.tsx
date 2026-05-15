@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getDebateHistory, getTrainingRecommendation, createRoom, type DebateHistoryItem, type TrainingRecommendation } from "../lib/api";
 import { useUserStore } from "../store/useUserStore";
@@ -53,85 +53,16 @@ function getGrade(score: number): Grade {
   return "C";
 }
 
-/* ─── 목 데이터 ─────────────────────────────────────────────── */
-const RADAR_DATA = [
-  { axis: "근거 제시", userValue: 82, avgValue: 65 },
-  { axis: "반박 능력", userValue: 68, avgValue: 55 },
-  { axis: "논리력", userValue: 75, avgValue: 60 },
-  { axis: "일관성", userValue: 88, avgValue: 62 },
-  { axis: "설득력", userValue: 71, avgValue: 58 },
-];
-
-const LINE_DATA = [
-  { date: "02/10", score: 54, topic: "사형제도 폐지 여부" },
-  { date: "02/17", score: 61, topic: "학생 스마트폰 교내 사용 금지" },
-  { date: "02/24", score: 65, topic: "수행평가 절대평가 전환" },
-  { date: "03/03", score: 72, topic: "인공지능 저작권 찬반" },
-  { date: "03/08", score: 78, topic: "원전 에너지 확대 정책" },
-  { date: "03/13", score: 88, topic: "기본소득제 도입 찬반" },
-];
-
-const KPI_DATA = [
-  {
-    label: "평균 점수",
-    value: "76점",
-    trend: "+4점",
-    trendUp: true,
-    icon: (
-      <svg
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="#8B5CF6"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M7.5 14.25v2.25m3-4.5v4.5m3-6.75v6.75m3-9v9M6 20.25h12A2.25 2.25 0 0 0 20.25 18V6A2.25 2.25 0 0 0 18 3.75H6A2.25 2.25 0 0 0 3.75 6v12A2.25 2.25 0 0 0 6 20.25Z" />
-      </svg>
-    ),
-  },
-  {
-    label: "총 토론 횟수",
-    value: "34회",
-    trend: "+2회 (이번 주)",
-    trendUp: true,
-    icon: (
-      <svg
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="#8B5CF6"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 0 1-.825-.242m9.345-8.334a2.126 2.126 0 0 0-.476-.095 48.64 48.64 0 0 0-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0 0 11.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
-      </svg>
-    ),
-  },
-  {
-    label: "최근 성장률",
-    value: "12%",
-    trend: "상위 15%",
-    trendUp: true,
-    icon: (
-      <svg
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="#8B5CF6"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941" />
-      </svg>
-    ),
-  },
+const KPI_ICONS = [
+  <svg key="score" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M7.5 14.25v2.25m3-4.5v4.5m3-6.75v6.75m3-9v9M6 20.25h12A2.25 2.25 0 0 0 20.25 18V6A2.25 2.25 0 0 0 18 3.75H6A2.25 2.25 0 0 0 3.75 6v12A2.25 2.25 0 0 0 6 20.25Z" />
+  </svg>,
+  <svg key="count" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 0 1-.825-.242m9.345-8.334a2.126 2.126 0 0 0-.476-.095 48.64 48.64 0 0 0-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0 0 11.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
+  </svg>,
+  <svg key="growth" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941" />
+  </svg>,
 ];
 
 
@@ -190,8 +121,10 @@ function RadarCustomTick(props: any) {
   );
 }
 
+interface KpiCardData { label: string; value: string; trend: string; trendUp: boolean; icon: React.ReactElement; }
+
 /* ─── 하위 컴포넌트들 ────────────────────────────────────────── */
-function KPICard({ data }: { data: (typeof KPI_DATA)[0] }) {
+function KPICard({ data }: { data: KpiCardData }) {
   return (
     <div className={styles.kpiCard}>
       <div className={styles.kpiHeader}>
@@ -396,7 +329,7 @@ export function AnalyticsDashboardSection({ hideKpi = false }: { hideKpi?: boole
   }, []);
 
   const lineData = useMemo(() => {
-    if (history.length === 0) return LINE_DATA;
+    if (history.length === 0) return [];
     return [...history]
       .sort((a, b) => new Date(a.played_at).getTime() - new Date(b.played_at).getTime())
       .slice(-10)
@@ -411,7 +344,13 @@ export function AnalyticsDashboardSection({ hideKpi = false }: { hideKpi?: boole
   }, [history]);
 
   const radarData = useMemo(() => {
-    if (history.length === 0) return RADAR_DATA;
+    if (history.length === 0) return [
+      { axis: "근거 제시", userValue: 0, avgValue: 65 },
+      { axis: "반박 능력", userValue: 0, avgValue: 55 },
+      { axis: "논리력",   userValue: 0, avgValue: 60 },
+      { axis: "일관성",   userValue: 0, avgValue: 62 },
+      { axis: "설득력",   userValue: 0, avgValue: 58 },
+    ];
     const avg = (vals: number[]) => Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
     return [
       { axis: "근거 제시", userValue: avg(history.map((h) => h.evidence)), avgValue: 65 },
@@ -438,14 +377,15 @@ export function AnalyticsDashboardSection({ hideKpi = false }: { hideKpi?: boole
     return { avgScore, totalDebates, growthRate };
   }, [user, history]);
 
-  const kpiCards = [
-    { ...KPI_DATA[0], value: `${liveKpi.avgScore}점`, trend: "누적 평균 점수", trendUp: true },
-    { ...KPI_DATA[1], value: `${liveKpi.totalDebates}회`, trend: "총 누적 횟수", trendUp: true },
+  const kpiCards: KpiCardData[] = [
+    { label: "평균 점수",   value: `${liveKpi.avgScore}점`,  trend: "누적 평균 점수", trendUp: true, icon: KPI_ICONS[0] },
+    { label: "총 토론 횟수", value: `${liveKpi.totalDebates}회`, trend: "총 누적 횟수",  trendUp: true, icon: KPI_ICONS[1] },
     {
-      ...KPI_DATA[2],
+      label: "최근 성장률",
       value: `${liveKpi.growthRate >= 0 ? '+' : ''}${liveKpi.growthRate}%`,
       trend: liveKpi.growthRate >= 0 ? "성장 중" : "하락 중",
       trendUp: liveKpi.growthRate >= 0,
+      icon: KPI_ICONS[2],
     },
   ];
 
@@ -482,6 +422,11 @@ export function AnalyticsDashboardSection({ hideKpi = false }: { hideKpi?: boole
               <h2 className={styles.chartTitle}>논리 점수 성장 추이</h2>
             </div>
             <div className={styles.chartCardFlex}>
+              {lineData.length === 0 ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#8B949E', fontSize: '13px' }}>
+                  토론을 완료하면 점수 추이가 표시됩니다
+                </div>
+              ) : (
               <ResponsiveContainer width="100%" height="100%" debounce={0}>
                 <AreaChart
                   data={lineData}
@@ -538,6 +483,7 @@ export function AnalyticsDashboardSection({ hideKpi = false }: { hideKpi?: boole
                   />
                 </AreaChart>
               </ResponsiveContainer>
+              )}
             </div>
           </div>
 
