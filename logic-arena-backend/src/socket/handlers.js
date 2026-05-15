@@ -312,24 +312,93 @@ function checkFinalDone(io, roomId) {
 
 // ── Disconnect helper ─────────────────────────────────────────
 
-function handleLeaveInternal(io, socket) {
+// 페이즈 → 단계 번호 (2 이하: 단순 승패, 3 이상: 부분 리포트 생성)
+const PHASE_STAGE = {
+  topic_selection: 1, arguing: 2,
+  pro_p_rebuttal: 3, pro_p_defense: 3, pro_p_counter: 3,
+  con_p_rebuttal: 4, con_p_defense: 4, con_p_counter: 4,
+  pro_a_rebuttal: 5, pro_a_defense: 5, pro_a_counter: 5,
+  con_a_rebuttal: 6, con_a_defense: 6, con_a_counter: 6,
+  coaching: 7, final_argument: 7, judging: 8,
+};
+
+async function handleLeaveInternal(io, socket) {
   const roomId = socket.data.roomId;
   if (!roomId) return;
+
+  const room = getRoom(roomId);
+  const phase = room?.phase;
+
+  // 퇴장자의 진영 및 상대방 승리 여부 파악 (removePlayerFromRoom 전에)
+  const leaverIsPro = room?.proPlayer?.socketId === socket.id;
+  const leaverIsCon = room?.conPlayer?.socketId === socket.id;
+  const winnerVote = leaverIsPro ? 'con' : leaverIsCon ? 'pro' : null;
 
   const result = removePlayerFromRoom(roomId, socket.id);
   socket.data.roomId = null;
   socket.leave(roomId);
 
   if (!result) return;
-  const { room } = result;
+  const { room: updatedRoom } = result;
 
-  if (!room) {
+  const stage = PHASE_STAGE[phase] ?? 0;
+  const isActiveGame = stage > 0 && winnerVote !== null;
+
+  if (isActiveGame) {
+    clearPhaseTimer(roomId);
+
+    const participants = [];
+    if (room.proPlayer) participants.push({ userId: room.proPlayer.userId, vote: 'pro' });
+    if (room.conPlayer) participants.push({ userId: room.conPlayer.userId, vote: 'con' });
+
+    if (stage <= 2) {
+      // 2단계 이하: 단순 승패만 처리, 리포트 없음
+      const earlyResult = {
+        winner: winnerVote,
+        summary: '상대방이 퇴장하여 게임이 조기 종료되었습니다.',
+        scores: [],
+      };
+      if (updatedRoom) setResult(roomId, earlyResult);
+      await updateStats(participants, earlyResult.winner).catch(() => {});
+      await saveDebateHistory(participants, earlyResult, room.topic ?? '').catch(() => {});
+      io.to(roomId).emit('debate_ended', { result: earlyResult, room: getRoomSerialized(roomId) });
+      if (updatedRoom) await startPhase(io, roomId, 'ended');
+    } else {
+      // 3단계 이상: 현재까지 내용으로 부분 리포트 생성
+      try {
+        const judgeResult = await judgeDebate({ topic: room.topic ?? '', content: room.content });
+        judgeResult.winner = winnerVote; // 퇴장자는 무조건 패배
+        if (updatedRoom) setResult(roomId, judgeResult);
+        await updateStats(participants, judgeResult.winner).catch(() => {});
+        await saveDebateHistory(participants, judgeResult, room.topic ?? '').catch(() => {});
+        io.to(roomId).emit('debate_ended', { result: judgeResult, room: getRoomSerialized(roomId) });
+        if (updatedRoom) await startPhase(io, roomId, 'ended');
+      } catch (e) {
+        console.error('[EarlyExit] 판정 실패:', e.message);
+        const fallback = {
+          winner: winnerVote,
+          summary: '상대방이 퇴장하여 게임이 종료되었습니다.',
+          scores: [],
+        };
+        if (updatedRoom) setResult(roomId, fallback);
+        await updateStats(participants, fallback.winner).catch(() => {});
+        await saveDebateHistory(participants, fallback, room.topic ?? '').catch(() => {});
+        io.to(roomId).emit('debate_ended', { result: fallback, room: getRoomSerialized(roomId) });
+        if (updatedRoom) await startPhase(io, roomId, 'ended');
+      }
+    }
+
+    io.emit('room_list', getAllRooms());
+    return;
+  }
+
+  if (!updatedRoom) {
     clearPhaseTimer(roomId);
     io.emit('room_list', getAllRooms());
     return;
   }
 
-  io.to(roomId).emit('player_left', { room });
+  io.to(roomId).emit('player_left', { room: updatedRoom });
   io.emit('room_list', getAllRooms());
 }
 

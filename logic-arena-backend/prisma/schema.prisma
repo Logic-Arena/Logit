@@ -49,3 +49,26 @@ model DebateHistory {
 
   user       User     @relation(fields: [user_id], references: [user_id])
 }
+
+model CommunityTopic {
+  id         Int             @id @default(autoincrement())
+  question   String
+  category   String
+  badge      String?
+  pro_votes  Int             @default(0)
+  con_votes  Int             @default(0)
+  expires_at DateTime
+  created_at DateTime        @default(now())
+  votes      CommunityVote[]
+}
+
+model CommunityVote {
+  id         Int            @id @default(autoincrement())
+  topic_id   Int
+  user_id    Int
+  vote       String
+  created_at DateTime       @default(now())
+  topic      CommunityTopic @relation(fields: [topic_id], references: [id])
+
+  @@unique([topic_id, user_id])
+}

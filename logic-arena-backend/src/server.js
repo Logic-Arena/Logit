@@ -8,6 +8,8 @@ import { PORT, CORS_ORIGIN, SESSION_SECRET } from './config.js';
 import roomsRouter from './routes/rooms.js';
 import authRouter from './routes/auth.js';
 import historyRouter from './routes/history.js';
+import communityRouter from './routes/community.js';
+import trainingRouter from './routes/training.js';
 import { registerHandlers } from './socket/handlers.js';
 
 const app = express();
@@ -41,6 +43,8 @@ app.get('/health', (_req, res) => {
 app.use('/rooms', roomsRouter);
 app.use('/auth', authRouter);
 app.use('/debate-history', historyRouter);
+app.use('/community-topics', communityRouter);
+app.use('/training-recommendation', trainingRouter);
 
 io.use((socket, next) => {
   socket.data.roomId = null;

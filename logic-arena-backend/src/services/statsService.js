@@ -44,6 +44,8 @@ export async function saveDebateHistory(participants, result, topic) {
   const dbParticipants = participants.filter((p) => /^\d+$/.test(p.userId));
   if (dbParticipants.length === 0) return;
 
+  const safeTopic = topic?.trim() || '(주제 없음)';
+
   await Promise.all(
     dbParticipants.map(async (p) => {
       const userId = parseInt(p.userId, 10);
@@ -52,13 +54,14 @@ export async function saveDebateHistory(participants, result, topic) {
       const resultLabel = isDraw ? 'draw' : isWinner ? 'win' : 'lose';
 
       const scoreData = result.scores?.find((s) => s.vote === p.vote && s.type === 'player');
+      const score = scoreData?.total ?? 0;
 
       await prisma.debateHistory.create({
         data: {
           user_id: userId,
-          topic,
+          topic: safeTopic,
           position: p.vote,
-          score: scoreData?.total ?? 0,
+          score,
           logic: scoreData?.logic ?? 0,
           evidence: scoreData?.evidence ?? 0,
           persuasion: scoreData?.persuasion ?? 0,
@@ -67,6 +70,23 @@ export async function saveDebateHistory(participants, result, topic) {
           result: resultLabel,
         },
       });
+
+      // score_average 갱신 (실패해도 이력 생성은 유지)
+      try {
+        const allScores = await prisma.debateHistory.findMany({
+          where: { user_id: userId },
+          select: { score: true },
+        });
+        if (allScores.length > 0) {
+          const avg = allScores.reduce((s, h) => s + h.score, 0) / allScores.length;
+          await prisma.userStats.update({
+            where: { user_id: userId },
+            data: { score_average: Math.round(avg * 10) / 10 },
+          });
+        }
+      } catch (e) {
+        console.error('[saveDebateHistory] score_average 갱신 실패:', e.message);
+      }
     })
   );
 }

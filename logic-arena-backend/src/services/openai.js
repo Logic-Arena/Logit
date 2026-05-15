@@ -227,6 +227,65 @@ function buildDebateSummary(content) {
   return sections.join('\n\n') || null;
 }
 
+export async function generateTrainingRecommendation({ weakScores, recentTopics }) {
+  const weakPoints = [...weakScores]
+    .sort((a, b) => a.score - b.score)
+    .slice(0, 2)
+    .map((w) => `${w.axis} (평균 ${w.score}점)`)
+    .join(', ');
+
+  const recentText = recentTopics.length > 0 ? recentTopics.slice(0, 3).join(', ') : '없음';
+
+  const prompt =
+    `당신은 토론 훈련 코치입니다.\n` +
+    `사용자의 최근 토론 분석:\n` +
+    `- 취약한 영역: ${weakPoints}\n` +
+    `- 최근 토론 주제: ${recentText}\n\n` +
+    `위 데이터를 바탕으로 오늘의 맞춤 훈련을 추천해주세요.\n` +
+    `반드시 아래 JSON 형식으로만 답하세요 (설명 없이 JSON만):\n` +
+    `{"title":"훈련 제목 (10~20자)","description":"훈련 설명 (2~3문장, 왜 이 훈련이 필요한지와 구체적 방법 포함)","topic":"추천 토론 주제 (찬반 논쟁 가능한 한국어 주제)"}`;
+
+  try {
+    const raw = await ask(prompt);
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('JSON 파싱 실패');
+    return JSON.parse(jsonMatch[0]);
+  } catch {
+    return {
+      title: '반박 논리 강화 훈련',
+      description: '상대방 주장을 정확히 파악하고 논리적으로 재반박하는 연습이 필요합니다. 감정적 표현을 피하고 구체적 근거로 반박하는 방식을 연습해보세요.',
+      topic: '인공지능이 인간의 창의성을 대체할 수 있다',
+    };
+  }
+}
+
+export async function generateCommunityTopics() {
+  const prompt =
+    `현재 시사적으로 논쟁이 활발한 찬반 토론 주제 3개를 생성해주세요.\n` +
+    `일반인이 쉽게 의견을 가질 수 있는 주제로, 질문형으로 작성해주세요.\n` +
+    `반드시 아래 JSON 형식으로만 답하세요 (설명 없이 JSON만):\n` +
+    `[{"question":"~, 찬성하시나요? 형식 질문 (25자 이내)","category":"교육/기술·사회/환경/정치/문화 중 하나"},` +
+    `{"question":"질문","category":"카테고리"},{"question":"질문","category":"카테고리"}]`;
+
+  try {
+    const raw = await ask(prompt);
+    const jsonMatch = raw.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) throw new Error('JSON 파싱 실패');
+    const topics = JSON.parse(jsonMatch[0]);
+    return topics.slice(0, 3).map((t, i) => ({
+      question: t.question,
+      category: t.category ?? '시사',
+      badge: i === 0 ? 'HOT' : i === 2 ? 'NEW' : null,
+    }));
+  } catch {
+    return [
+      { question: '학교 스마트폰 전면 금지, 찬성하시나요?', category: '교육', badge: 'HOT' },
+      { question: '대입 수능, 절대평가로 전환해야 한다', category: '교육', badge: null },
+      { question: 'AI 면접관 도입, 공정한가?', category: '기술·사회', badge: 'NEW' },
+    ];
+  }
+}
+
 // Legacy - kept for compatibility
 export async function generateAiResponse({ topic, vote, chatHistory, triggerMessage }) {
   const stance = vote === 'pro' ? '찬성' : '반대';
