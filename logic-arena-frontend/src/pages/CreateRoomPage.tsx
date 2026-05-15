@@ -7,14 +7,15 @@ import type { RoomMode, TopicMode } from '../types/room';
 
 export function CreateRoomPage() {
   const [title, setTitle] = useState('');
-  const [mode, setMode] = useState<RoomMode>('free_debate');
+  const [mode, setMode] = useState<RoomMode>('ai_debate');
   const [topicMode, setTopicMode] = useState<TopicMode>('ai_auto');
   const [topic, setTopic] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     const trimmed = title.trim();
     if (!trimmed) {
@@ -34,6 +35,7 @@ export function CreateRoomPage() {
         mode,
         topicMode,
         topicMode === 'manual' ? topic.trim() : undefined,
+        password.trim() || undefined,
       );
       navigate(`/rooms/${room.id}`);
     } catch (err) {
@@ -46,7 +48,8 @@ export function CreateRoomPage() {
   return (
     <div className="page form-page">
       <h1 className="page__title">새 토론방 만들기</h1>
-      <form className="form-card" onSubmit={handleSubmit}>
+      <div className="form-card">
+      <form className="form-card__body" onSubmit={handleSubmit}>
         <div className="form-field">
           <label className="form-label" htmlFor="title">방 제목</label>
           <input
@@ -110,6 +113,18 @@ export function CreateRoomPage() {
           </div>
         )}
 
+        <div className="form-field">
+          <label className="form-label" htmlFor="password">비밀번호 (선택)</label>
+          <input
+            id="password"
+            className="form-input"
+            type="password"
+            placeholder="비밀번호 없음"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </div>
+
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
           <button type="button" className="btn btn--ghost" onClick={() => navigate('/')}>
             취소
@@ -119,6 +134,7 @@ export function CreateRoomPage() {
           </button>
         </div>
       </form>
+      </div>
     </div>
   );
 }

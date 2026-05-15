@@ -18,7 +18,9 @@ import {
   loginLocalUser,
   serializeAuthUser,
   createAccessToken,
+  getUserWithStats,
 } from '../services/authService.js';
+import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -69,8 +71,14 @@ router.get('/login', (_req, res) => {
   res.redirect(`${FRONTEND_URL}/auth/login`);
 });
 
-router.get('/me', (_req, res) => {
-  res.json({ message: 'JWT 인증 미들웨어 연결이 필요합니다.' });
+router.get('/me', requireAuth, async (req, res) => {
+  try {
+    const user = await getUserWithStats(req.user.id);
+    if (!user) return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
+    res.json(serializeAuthUser(user));
+  } catch (error) {
+    res.status(500).json({ error: '사용자 정보를 불러오지 못했습니다.' });
+  }
 });
 
 router.post('/signup', async (req, res) => {
@@ -80,6 +88,12 @@ router.post('/signup', async (req, res) => {
     if (!username || !password) {
       return res.status(400).json({
         error: '아이디와 비밀번호는 필수입니다.',
+      });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({
+        error: '비밀번호는 6자리 이상이어야 합니다.',
       });
     }
 

@@ -9,4 +9,15 @@ if (provider === 'openai') {
 
 console.log(`[AI] Provider: ${provider}`);
 
-export const { generateTopic, generateAiResponse } = service;
+export const {
+  generateTopic,
+  generateArgument,
+  generateRebuttal,
+  generateDefense,
+  generateCounter,
+  generateCoaching,
+  judgeDebate,
+  generateAiResponse,
+  generateTrainingRecommendation,
+  generateCommunityTopics,
+} = service;

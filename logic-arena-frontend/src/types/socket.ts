@@ -1,27 +1,25 @@
-import type { Room, RoomUser, ChatMessage, VoteOption } from './room';
+import type { Room, PlayerRole, DebateResult } from './room';
 
 export interface ClientToServerEvents {
-  join_room: (payload: {
-    roomId: string;
-    userId: string;
-    username: string;
-    userRole: 'host' | 'participant' | 'observer';
-  }) => void;
-  leave_room: (payload: { roomId: string }) => void;
-  start_debate: (payload: { roomId: string }) => void;
-  cast_vote: (payload: { roomId: string; vote: VoteOption }) => void;
-  send_message: (payload: { roomId: string; content: string }) => void;
+  join_room: (payload: { roomId: string; userId: string; username: string; password?: string }) => void;
+  leave_room: () => void;
+  start_game: (payload: { roomId: string }) => void;
+  select_side: (payload: { roomId: string; side: 'pro' | 'con' }) => void;
+  submit_content: (payload: { roomId: string; text: string; skip?: boolean }) => void;
 }
 
 export interface ServerToClientEvents {
   room_list: (rooms: Room[]) => void;
-  room_state: (payload: { room: Room }) => void;
-  user_joined: (payload: { user: RoomUser; room: Room }) => void;
-  user_left: (payload: { user: RoomUser; room: Room }) => void;
-  host_changed: (payload: { newHostSocketId: string }) => void;
-  debate_started: (payload: { topic: string; phase: 'voting' }) => void;
-  vote_updated: (payload: { pro: number; con: number }) => void;
-  new_message: (payload: { message: ChatMessage }) => void;
-  topic_updated: (payload: { topic: string }) => void;
+  room_state: (payload: { room: Room; myRole: PlayerRole }) => void;
+  player_joined: (payload: { room: Room }) => void;
+  player_left: (payload: { room: Room | null }) => void;
+  phase_changed: (payload: { phase: string; room: Room }) => void;
+  topic_set: (payload: { topic: string; room: Room }) => void;
+  sides_assigned: (payload: { random: boolean; room: Room }) => void;
+  side_selection_update: (payload: { room: Room }) => void;
+  side_selection_retry: (payload: { attempts: number; room: Room }) => void;
+  ai_content: (payload: { room: Room }) => void;
+  content_submitted: (payload: { phase: string; contentKey: string; room: Room }) => void;
+  debate_ended: (payload: { result: DebateResult; room: Room }) => void;
   error: (payload: { message: string }) => void;
 }

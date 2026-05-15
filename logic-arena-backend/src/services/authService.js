@@ -34,7 +34,9 @@ export async function findOrCreateGoogleUser(profile) {
       email,
       name,
       profile_image: profileImage,
+      stats: { create: {} },
     },
+    include: { stats: true },
   });
 
   return sanitizeUser(insertedUser);
@@ -64,7 +66,9 @@ export async function findOrCreateKakaoUser(kakaoUser) {
       email,
       name,
       profile_image: profileImage,
+      stats: { create: {} },
     },
+    include: { stats: true },
   });
 
   return sanitizeUser(insertedUser);
@@ -72,35 +76,43 @@ export async function findOrCreateKakaoUser(kakaoUser) {
 
 export async function signupLocalUser({ username, password, name, email }) {
   const existing = await prisma.user.findUnique({
-    where: {
-      login_id: username,
-    },
+    where: { login_id: username },
   });
-
   if (existing) {
     throw new Error('이미 사용 중인 아이디입니다.');
+  }
+
+  if (email) {
+    const emailExists = await prisma.user.findUnique({
+      where: { email },
+    });
+    if (emailExists) {
+      throw new Error('이미 사용 중인 이메일입니다.');
+    }
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
   const displayName = name?.trim() || username;
 
-  const result = await prisma.user.create({
-    data: {
-      provider: 'local',
-      login_id: username,
-      password: passwordHash,
-      name: displayName,
-      email: email ?? null,
-      stats: {
-        create: {},
+  try {
+    const result = await prisma.user.create({
+      data: {
+        provider: 'local',
+        login_id: username,
+        password: passwordHash,
+        name: displayName,
+        email: email ?? null,
+        stats: { create: {} },
       },
-    },
-    include: {
-      stats: true,
-    },
-  });
-
-  return sanitizeUser(result);
+      include: { stats: true },
+    });
+    return sanitizeUser(result);
+  } catch (error) {
+    if (error?.code === 'P2002') {
+      throw new Error('이미 사용 중인 아이디 또는 이메일입니다.');
+    }
+    throw error;
+  }
 }
 
 export async function loginLocalUser({ username, password }) {
@@ -137,6 +149,14 @@ export function serializeAuthUser(user) {
     profile_image: user.profile_image ?? null,
     stats: user.stats ?? null,
   };
+}
+
+export async function getUserWithStats(userId) {
+  const user = await prisma.user.findUnique({
+    where: { user_id: userId },
+    include: { stats: true },
+  });
+  return user ? sanitizeUser(user) : null;
 }
 
 export function createAccessToken(user) {
