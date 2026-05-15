@@ -62,8 +62,7 @@ export function SignupPage() {
         {/* ── Left: Brand ── */}
         <div className="auth-split__brand">
           <div className="auth-brand__logo">
-            <span className="auth-brand__logo-mark">L</span>
-            Logit
+            <img src="/logit-logo.png" alt="Logit" className="auth-brand__logo-img" />
           </div>
           <div className="auth-brand__tagline">
             <p className="auth-brand__tagline-eyebrow">지금 바로 시작하세요</p>
@@ -77,7 +76,6 @@ export function SignupPage() {
 
         {/* ── Right: Form ── */}
         <div className="auth-split__form">
-          <div className="auth-split__form-deco" aria-hidden="true">✦</div>
           <div className="auth-split__form-header">
             <h1>회원가입</h1>
             <p>Logit 계정을 만들어 토론을 시작하세요</p>

@@ -48,7 +48,8 @@ export function CreateRoomPage() {
   return (
     <div className="page form-page">
       <h1 className="page__title">새 토론방 만들기</h1>
-      <form className="form-card" onSubmit={handleSubmit}>
+      <div className="form-card">
+      <form className="form-card__body" onSubmit={handleSubmit}>
         <div className="form-field">
           <label className="form-label" htmlFor="title">방 제목</label>
           <input
@@ -133,6 +134,7 @@ export function CreateRoomPage() {
           </button>
         </div>
       </form>
+      </div>
     </div>
   );
 }

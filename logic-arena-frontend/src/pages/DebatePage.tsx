@@ -7,6 +7,7 @@ import { useRoomStore } from '../store/useRoomStore';
 import { useUserStore } from '../store/useUserStore';
 import { PhaseTimer } from '../components/debate/PhaseTimer';
 import { SubmitPanel } from '../components/debate/SubmitPanel';
+import { Popover } from '../components/common/Popover';
 import type { Room, Phase, PlayerRole, RoomContent } from '../types/room';
 
 // ─── 상수 ──────────────────────────────────────────────────────
@@ -67,25 +68,25 @@ const CONTENT_FLOW: Array<{
 }> = [
   { key: 'pro_argument',          author: '찬성 플레이어', align: 'pro', variant: 'player' },
   { key: 'con_argument',          author: '반대 플레이어', align: 'con', variant: 'player' },
-  { key: 'pro_ai_argument',       author: '찬성 AI',       align: 'pro', variant: 'ai' },
-  { key: 'con_ai_argument',       author: '반대 AI',       align: 'con', variant: 'ai' },
+  { key: 'pro_ai_argument',       author: 'AI 보조·찬성',  align: 'pro', variant: 'ai' },
+  { key: 'con_ai_argument',       author: 'AI 보조·반대',  align: 'con', variant: 'ai' },
   { key: 'pro_p_rebuttal',        author: '찬성 플레이어', align: 'pro', variant: 'player' },
   { key: 'pro_p_defense_player',  author: '반대 플레이어', align: 'con', variant: 'player' },
-  { key: 'pro_p_defense_ai',      author: '반대 AI',       align: 'con', variant: 'ai' },
+  { key: 'pro_p_defense_ai',      author: 'AI 보조·반대',  align: 'con', variant: 'ai' },
   { key: 'pro_p_counter',         author: '찬성 플레이어', align: 'pro', variant: 'player' },
   { key: 'con_p_rebuttal',        author: '반대 플레이어', align: 'con', variant: 'player' },
   { key: 'con_p_defense_player',  author: '찬성 플레이어', align: 'pro', variant: 'player' },
-  { key: 'con_p_defense_ai',      author: '찬성 AI',       align: 'pro', variant: 'ai' },
+  { key: 'con_p_defense_ai',      author: 'AI 보조·찬성',  align: 'pro', variant: 'ai' },
   { key: 'con_p_counter',         author: '반대 플레이어', align: 'con', variant: 'player' },
-  { key: 'pro_a_rebuttal',        author: '찬성 AI',       align: 'pro', variant: 'ai' },
+  { key: 'pro_a_rebuttal',        author: 'AI 보조·찬성',  align: 'pro', variant: 'ai' },
   { key: 'pro_a_defense_player',  author: '반대 플레이어', align: 'con', variant: 'player' },
-  { key: 'pro_a_defense_ai',      author: '반대 AI',       align: 'con', variant: 'ai' },
-  { key: 'pro_a_counter',         author: '찬성 AI',       align: 'pro', variant: 'ai' },
-  { key: 'con_a_rebuttal',        author: '반대 AI',       align: 'con', variant: 'ai' },
+  { key: 'pro_a_defense_ai',      author: 'AI 보조·반대',  align: 'con', variant: 'ai' },
+  { key: 'pro_a_counter',         author: 'AI 보조·찬성',  align: 'pro', variant: 'ai' },
+  { key: 'con_a_rebuttal',        author: 'AI 보조·반대',  align: 'con', variant: 'ai' },
   { key: 'con_a_defense_player',  author: '찬성 플레이어', align: 'pro', variant: 'player' },
-  { key: 'con_a_defense_ai',      author: '찬성 AI',       align: 'pro', variant: 'ai' },
-  { key: 'con_a_counter',         author: '반대 AI',       align: 'con', variant: 'ai' },
-  { key: 'coaching',              author: '훈수 AI',       align: 'pro', variant: 'coach' },
+  { key: 'con_a_defense_ai',      author: 'AI 보조·찬성',  align: 'pro', variant: 'ai' },
+  { key: 'con_a_counter',         author: 'AI 보조·반대',  align: 'con', variant: 'ai' },
+  { key: 'coaching',              author: '훈수 AI',        align: 'pro', variant: 'coach' },
   { key: 'pro_final',             author: '찬성 플레이어', align: 'pro', variant: 'player' },
   { key: 'con_final',             author: '반대 플레이어', align: 'con', variant: 'player' },
 ];
@@ -110,6 +111,18 @@ const SUBMIT_LABELS: Partial<Record<Phase, string>> = {
 
 const OPTIONAL_PHASES = new Set<Phase>(['pro_a_defense', 'con_a_defense']);
 const AUTO_PHASES = new Set<Phase>(['pro_a_rebuttal', 'pro_a_counter', 'con_a_rebuttal', 'con_a_counter', 'coaching', 'judging']);
+
+// 4단계 매핑
+const DEBATE_STAGES: Array<{ label: string; phases: Set<Phase> }> = [
+  { label: '최초 주장', phases: new Set<Phase>(['arguing']) },
+  { label: '반론', phases: new Set<Phase>(['pro_p_rebuttal', 'pro_p_defense', 'con_p_rebuttal', 'con_p_defense', 'pro_a_rebuttal', 'pro_a_defense', 'con_a_rebuttal', 'con_a_defense']) },
+  { label: '재반박', phases: new Set<Phase>(['pro_p_counter', 'con_p_counter', 'pro_a_counter', 'con_a_counter', 'coaching']) },
+  { label: '최종 주장', phases: new Set<Phase>(['final_argument']) },
+];
+
+function getStageIndex(phase: Phase): number {
+  return DEBATE_STAGES.findIndex(s => s.phases.has(phase));
+}
 
 // ─── 공통 UI ────────────────────────────────────────────────────
 
@@ -138,40 +151,30 @@ function NotMyTurnBanner({ message }: { message: string }) {
   );
 }
 
-// ─── InitialClaimsBar ───────────────────────────────────────────
+// ─── SlimPhaseBar ──────────────────────────────────────────────
 
-function InitialClaimsBar({ content }: { content: Room['content'] }) {
-  const [open, setOpen] = useState(false);
-  if (!content.pro_argument && !content.con_argument) return null;
+function SlimPhaseBar({ phase, phaseEndAt }: { phase: Phase; phaseEndAt: number | null }) {
+  const idx = getStageIndex(phase);
+  if (idx < 0) return null;
   return (
-    <div style={{ borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface-2)', flexShrink: 0 }}>
-      <button
-        onClick={() => setOpen(v => !v)}
-        style={{
-          width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          padding: '8px 20px', background: 'transparent', border: 'none', cursor: 'pointer',
-          fontSize: '12px', color: 'var(--color-text-muted)',
-        }}
-      >
-        <span style={{ fontWeight: 600, color: 'var(--color-text)' }}>최초 주장 보기</span>
-        <span style={{ fontSize: '10px', transition: 'transform 0.15s', transform: open ? 'rotate(180deg)' : 'none', display: 'inline-block' }}>▼</span>
-      </button>
-      {open && (
-        <div style={{ padding: '0 20px 12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', alignItems: 'start' }}>
-          {content.pro_argument && (
-            <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-sm)', background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.25)' }}>
-              <div style={{ fontSize: '10px', color: 'var(--color-pro)', fontWeight: 700, marginBottom: '6px' }}>찬성 최초 주장</div>
-              <div style={{ fontSize: '12px', lineHeight: 1.65, color: 'var(--color-text)' }}>{content.pro_argument}</div>
-            </div>
-          )}
-          {content.con_argument && (
-            <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-sm)', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.25)' }}>
-              <div style={{ fontSize: '10px', color: 'var(--color-con)', fontWeight: 700, marginBottom: '6px' }}>반대 최초 주장</div>
-              <div style={{ fontSize: '12px', lineHeight: 1.65, color: 'var(--color-text)' }}>{content.con_argument}</div>
-            </div>
-          )}
+    <div className="slim-phase-bar">
+      <div className="slim-phase-bar__track">
+        {DEBATE_STAGES.map((_, i) => (
+          <div
+            key={i}
+            className={`slim-phase-bar__seg slim-phase-bar__seg--${
+              i < idx ? 'done' : i === idx ? 'active' : 'upcoming'
+            }`}
+          />
+        ))}
+      </div>
+      <div className="slim-phase-bar__row">
+        <span className="slim-phase-bar__label">{DEBATE_STAGES[idx].label} 단계 진행 중</span>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <span className="slim-phase-bar__chip">{idx + 1}/{DEBATE_STAGES.length}단계</span>
+          <PhaseTimer phaseEndAt={phaseEndAt} />
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -185,6 +188,14 @@ function DebateChatView({ room, myRole }: { room: Room; myRole: PlayerRole | nul
   const mySide: AlignSide | null = myRole === 'pro_player' ? 'pro' : myRole === 'con_player' ? 'con' : null;
   const isAutoPhase = AUTO_PHASES.has(phase);
   const chatRef = useRef<HTMLDivElement>(null);
+  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
+
+  const toggleExpand = (key: string) =>
+    setExpandedKeys(prev => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
 
   useEffect(() => {
     if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
@@ -193,7 +204,6 @@ function DebateChatView({ room, myRole }: { room: Room; myRole: PlayerRole | nul
   const messages = CONTENT_FLOW.flatMap((item) => {
     const text = content[item.key];
     if (!text) return [];
-    // During arguing: hide opponent's argument until both have submitted
     if (phase === 'arguing') {
       const both = !!(content.pro_argument && content.con_argument);
       if (!both) {
@@ -208,9 +218,10 @@ function DebateChatView({ room, myRole }: { room: Room; myRole: PlayerRole | nul
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      {/* Scrollable chat */}
-      <div ref={chatRef} style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        {/* Status chips for arguing / final */}
+      <SlimPhaseBar phase={phase} phaseEndAt={room.phaseEndAt} />
+
+      {/* 스크롤 채팅 영역 */}
+      <div ref={chatRef} style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
         {phase === 'arguing' && (
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             <StatusChip label="찬성P" done={!!content.pro_argument} isMe={myRole === 'pro_player'} />
@@ -226,40 +237,75 @@ function DebateChatView({ room, myRole }: { room: Room; myRole: PlayerRole | nul
           </div>
         )}
 
-        {/* Empty state */}
         {messages.length === 0 && (
           <div style={{ textAlign: 'center', color: isAutoPhase ? '#67e8f9' : 'var(--color-text-muted)', padding: '40px 0', fontSize: '13px', fontStyle: 'italic' }}>
             {isAutoPhase ? 'AI가 자동으로 생성 중입니다... 잠시 기다려 주세요' : '아직 작성된 내용이 없습니다.'}
           </div>
         )}
 
-        {/* Chat bubbles */}
-        {messages.map((item) => (
-          <article
-            key={item.key}
-            className={[
-              'debate-bubble',
-              `debate-bubble--${item.align}`,
-              `debate-bubble--${item.variant}`,
-              mySide === item.align ? 'debate-bubble--mine' : '',
-            ].filter(Boolean).join(' ')}
-          >
-            <div className="debate-bubble__meta">
-              <strong>{item.author}</strong>
-              <span>{CONTENT_LABELS[item.key]}</span>
+        {messages.map((item) => {
+          const isOnMySide = mySide === item.align;
+          const isMyPlayerMsg = isOnMySide && item.variant === 'player';
+          const isCollapsed = isMyPlayerMsg && !expandedKeys.has(item.key);
+          const avatarChar = item.variant === 'ai'
+            ? 'AI'
+            : (mySide === item.align ? '나' : item.align === 'pro' ? '찬' : '반');
+
+          // 훈수 AI는 중앙 배치
+          if (item.variant === 'coach') {
+            return (
+              <div key={item.key} className="bubble-row bubble-row--coach">
+                <article className="debate-bubble debate-bubble--coach">
+                  <div className="debate-bubble__meta">
+                    <strong>{item.author}</strong>
+                    <span>{CONTENT_LABELS[item.key]}</span>
+                  </div>
+                  <div className="debate-bubble__body">
+                    {item.text.split(/\n{2,}/).map((para, i) => (
+                      <p key={i} style={{ margin: i === 0 ? 0 : '10px 0 0' }}>{para.trim()}</p>
+                    ))}
+                  </div>
+                </article>
+              </div>
+            );
+          }
+
+          return (
+            <div key={item.key} className={`bubble-row ${isOnMySide ? 'bubble-row--right' : 'bubble-row--left'}`}>
+              <div className={`bubble-avatar bubble-avatar--${item.align}`}>{avatarChar}</div>
+              <div className="bubble-content">
+                <div className="bubble-meta">
+                  <strong className="bubble-meta__author">{item.author}</strong>
+                  <span className="bubble-meta__type">{CONTENT_LABELS[item.key]}</span>
+                </div>
+                <article className={`debate-bubble debate-bubble--${item.align}-${item.variant}`}>
+                  {isCollapsed ? (
+                    <div className="debate-bubble__collapsed">
+                      <span className="debate-bubble__preview">
+                        {item.text.slice(0, 55)}{item.text.length > 55 ? '...' : ''}
+                      </span>
+                      <button className="debate-bubble__expand-btn" onClick={() => toggleExpand(item.key)}>
+                        펼치기 ↓
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="debate-bubble__body">
+                      {item.text}
+                      {isMyPlayerMsg && (
+                        <button className="debate-bubble__collapse-btn" onClick={() => toggleExpand(item.key)}>
+                          접기 ↑
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </article>
+              </div>
             </div>
-            <div className="debate-bubble__body">
-              {item.key === 'coaching'
-                ? item.text.split(/\n{2,}/).map((para, i) => (
-                    <p key={i} style={{ margin: i === 0 ? 0 : '10px 0 0' }}>{para.trim()}</p>
-                  ))
-                : item.text}
-            </div>
-          </article>
-        ))}
+          );
+        })}
       </div>
 
-      {/* Bottom panel */}
+      {/* 하단 입력 패널 */}
       <div style={{ flexShrink: 0, borderTop: '1px solid var(--color-border)', padding: '10px 20px', background: 'var(--color-surface)' }}>
         {myKey ? (
           <SubmitPanel
@@ -340,9 +386,9 @@ function TopicSelectionView({ room, myRole }: { room: Room; myRole: PlayerRole |
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             {(['pro', 'con'] as const).map((side) => {
               const label = side === 'pro' ? '찬성' : '반대';
-              const color = side === 'pro' ? 'var(--color-pro)' : 'var(--color-con)';
-              const bg = side === 'pro' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)';
-              const border = side === 'pro' ? 'rgba(34,197,94,0.4)' : 'rgba(239,68,68,0.4)';
+              const color = side === 'pro' ? '#9b8fff' : '#f0a070';
+              const bg = side === 'pro' ? 'rgba(108,92,231,0.12)' : 'rgba(212,98,46,0.12)';
+              const border = side === 'pro' ? 'rgba(108,92,231,0.45)' : 'rgba(212,98,46,0.45)';
               return (
                 <button key={side} onClick={() => handleSelect(side)} style={{ padding: '24px', borderRadius: 'var(--radius-md)', fontWeight: 700, fontSize: '18px', background: bg, border: `2px solid ${border}`, color, cursor: 'pointer' }}
                   onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.3)'; }}
@@ -354,8 +400,8 @@ function TopicSelectionView({ room, myRole }: { room: Room; myRole: PlayerRole |
         </>
       )}
       {isPlayer && mySelection && (
-        <div style={{ padding: '20px', borderRadius: 'var(--radius-md)', textAlign: 'center', background: mySelection === 'pro' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', border: `2px solid ${mySelection === 'pro' ? 'rgba(34,197,94,0.5)' : 'rgba(239,68,68,0.5)'}` }}>
-          <div style={{ fontSize: '20px', fontWeight: 700, marginBottom: '6px', color: mySelection === 'pro' ? 'var(--color-pro)' : 'var(--color-con)' }}>{mySelection === 'pro' ? '찬성' : '반대'} 선택 완료</div>
+        <div style={{ padding: '20px', borderRadius: 'var(--radius-md)', textAlign: 'center', background: mySelection === 'pro' ? 'rgba(108,92,231,0.12)' : 'rgba(212,98,46,0.12)', border: `2px solid ${mySelection === 'pro' ? 'rgba(108,92,231,0.5)' : 'rgba(212,98,46,0.5)'}` }}>
+          <div style={{ fontSize: '20px', fontWeight: 700, marginBottom: '6px', color: mySelection === 'pro' ? '#9b8fff' : '#f0a070' }}>{mySelection === 'pro' ? '찬성' : '반대'} 선택 완료</div>
           <div style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>상대방 선택을 기다리는 중...</div>
         </div>
       )}
@@ -393,7 +439,7 @@ function EndedView({ room }: { room: Room }) {
     </div>
   );
   const winnerLabel = result.winner === 'pro' ? '찬성 팀 승리' : result.winner === 'con' ? '반대 팀 승리' : '무승부';
-  const winnerColor = result.winner === 'pro' ? 'var(--color-pro)' : result.winner === 'con' ? 'var(--color-con)' : 'var(--color-text-muted)';
+  const winnerColor = result.winner === 'pro' ? '#9b8fff' : result.winner === 'con' ? '#f0a070' : 'var(--color-text-muted)';
   const sorted = [...(result.scores ?? [])].sort((a, b) => a.rank - b.rank);
   const playerScores = sorted.filter((s) => s.type === 'player');
   return (
@@ -421,7 +467,7 @@ function EndedView({ room }: { room: Room }) {
             </thead>
             <tbody>
               {sorted.map((s) => {
-                const sideColor = s.vote === 'pro' ? 'var(--color-pro)' : 'var(--color-con)';
+                const sideColor = s.vote === 'pro' ? '#9b8fff' : '#f0a070';
                 return (
                   <tr key={s.name} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                     <td style={{ padding: '10px 12px', fontSize: '16px' }}>{RANK_BADGE[s.rank - 1] ?? s.rank}</td>
@@ -442,9 +488,9 @@ function EndedView({ room }: { room: Room }) {
       {sorted.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
           {sorted.map((s) => {
-            const sideColor = s.vote === 'pro' ? 'var(--color-pro)' : 'var(--color-con)';
+            const sideColor = s.vote === 'pro' ? '#9b8fff' : '#f0a070';
             return (
-              <div key={s.name} style={{ background: s.vote === 'pro' ? 'rgba(34,197,94,0.06)' : 'rgba(239,68,68,0.06)', border: `1px solid ${s.vote === 'pro' ? 'rgba(34,197,94,0.25)' : 'rgba(239,68,68,0.25)'}`, borderRadius: 'var(--radius-md)', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div key={s.name} style={{ background: s.vote === 'pro' ? 'rgba(108,92,231,0.08)' : 'rgba(212,98,46,0.08)', border: `1px solid ${s.vote === 'pro' ? 'rgba(108,92,231,0.25)' : 'rgba(212,98,46,0.25)'}`, borderRadius: 'var(--radius-md)', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontWeight: 700, color: sideColor }}>{RANK_BADGE[s.rank - 1]} {s.name}</span>
                   <span style={{ fontWeight: 700, fontSize: '15px' }}>{s.total}점</span>
@@ -465,7 +511,7 @@ function EndedView({ room }: { room: Room }) {
           <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.4px' }}>플레이어 개인 조언</div>
           {playerScores.filter((s) => s.advice).map((s) => (
             <div key={s.name} style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '14px 16px' }}>
-              <div style={{ fontSize: '12px', fontWeight: 700, color: s.vote === 'pro' ? 'var(--color-pro)' : 'var(--color-con)', marginBottom: '6px' }}>{s.name}에게</div>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: s.vote === 'pro' ? '#9b8fff' : '#f0a070', marginBottom: '6px' }}>{s.name}에게</div>
               <p style={{ fontSize: '13px', lineHeight: 1.7, margin: 0 }}>{s.advice}</p>
             </div>
           ))}
@@ -476,49 +522,99 @@ function EndedView({ room }: { room: Room }) {
   );
 }
 
-// ─── 사이드바 ───────────────────────────────────────────────────
+// ─── 사이드바 (우측 정보 패널) ──────────────────────────────────
 
-function PlayerSlot({ player, role, myRole, mySocketId }: {
-  player: { socketId: string; username: string } | null;
-  role: PlayerRole; myRole: PlayerRole | null; mySocketId: string;
-}) {
-  const isMe = (player?.socketId === mySocketId) || (myRole === role && !player);
-  return (
-    <div style={{ padding: '8px 12px', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 500, background: player ? 'var(--color-surface-2)' : 'transparent', border: `1px solid ${isMe ? 'var(--color-primary)' : player ? 'var(--color-border)' : 'rgba(255,255,255,0.05)'}`, color: player ? 'var(--color-text)' : 'var(--color-text-muted)' }}>
-      {!player ? '(대기 중)' : isMe ? `나 (${player.username})` : player.username}
-    </div>
-  );
-}
-
-function DebateSidebar({ room, myRole, mySocketId, sidebarOpen, onClose }: {
+function DebateSidebar({ room, myRole, sidebarOpen, onClose }: {
   room: Room; myRole: PlayerRole | null; mySocketId: string; sidebarOpen: boolean; onClose: () => void;
 }) {
+  const mySide: AlignSide | null = myRole === 'pro_player' ? 'pro' : myRole === 'con_player' ? 'con' : null;
+  const { phase, content } = room;
+  const stageIdx = getStageIndex(phase);
+
   return (
     <>
       <div className={`sidebar-backdrop${sidebarOpen ? ' is-open' : ''}`} onClick={onClose} />
       <div className={`debate-sidebar${sidebarOpen ? ' is-open' : ''}`}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px', borderBottom: '1px solid var(--color-border)', flexShrink: 0 }}>
-          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#06b6d4', boxShadow: '0 0 6px #06b6d4', display: 'block', flexShrink: 0 }} />
-          <span style={{ fontSize: '11px', fontWeight: 500, color: '#06b6d4' }}>AI 대전 모드</span>
+
+        {/* 토론 주제 + 포지션 */}
+        <div className="sidebar-section">
+          <div className="sidebar-section__title">토론 주제</div>
+          <p className="sidebar-topic">{room.topic ?? '주제 생성 중...'}</p>
+          <div className="sidebar-positions">
+            <span className={`sidebar-badge sidebar-badge--pro${mySide === 'pro' ? ' sidebar-badge--me' : ''}`}>
+              {mySide === 'pro' ? '나' : mySide === 'con' ? '상대' : '찬성'}·찬성
+            </span>
+            <span className={`sidebar-badge sidebar-badge--con${mySide === 'con' ? ' sidebar-badge--me' : ''}`}>
+              {mySide === 'con' ? '나' : mySide === 'pro' ? '상대' : '반대'}·반대
+            </span>
+          </div>
         </div>
-        <div style={{ flex: 1, overflow: 'auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-pro)', textTransform: 'uppercase', letterSpacing: '0.6px', padding: '8px 4px 4px' }}>찬성 팀</div>
-          <PlayerSlot player={room.proPlayer} role="pro_player" myRole={myRole} mySocketId={mySocketId} />
-          <div style={{ fontSize: '11px', color: '#06b6d4', padding: '6px 10px', background: 'rgba(6,182,212,0.08)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(6,182,212,0.2)' }}>찬성AI</div>
-          <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-con)', textTransform: 'uppercase', letterSpacing: '0.6px', padding: '12px 4px 4px' }}>반대 팀</div>
-          <PlayerSlot player={room.conPlayer} role="con_player" myRole={myRole} mySocketId={mySocketId} />
-          <div style={{ fontSize: '11px', color: '#06b6d4', padding: '6px 10px', background: 'rgba(6,182,212,0.08)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(6,182,212,0.2)' }}>반대AI</div>
-          {room.observers.length > 0 && (
-            <>
-              <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.6px', padding: '12px 4px 4px' }}>관전자 ({room.observers.length})</div>
-              {room.observers.map((o) => (
-                <div key={o.socketId} style={{ fontSize: '12px', color: 'var(--color-text-muted)', padding: '4px 6px' }}>
-                  {o.socketId === mySocketId ? `나 (${o.username})` : o.username}
+
+        {/* 진행 단계 */}
+        <div className="sidebar-section">
+          <div className="sidebar-section__title">진행 단계</div>
+          {DEBATE_STAGES.map((stage, i) => {
+            const status = stageIdx < 0
+              ? 'upcoming'
+              : i < stageIdx ? 'done' : i === stageIdx ? 'active' : 'upcoming';
+            return (
+              <div key={i} className={`stage-item stage-item--${status}`}>
+                <span className="stage-item__dot" />
+                <span className="stage-item__label">{i + 1}단계·{stage.label}</span>
+                {status === 'done' && <span className="stage-item__badge">완료</span>}
+                {status === 'active' && <span className="stage-item__badge stage-item__badge--active">진행 중</span>}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* 최초 주장 요약 */}
+        {(content.pro_argument || content.con_argument) && (
+          <div className="sidebar-section">
+            <div className="sidebar-section__title">최초 주장 요약</div>
+            {content.pro_argument && (
+              <Popover
+                width={300}
+                content={
+                  <div className="popover__claim">
+                    <div className="popover__claim-label popover__claim-label--pro">찬성 측 최초 주장</div>
+                    <p className="popover__claim-text">{content.pro_argument}</p>
+                  </div>
+                }
+              >
+                <div className="claim-summary claim-summary--pro">
+                  <div className="claim-summary__label">찬성 측</div>
+                  <p className="claim-summary__text">
+                    {content.pro_argument.length > 90
+                      ? content.pro_argument.slice(0, 90) + '...'
+                      : content.pro_argument}
+                  </p>
                 </div>
-              ))}
-            </>
-          )}
-        </div>
+              </Popover>
+            )}
+            {content.con_argument && (
+              <Popover
+                width={300}
+                content={
+                  <div className="popover__claim">
+                    <div className="popover__claim-label popover__claim-label--con">반대 측 최초 주장</div>
+                    <p className="popover__claim-text">{content.con_argument}</p>
+                  </div>
+                }
+              >
+                <div className="claim-summary claim-summary--con">
+                  <div className="claim-summary__label">반대 측</div>
+                  <p className="claim-summary__text">
+                    {content.con_argument.length > 90
+                      ? content.con_argument.slice(0, 90) + '...'
+                      : content.con_argument}
+                  </p>
+                </div>
+              </Popover>
+            )}
+          </div>
+        )}
+
       </div>
     </>
   );
@@ -600,42 +696,18 @@ export function DebatePage() {
   if (!room) return <div className="loading">방에 접속 중...</div>;
 
   const { phase } = room;
-  const showTopicBanner = !!room.topic && phase !== 'waiting' && phase !== 'topic_selection';
-  const showInitialClaims = !!(room.content.pro_argument && room.content.con_argument) && phase !== 'waiting' && phase !== 'topic_selection';
   const isDebatePhase = DEBATE_PHASES.has(phase);
 
   return (
     <div className="debate-page">
-      <DebateSidebar room={room} myRole={myRole} mySocketId={mySocketId} sidebarOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
       <div className="debate-main">
-        {/* Mobile header */}
+        {/* 모바일 헤더 */}
         <div className="debate-mobile-header">
-          <button className="sidebar-toggle-btn" onClick={() => setSidebarOpen(v => !v)}>참가자</button>
+          <button className="sidebar-toggle-btn" onClick={() => setSidebarOpen(v => !v)}>정보 ▸</button>
           {room.topic && <span className="debate-mobile-header__topic">{room.topic}</span>}
         </div>
 
-        {/* Phase header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 20px', borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface)', flexShrink: 0, gap: '12px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
-            <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{room.title}</span>
-            <span style={{ fontSize: '15px', fontWeight: 700 }}>{PHASE_LABELS[phase]}</span>
-          </div>
-          <PhaseTimer phaseEndAt={room.phaseEndAt} />
-        </div>
-
-        {/* Prominent topic banner */}
-        {showTopicBanner && (
-          <div style={{ padding: '10px 20px', background: 'rgba(108,99,255,0.08)', borderBottom: '1px solid rgba(108,99,255,0.2)', flexShrink: 0 }}>
-            <div style={{ fontSize: '10px', color: 'var(--color-primary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '3px' }}>토론 주제</div>
-            <div style={{ fontSize: '15px', fontWeight: 700, lineHeight: 1.4 }}>{room.topic}</div>
-          </div>
-        )}
-
-        {/* Initial claims accordion */}
-        {showInitialClaims && <InitialClaimsBar content={room.content} />}
-
-        {/* Main content */}
+        {/* 메인 컨텐츠 */}
         {isDebatePhase ? (
           <DebateChatView room={room} myRole={myRole} />
         ) : phase === 'judging' ? (
@@ -652,6 +724,14 @@ export function DebatePage() {
           </div>
         )}
       </div>
+
+      <DebateSidebar
+        room={room}
+        myRole={myRole}
+        mySocketId={mySocketId}
+        sidebarOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
     </div>
   );
 }

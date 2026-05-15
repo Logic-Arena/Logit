@@ -45,8 +45,7 @@ export function LoginPage() {
         {/* ── Left: Brand ── */}
         <div className="auth-split__brand">
           <div className="auth-brand__logo">
-            <span className="auth-brand__logo-mark">L</span>
-            Logit
+            <img src="/logit-logo.png" alt="Logit" className="auth-brand__logo-img" />
           </div>
           <div className="auth-brand__tagline">
             <p className="auth-brand__tagline-eyebrow">논리로 성장하세요</p>
@@ -60,8 +59,6 @@ export function LoginPage() {
 
         {/* ── Right: Form ── */}
         <div className="auth-split__form">
-          <div className="auth-split__form-deco" aria-hidden="true">✦</div>
-
           <div className="auth-split__form-header">
             <h1>로그인</h1>
             <p>Logit에 오신 걸 환영합니다</p>

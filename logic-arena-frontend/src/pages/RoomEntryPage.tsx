@@ -27,7 +27,8 @@ export function RoomEntryPage() {
   return (
     <div className="page form-page">
       <h1 className="page__title">토론방 입장</h1>
-      <form className="form-card" onSubmit={handleEnter}>
+      <div className="form-card">
+      <form className="form-card__body" onSubmit={handleEnter}>
         <div className="form-field">
           <label className="form-label" htmlFor="nickname">닉네임</label>
           <input
@@ -64,6 +65,7 @@ export function RoomEntryPage() {
           </button>
         </div>
       </form>
+      </div>
     </div>
   );
 }
