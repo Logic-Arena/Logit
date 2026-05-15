@@ -50,7 +50,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 28px;
+  font-size: var(--text-title);
   font-weight: 700;
   color: #fff;
   flex-shrink: 0;
@@ -70,14 +70,14 @@
 }
 
 .profileName {
-  font-size: 22px;
+  font-size: var(--text-title);
   font-weight: 700;
-  color: #ffffff;
+  color: var(--color-text);
   margin: 0 0 4px;
 }
 
 .profileHandle {
-  font-size: 13px;
+  font-size: var(--text-body);
   color: #8b949e;
   margin: 0 0 12px;
 }
@@ -92,7 +92,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
+  font-size: var(--text-caption);
   font-weight: 500;
   color: #c4b5fd;
   background-color: rgba(139, 92, 246, 0.1);
@@ -122,14 +122,14 @@
 .pillarIcon {
   width: 18px;
   height: 18px;
-  color: #8b5cf6;
+  color: var(--color-text);
   flex-shrink: 0;
 }
 
 .tierName {
-  font-size: 18px;
+  font-size: var(--text-title);
   font-weight: 700;
-  color: #ffffff;
+  color: var(--color-text);
 }
 
 .tierProgressWrap {
@@ -150,16 +150,38 @@
 .tierLabels {
   display: flex;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: var(--text-caption);
   color: #8b949e;
+}
+
+/* ── Summary Section ──────────────────────────────────────── */
+
+.summarySection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.summaryLabel {
+  font-size: var(--text-caption);
+  font-weight: 600;
+  color: #8b949e;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 /* ── Stats Grid ───────────────────────────────────────────── */
 
 .statsGrid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .statsGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 @media (max-width: 640px) {
@@ -174,6 +196,8 @@
   border-radius: 12px;
   padding: 20px 24px;
   transition: border-color 0.15s;
+  display: flex;
+  flex-direction: column;
 }
 
 .statCard:hover {
@@ -181,24 +205,51 @@
 }
 
 .statLabel {
-  font-size: 13px;
+  font-size: var(--text-body);
   color: #8b949e;
   font-weight: 500;
   margin-bottom: 8px;
 }
 
 .statValue {
-  font-size: 26px;
+  font-size: var(--text-title);
   font-weight: 700;
-  color: #ffffff;
+  color: var(--color-text);
   line-height: 1.2;
+  flex: 1;
 }
 
 .statUnit {
-  font-size: 14px;
+  font-size: var(--text-subtitle);
   font-weight: 500;
   color: #8b949e;
   margin-left: 2px;
+}
+
+.statFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #21262d;
+}
+
+.statPeriod {
+  font-size: 12px;
+  color: #8b949e;
+}
+
+.statDeltaUp {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4ade80;
+}
+
+.statDeltaDown {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f87171;
 }
 
 /* ── Tab Bar ──────────────────────────────────────────────── */
@@ -212,7 +263,7 @@
 .tabBtn {
   position: relative;
   padding: 12px 20px;
-  font-size: 15px;
+  font-size: var(--text-subtitle);
   font-weight: 600;
   color: #8b949e;
   background: transparent;

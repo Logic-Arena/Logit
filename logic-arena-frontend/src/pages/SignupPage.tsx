@@ -23,7 +23,7 @@ export function SignupPage() {
     }
   }, [isLoggedIn, navigate]);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!name.trim() || !loginId.trim() || !password.trim()) {
       showToast('이름, 아이디, 비밀번호는 필수입니다', 'error');
@@ -57,96 +57,129 @@ export function SignupPage() {
 
   return (
     <div className="auth-page">
-      <div className="auth-card">
-        <div className="auth-logo">
-          <span className="auth-logo__text">Logit</span>
-          <p className="auth-logo__sub">논리로 승부하는 토론 아레나</p>
+      <div className="auth-split">
+
+        {/* ── Left: Brand ── */}
+        <div className="auth-split__brand">
+          <div className="auth-brand__logo">
+            <span className="auth-brand__logo-mark">L</span>
+            Logit
+          </div>
+          <div className="auth-brand__tagline">
+            <p className="auth-brand__tagline-eyebrow">지금 바로 시작하세요</p>
+            <h2 className="auth-brand__tagline-title">
+              논리로 승부하는<br />
+              토론 아레나에<br />
+              오신 걸 환영합니다
+            </h2>
+          </div>
         </div>
 
-        <form className="auth-form" onSubmit={handleSubmit} noValidate>
-          <div className="form-field">
-            <label className="form-label" htmlFor="signup-name">이름 <span className="auth-required">*</span></label>
-            <input
-              id="signup-name"
-              className="form-input"
-              type="text"
-              placeholder="닉네임을 입력하세요"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              disabled={loading}
-            />
+        {/* ── Right: Form ── */}
+        <div className="auth-split__form">
+          <div className="auth-split__form-deco" aria-hidden="true">✦</div>
+          <div className="auth-split__form-header">
+            <h1>회원가입</h1>
+            <p>Logit 계정을 만들어 토론을 시작하세요</p>
           </div>
 
-          <div className="form-field">
-            <label className="form-label" htmlFor="signup-id">아이디 <span className="auth-required">*</span></label>
-            <input
-              id="signup-id"
-              className="form-input"
-              type="text"
-              placeholder="로그인에 사용할 아이디"
-              autoComplete="username"
-              value={loginId}
-              onChange={(e) => setLoginId(e.target.value)}
+          <form className="auth-form" onSubmit={handleSubmit} noValidate>
+            <div className="form-field">
+              <label className="form-label" htmlFor="signup-name">
+                이름 <span className="auth-required">*</span>
+              </label>
+              <input
+                id="signup-name"
+                className="form-input"
+                type="text"
+                placeholder="닉네임을 입력하세요"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+
+            <div className="form-field">
+              <label className="form-label" htmlFor="signup-id">
+                아이디 <span className="auth-required">*</span>
+              </label>
+              <input
+                id="signup-id"
+                className="form-input"
+                type="text"
+                placeholder="로그인에 사용할 아이디"
+                autoComplete="username"
+                value={loginId}
+                onChange={(e) => setLoginId(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+
+            <div className="form-field">
+              <label className="form-label" htmlFor="signup-email">
+                이메일 <span className="auth-optional">(선택)</span>
+              </label>
+              <input
+                id="signup-email"
+                className="form-input"
+                type="email"
+                placeholder="email@example.com"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+
+            <div className="form-field">
+              <label className="form-label" htmlFor="signup-password">
+                비밀번호 <span className="auth-required">*</span>
+              </label>
+              <input
+                id="signup-password"
+                className="form-input"
+                type="password"
+                placeholder="6자 이상"
+                autoComplete="new-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+
+            <div className="form-field">
+              <label className="form-label" htmlFor="signup-password-confirm">
+                비밀번호 확인 <span className="auth-required">*</span>
+              </label>
+              <input
+                id="signup-password-confirm"
+                className="form-input"
+                type="password"
+                placeholder="비밀번호를 다시 입력하세요"
+                autoComplete="new-password"
+                value={passwordConfirm}
+                onChange={(e) => setPasswordConfirm(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+
+            <button
+              id="signup-submit"
+              className="btn btn--primary auth-submit"
+              type="submit"
               disabled={loading}
-            />
-          </div>
+            >
+              {loading ? '가입 중...' : '회원가입'}
+            </button>
+          </form>
 
-          <div className="form-field">
-            <label className="form-label" htmlFor="signup-email">이메일 <span className="auth-optional">(선택)</span></label>
-            <input
-              id="signup-email"
-              className="form-input"
-              type="email"
-              placeholder="email@example.com"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={loading}
-            />
-          </div>
+          <p className="auth-footer">
+            이미 계정이 있으신가요?{' '}
+            <Link to="/login" className="auth-footer__link">로그인</Link>
+          </p>
+        </div>
 
-          <div className="form-field">
-            <label className="form-label" htmlFor="signup-password">비밀번호 <span className="auth-required">*</span></label>
-            <input
-              id="signup-password"
-              className="form-input"
-              type="password"
-              placeholder="6자 이상"
-              autoComplete="new-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={loading}
-            />
-          </div>
 
-          <div className="form-field">
-            <label className="form-label" htmlFor="signup-password-confirm">비밀번호 확인 <span className="auth-required">*</span></label>
-            <input
-              id="signup-password-confirm"
-              className="form-input"
-              type="password"
-              placeholder="비밀번호를 다시 입력하세요"
-              autoComplete="new-password"
-              value={passwordConfirm}
-              onChange={(e) => setPasswordConfirm(e.target.value)}
-              disabled={loading}
-            />
-          </div>
-
-          <button
-            id="signup-submit"
-            className="btn btn--primary auth-submit"
-            type="submit"
-            disabled={loading}
-          >
-            {loading ? '가입 중...' : '회원가입'}
-          </button>
-        </form>
-
-        <p className="auth-footer">
-          이미 계정이 있으신가요?{' '}
-          <Link to="/login" className="auth-footer__link">로그인</Link>
-        </p>
       </div>
     </div>
   );

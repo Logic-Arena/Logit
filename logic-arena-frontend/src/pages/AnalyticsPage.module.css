@@ -44,10 +44,10 @@
 }
 
 .headerTitle {
-  font-size: 22px;
+  font-size: var(--text-title);
   line-height: 1.3;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--color-text);
   letter-spacing: 0.025em; /* tracking-wide */
   margin: 0;
 }
@@ -91,7 +91,7 @@
 
 .kpiLabel {
   color: #8b949e;
-  font-size: 14px;
+  font-size: var(--text-subtitle);
   font-weight: 500;
 }
 
@@ -100,10 +100,10 @@
 }
 
 .kpiValue {
-  font-size: 22px;
+  font-size: var(--text-title);
   line-height: 1.2;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--color-text);
   margin-bottom: 8px;
 }
 
@@ -117,13 +117,13 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 14px;
+  font-size: var(--text-subtitle);
   color: #4ade80; /* text-green-400 */
 }
 
 .kpiTrendValue {
   color: #8b949e;
-  font-size: 14px;
+  font-size: var(--text-subtitle);
 }
 
 .bentoGridWrapper {
@@ -213,7 +213,7 @@
 }
 
 .chartTitle {
-  font-size: 14px;
+  font-size: var(--text-subtitle);
   font-weight: 700;
   color: #f3f4f6; /* text-gray-100 */
   margin: 0;
@@ -222,7 +222,7 @@
 .legend {
   display: flex;
   gap: 16px;
-  font-size: 12px;
+  font-size: var(--text-caption);
 }
 
 .legendItem {
@@ -303,7 +303,7 @@
 
 .recommendationBadge {
   font-weight: 700;
-  font-size: 12px;
+  font-size: var(--text-caption);
   color: #c4b5fd;
   background-color: rgba(139, 92, 246, 0.15);
   padding: 4px 10px;
@@ -316,16 +316,16 @@
 
 .recommendationDesc {
   color: #e5e7eb;
-  font-size: 14px;
+  font-size: var(--text-subtitle);
   line-height: 1.5;
 }
 
 .recommendationBtn {
   background-color: #8b5cf6;
-  color: #ffffff;
+  color: var(--color-text);
   padding: 8px 16px;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: var(--text-subtitle);
   font-weight: 600;
   white-space: nowrap;
   transition: background-color 0.15s;
@@ -370,7 +370,7 @@
 .filterBtn {
   padding: 6px 16px;
   border-radius: 999px;
-  font-size: 14px;
+  font-size: var(--text-subtitle);
   font-weight: 500;
   transition: all 0.15s ease-in-out;
   cursor: pointer;
@@ -379,7 +379,7 @@
 
 .filterBtnActive {
   background-color: #8b5cf6;
-  color: #ffffff;
+  color: var(--color-text);
 }
 
 .filterBtnInactive {
@@ -436,7 +436,7 @@
   border: 1px solid #30363d;
   border-radius: 0.5rem;
   padding: 8px 16px 8px 40px;
-  font-size: 14px;
+  font-size: var(--text-subtitle);
   color: #e5e7eb;
   transition: border-color 0.15s;
   outline: none;
@@ -464,7 +464,7 @@
   background-color: #0d1117;
   border: 1px solid #30363d;
   border-radius: 0.5rem;
-  font-size: 14px;
+  font-size: var(--text-subtitle);
   color: #e5e7eb;
   outline: none;
   cursor: pointer;
@@ -506,8 +506,12 @@
   background-color: #161b22;
   border: 1px solid #30363d;
   border-radius: 0.75rem;
-  padding: 24px;
+  padding: 20px 24px;
   transition: border-color 0.15s, background-color 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: flex-start;
 }
 
 .reportCard:hover {
@@ -523,7 +527,7 @@
 }
 
 .reportCardTopic {
-  font-size: 14px;
+  font-size: var(--text-subtitle);
   font-weight: 600;
   color: #e5e7eb;
   margin-bottom: 4px;
@@ -531,7 +535,7 @@
 }
 
 .reportCardDate {
-  font-size: 14px;
+  font-size: var(--text-subtitle);
   color: #8b949e;
 }
 
@@ -540,7 +544,7 @@
 }
 
 .reportCardScore {
-  font-size: 22px;
+  font-size: var(--text-title);
   font-weight: 700;
   display: flex;
   align-items: baseline;
@@ -561,13 +565,13 @@
 }
 
 .metricLabel {
-  font-size: 12px;
+  font-size: var(--text-caption);
   color: #8b949e;
   margin-bottom: 4px;
 }
 
 .metricValue {
-  font-size: 14px;
+  font-size: var(--text-subtitle);
   color: #e5e7eb;
 }
 
@@ -576,10 +580,201 @@
   font-weight: 500;
 }
 
+.reportCardDetailBtn {
+  font-size: 12px;
+  color: #8890a8 !important;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: color 0.15s;
+  font-family: "Noto Sans KR", sans-serif;
+}
+
+.reportCardDetailBtn:hover {
+  color: #d1d5db !important;
+}
+
 .categoryChip {
   display: inline-block;
-  font-size: 12px;
+  font-size: var(--text-caption);
   font-weight: 600;
   padding: 4px 12px;
   border-radius: 9999px;
+}
+
+/* ── Recent Growth Summary ────────────────────────────────── */
+
+.recentSummary {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.recentSummaryTitle {
+  font-size: var(--text-caption);
+  font-weight: 600;
+  color: #8b949e;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0;
+}
+
+.recentBannerRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .recentBannerRow {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .recentBannerRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.recentBannerCard {
+  background-color: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 14px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color 0.15s;
+}
+
+.recentBannerCard:hover {
+  border-color: rgba(139, 92, 246, 0.4);
+}
+
+/* 1. 날짜 + 상대 시간 */
+.recentBannerDate {
+  font-size: var(--text-caption);
+  color: #8b949e;
+  margin: 0;
+}
+
+/* 2. 카테고리 + 주제 + 입장 */
+.recentBannerMeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.recentBannerCategory {
+  font-size: var(--text-caption);
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.06);
+  color: #8b949e;
+}
+
+.recentBannerTopicBtn {
+  font-size: var(--text-subtitle);
+  font-weight: 700;
+  color: #f3f4f6;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  transition: color 0.15s;
+  font-family: "Noto Sans KR", sans-serif;
+}
+
+.recentBannerTopicBtn:hover {
+  color: #c4b5fd;
+}
+
+.recentBannerPosition {
+  font-size: var(--text-caption);
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+/* 5. 점수 + 변화율 */
+.recentBannerScoreLine {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.recentBannerScore {
+  font-size: var(--text-title);
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1;
+}
+
+.recentBannerScoreUnit {
+  font-size: var(--text-subtitle);
+  font-weight: 500;
+  color: #8b949e;
+  margin-left: 3px;
+}
+
+.recentDeltaUp {
+  font-size: var(--text-body);
+  font-weight: 700;
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.1);
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(74, 222, 128, 0.2);
+}
+
+.recentDeltaDown {
+  font-size: var(--text-body);
+  font-weight: 700;
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.1);
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(248, 113, 113, 0.2);
+}
+
+/* 구분선 */
+.recentBannerDivider {
+  border: none;
+  border-top: 1px solid #30363d;
+  margin: 2px 0;
+}
+
+
+/* 7. 상세 보기 */
+.recentBannerDetailBtn {
+  align-self: flex-start;
+  margin-top: auto;
+  font-size: var(--text-caption);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+  font-family: "Noto Sans KR", sans-serif;
+}
+
+.recentBannerDetailBtn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #e5e7eb;
 }

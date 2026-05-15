@@ -73,18 +73,17 @@ export function UserTierWidget() {
         </div>
       </div>
 
-      <div className="tier-widget__divider" />
-
-      <div className="tier-widget__box tier-widget__box--wide">
-        <div className="tier-widget__box-label">평균점수</div>
-        <div className="tier-widget__box-value">{scoreAverage.toLocaleString()}</div>
-      </div>
-
       <div className="tier-widget__box-row">
+        <div className="tier-widget__box">
+          <div className="tier-widget__box-label">평균점수</div>
+          <div className="tier-widget__box-value">{scoreAverage.toLocaleString()}</div>
+        </div>
+        <div className="tier-widget__stat-divider" />
         <div className="tier-widget__box">
           <div className="tier-widget__box-label">토론횟수</div>
           <div className="tier-widget__box-value">{debateCount}</div>
         </div>
+        <div className="tier-widget__stat-divider" />
         <div className="tier-widget__box">
           <div className="tier-widget__box-label">이긴횟수</div>
           <div className="tier-widget__box-value">{winCount}</div>

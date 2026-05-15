@@ -4,7 +4,7 @@ import { getRooms } from "../lib/api";
 import { socket } from "../lib/socket";
 import { RoomList } from "../components/lobby/RoomList";
 import { UserTierWidget } from "../components/lobby/UserTierWidget";
-import { LogicReportWidget } from "../components/lobby/LogicReportWidget";
+import { CommunityVoteWidget } from "../components/lobby/CommunityVoteWidget";
 import { useSidebar } from "../hooks/useSidebar";
 import type { Room } from "../types/room";
 
@@ -35,6 +35,9 @@ export function LobbyPage() {
     <div className="lobby-layout">
       <div className={`lobby-sidebar${sidebarOpen ? " is-open" : ""}`}>
         <UserTierWidget />
+        <div className="lobby-sidebar__vote-widget">
+          <CommunityVoteWidget />
+        </div>
       </div>
 
       {sidebarOpen && (
@@ -64,9 +67,8 @@ export function LobbyPage() {
         )}
       </div>
 
-      {/* 오른쪽: 논리 성장 리포트 */}
       <div className="lobby-report">
-        <LogicReportWidget />
+        <CommunityVoteWidget />
       </div>
     </div>
   );
