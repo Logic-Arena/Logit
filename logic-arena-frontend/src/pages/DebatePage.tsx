@@ -86,7 +86,8 @@ const CONTENT_FLOW: Array<{
   { key: 'con_a_defense_player',  author: '찬성 플레이어', align: 'pro', variant: 'player' },
   { key: 'con_a_defense_ai',      author: 'AI 보조·찬성',  align: 'pro', variant: 'ai' },
   { key: 'con_a_counter',         author: 'AI 보조·반대',  align: 'con', variant: 'ai' },
-  { key: 'coaching',              author: '훈수 AI',        align: 'pro', variant: 'coach' },
+  { key: 'coaching_pro',          author: '훈수 AI (찬성P)', align: 'pro', variant: 'coach' },
+  { key: 'coaching_con',          author: '훈수 AI (반대P)', align: 'con', variant: 'coach' },
   { key: 'pro_final',             author: '찬성 플레이어', align: 'pro', variant: 'player' },
   { key: 'con_final',             author: '반대 플레이어', align: 'con', variant: 'player' },
 ];
@@ -98,7 +99,7 @@ const CONTENT_LABELS: Partial<Record<keyof RoomContent, string>> = {
   con_p_rebuttal: '반론', con_p_defense_player: '변론', con_p_defense_ai: 'AI 변론', con_p_counter: '재반론',
   pro_a_rebuttal: 'AI 반론', pro_a_defense_player: '변론 (vs AI)', pro_a_defense_ai: 'AI 변론', pro_a_counter: 'AI 재반론',
   con_a_rebuttal: 'AI 반론', con_a_defense_player: '변론 (vs AI)', con_a_defense_ai: 'AI 변론', con_a_counter: 'AI 재반론',
-  coaching: '훈수', pro_final: '최종 변론', con_final: '최종 변론',
+  coaching_pro: '훈수 (찬성P)', coaching_con: '훈수 (반대P)', pro_final: '최종 변론', con_final: '최종 변론',
 };
 
 const SUBMIT_LABELS: Partial<Record<Phase, string>> = {
@@ -151,7 +152,7 @@ function NotMyTurnBanner({ message }: { message: string }) {
   );
 }
 
-// ─── SlimPhaseBar ──────────────────────────────────────────────
+// ─── SlimPhaseBar & InitialClaimsBar ───────────────────────────
 
 function SlimPhaseBar({ phase, phaseEndAt }: { phase: Phase; phaseEndAt: number | null }) {
   const idx = getStageIndex(phase);
@@ -175,6 +176,55 @@ function SlimPhaseBar({ phase, phaseEndAt }: { phase: Phase; phaseEndAt: number 
           <PhaseTimer phaseEndAt={phaseEndAt} />
         </div>
       </div>
+    </div>
+  );
+}
+
+function InitialClaimsBar({ content }: { content: Room['content'] }) {
+  const [open, setOpen] = useState(false);
+  const hasAny = content.pro_argument || content.con_argument || content.pro_ai_argument || content.con_ai_argument;
+  if (!hasAny) return null;
+  return (
+    <div style={{ borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface-2)', flexShrink: 0 }}>
+      <button
+        onClick={() => setOpen(v => !v)}
+        style={{
+          width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          padding: '8px 20px', background: 'transparent', border: 'none', cursor: 'pointer',
+          fontSize: '12px', color: 'var(--color-text-muted)',
+        }}
+      >
+        <span style={{ fontWeight: 600, color: 'var(--color-text)' }}>최초 주장 보기</span>
+        <span style={{ fontSize: '10px', transition: 'transform 0.15s', transform: open ? 'rotate(180deg)' : 'none', display: 'inline-block' }}>▼</span>
+      </button>
+      {open && (
+        <div style={{ padding: '0 20px 12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', alignItems: 'start' }}>
+          {content.pro_argument && (
+            <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-sm)', background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.25)' }}>
+              <div style={{ fontSize: '10px', color: 'var(--color-pro)', fontWeight: 700, marginBottom: '6px' }}>찬성P 주장</div>
+              <div style={{ fontSize: '12px', lineHeight: 1.65, color: 'var(--color-text)' }}>{content.pro_argument}</div>
+            </div>
+          )}
+          {content.con_argument && (
+            <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-sm)', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.25)' }}>
+              <div style={{ fontSize: '10px', color: 'var(--color-con)', fontWeight: 700, marginBottom: '6px' }}>반대P 주장</div>
+              <div style={{ fontSize: '12px', lineHeight: 1.65, color: 'var(--color-text)' }}>{content.con_argument}</div>
+            </div>
+          )}
+          {content.pro_ai_argument && (
+            <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-sm)', background: 'rgba(6,182,212,0.06)', border: '1px solid rgba(6,182,212,0.25)' }}>
+              <div style={{ fontSize: '10px', color: '#06b6d4', fontWeight: 700, marginBottom: '6px' }}>찬성AI 주장</div>
+              <div style={{ fontSize: '12px', lineHeight: 1.65, color: 'var(--color-text)' }}>{content.pro_ai_argument}</div>
+            </div>
+          )}
+          {content.con_ai_argument && (
+            <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-sm)', background: 'rgba(6,182,212,0.06)', border: '1px solid rgba(6,182,212,0.25)' }}>
+              <div style={{ fontSize: '10px', color: '#06b6d4', fontWeight: 700, marginBottom: '6px' }}>반대AI 주장</div>
+              <div style={{ fontSize: '12px', lineHeight: 1.65, color: 'var(--color-text)' }}>{content.con_ai_argument}</div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -209,8 +259,12 @@ function DebateChatView({ room, myRole }: { room: Room; myRole: PlayerRole | nul
       if (!both) {
         if (item.key === 'pro_argument' && myRole !== 'pro_player') return [];
         if (item.key === 'con_argument' && myRole !== 'con_player') return [];
+        if (item.key === 'pro_ai_argument' || item.key === 'con_ai_argument') return [];
       }
     }
+    // 훈수: 플레이어는 자신의 진영 훈수만 표시, 관전자는 둘 다 표시
+    if (item.key === 'coaching_pro' && myRole === 'con_player') return [];
+    if (item.key === 'coaching_con' && myRole === 'pro_player') return [];
     return [{ ...item, text }];
   });
 
@@ -334,7 +388,50 @@ function DebateChatView({ room, myRole }: { room: Room; myRole: PlayerRole | nul
 
 // ─── Phase 별 뷰 (특수 케이스) ──────────────────────────────────
 
-function WaitingView({ room, myRole, mySocketId }: { room: Room; myRole: PlayerRole | null; mySocketId: string }) {
+const DEBATE_TIPS = [
+  '강한 논거는 구체적인 사례나 통계로 뒷받침됩니다.',
+  '상대방의 주장을 먼저 인정한 뒤 반박하면 설득력이 높아집니다.',
+  '감정적인 언어보다 논리적 근거가 판정에서 더 높은 점수를 받습니다.',
+  '최종 변론에서는 핵심 논점만 간결하게 요약하세요.',
+  '반론 시에는 상대방이 실제로 말한 내용을 정확히 인용하세요.',
+  '증거 제시 시 출처가 명확할수록 신뢰도가 올라갑니다.',
+  '논증 구조: 주장 → 근거 → 예시 순서가 가장 명확합니다.',
+  '긴 문장보다 짧고 명확한 문장이 설득력이 강합니다.',
+];
+
+function JudgingWaitView({ room, myRole }: { room: Room; myRole: PlayerRole | null }) {
+  const [tipIdx, setTipIdx] = useState(0);
+  const myFinal = myRole === 'pro_player' ? room.content.pro_final : myRole === 'con_player' ? room.content.con_final : null;
+
+  useEffect(() => {
+    const timer = setInterval(() => setTipIdx(i => (i + 1) % DEBATE_TIPS.length), 4000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '24px', padding: '32px 24px' }}>
+      <div style={{ fontSize: '52px' }}>⚖️</div>
+      <div style={{ textAlign: 'center' }}>
+        <p style={{ fontSize: '17px', fontWeight: 700, marginBottom: '4px' }}>AI가 토론을 분석하고 있습니다...</p>
+        <p style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>결과가 곧 나옵니다. 잠시만 기다려 주세요</p>
+      </div>
+
+      {myFinal && (
+        <div style={{ width: '100%', maxWidth: '600px', background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '16px 20px' }}>
+          <div style={{ fontSize: '11px', color: 'var(--color-primary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>내 최종 변론</div>
+          <p style={{ fontSize: '13px', lineHeight: 1.7, color: 'var(--color-text-muted)', margin: 0, whiteSpace: 'pre-wrap' }}>{myFinal}</p>
+        </div>
+      )}
+
+      <div style={{ width: '100%', maxWidth: '600px', background: 'rgba(108,99,255,0.08)', border: '1px solid rgba(108,99,255,0.2)', borderRadius: 'var(--radius-md)', padding: '14px 18px', minHeight: '60px', transition: 'opacity 0.3s' }}>
+        <div style={{ fontSize: '10px', color: 'var(--color-primary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>토론 꿀팁</div>
+        <p style={{ fontSize: '13px', lineHeight: 1.65, color: 'var(--color-text)', margin: 0 }}>{DEBATE_TIPS[tipIdx]}</p>
+      </div>
+    </div>
+  );
+}
+
+function WaitingView({ room, myRole: _myRole, mySocketId }: { room: Room; myRole: PlayerRole | null; mySocketId: string }) {
   const isHost = room.host === mySocketId;
   const canStart = !!room.proPlayer && !!room.conPlayer;
   return (
@@ -378,7 +475,12 @@ function TopicSelectionView({ room, myRole }: { room: Room; myRole: PlayerRole |
           AI가 주제를 생성 중입니다...
         </div>
       )}
-      {isPlayer && !mySelection && (
+      {isPlayer && !mySelection && !room.topic && (
+        <p style={{ textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '13px', fontStyle: 'italic' }}>
+          주제가 확정된 후 진영을 선택할 수 있습니다.
+        </p>
+      )}
+      {isPlayer && !mySelection && !!room.topic && (
         <>
           <p style={{ textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '13px' }}>
             원하는 진영을 선택하세요{attempts > 0 ? ` (충돌 ${attempts}/3회, 다시 선택해 주세요)` : ''}.
@@ -429,7 +531,7 @@ function ScoreBar({ value }: { value: number }) {
   );
 }
 
-function EndedView({ room }: { room: Room }) {
+function EndedView({ room, myRole }: { room: Room; myRole: PlayerRole | null }) {
   const result = room.result;
   const navigate = useNavigate();
   if (!result) return (
@@ -509,7 +611,14 @@ function EndedView({ room }: { room: Room }) {
       {playerScores.filter((s) => s.advice).length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.4px' }}>플레이어 개인 조언</div>
-          {playerScores.filter((s) => s.advice).map((s) => (
+          {playerScores
+            .filter((s) => s.advice)
+            .filter((s) => {
+              if (myRole === 'pro_player') return s.vote === 'pro';
+              if (myRole === 'con_player') return s.vote === 'con';
+              return true; // observer는 모두 표시
+            })
+            .map((s) => (
             <div key={s.name} style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '14px 16px' }}>
               <div style={{ fontSize: '12px', fontWeight: 700, color: s.vote === 'pro' ? '#9b8fff' : '#f0a070', marginBottom: '6px' }}>{s.name}에게</div>
               <p style={{ fontSize: '13px', lineHeight: 1.7, margin: 0 }}>{s.advice}</p>
@@ -641,8 +750,10 @@ export function DebatePage() {
   const username = currentUser?.name;
   const { room, myRole, mySocketId, resetRoom } = useRoomStore();
   const didJoin = useRef(false);
+  const isLeavingRef = useRef(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
 
   useSocket();
   useRoomEvents();
@@ -664,18 +775,18 @@ export function DebatePage() {
     const onConnect = () => {
       if (didJoin.current) return;
       didJoin.current = true;
-      socket.emit('join_room', { roomId, userId, username, password });
+      socket.emit('join_room', { roomId, userId, username, password: password ?? undefined });
     };
     socket.on('connect', onConnect);
 
     if (socket.connected && !didJoin.current) {
       didJoin.current = true;
-      socket.emit('join_room', { roomId, userId, username, password });
+      socket.emit('join_room', { roomId, userId, username, password: password ?? undefined });
     }
 
     return () => {
       socket.off('connect', onConnect);
-      socket.emit('leave_room');
+      if (!isLeavingRef.current) socket.emit('leave_room');
       resetRoom();
       socket.disconnect();
     };
@@ -707,20 +818,74 @@ export function DebatePage() {
           {room.topic && <span className="debate-mobile-header__topic">{room.topic}</span>}
         </div>
 
+        {/* 페이즈 헤더 */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 20px', borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface)', flexShrink: 0, gap: '12px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
+            <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{room.title}</span>
+            <span style={{ fontSize: '15px', fontWeight: 700 }}>{PHASE_LABELS[phase]}</span>
+          </div>
+          <PhaseTimer phaseEndAt={room.phaseEndAt} />
+          <button
+            onClick={() => setShowLeaveConfirm(true)}
+            style={{ padding: '5px 12px', fontSize: '12px', fontWeight: 600, borderRadius: '6px', border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-muted)', cursor: 'pointer', flexShrink: 0 }}
+          >
+            나가기
+          </button>
+        </div>
+
+        {/* 퇴장 확인 모달 */}
+        {showLeaveConfirm && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+            <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '12px', padding: '28px 24px', maxWidth: '360px', width: '90%', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <p style={{ fontSize: '16px', fontWeight: 700, margin: 0 }}>정말 퇴장하시겠습니까?</p>
+              {phase !== 'waiting' && phase !== 'ended' && (
+                <p style={{ fontSize: '13px', color: 'var(--color-danger)', margin: 0 }}>
+                  게임 진행 중 퇴장 시 <strong>패배 처리</strong>됩니다.
+                </p>
+              )}
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => setShowLeaveConfirm(false)}
+                  style={{ padding: '8px 18px', borderRadius: '6px', border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text)', cursor: 'pointer', fontWeight: 600 }}
+                >
+                  취소
+                </button>
+                <button
+                  onClick={() => {
+                    isLeavingRef.current = true;
+                    socket.emit('leave_room');
+                    navigate('/');
+                  }}
+                  style={{ padding: '8px 18px', borderRadius: '6px', border: 'none', background: 'var(--color-danger)', color: '#fff', cursor: 'pointer', fontWeight: 600 }}
+                >
+                  퇴장
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 토론 주제 배너 */}
+        {room.topic && isDebatePhase && (
+          <div style={{ padding: '10px 20px', background: 'rgba(108,99,255,0.08)', borderBottom: '1px solid rgba(108,99,255,0.2)', flexShrink: 0 }}>
+            <div style={{ fontSize: '10px', color: 'var(--color-primary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '3px' }}>토론 주제</div>
+            <div style={{ fontSize: '15px', fontWeight: 700, lineHeight: 1.4 }}>{room.topic}</div>
+          </div>
+        )}
+
+        {/* 최초 주장 아코디언 */}
+        <InitialClaimsBar content={room.content} />
+
         {/* 메인 컨텐츠 */}
         {isDebatePhase ? (
           <DebateChatView room={room} myRole={myRole} />
         ) : phase === 'judging' ? (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
-            <div style={{ fontSize: '56px' }}>⚖️</div>
-            <p style={{ fontSize: '17px', fontWeight: 700 }}>AI가 토론을 분석하고 있습니다...</p>
-            <p style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>잠시만 기다려 주세요</p>
-          </div>
+          <JudgingWaitView room={room} myRole={myRole} />
         ) : (
           <div style={{ flex: 1, overflow: 'auto', padding: '20px' }}>
             {phase === 'waiting' && <WaitingView room={room} myRole={myRole} mySocketId={mySocketId} />}
             {phase === 'topic_selection' && <TopicSelectionView room={room} myRole={myRole} />}
-            {phase === 'ended' && <EndedView room={room} />}
+            {phase === 'ended' && <EndedView room={room} myRole={myRole} />}
           </div>
         )}
       </div>

@@ -1,4 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { getDebateHistory, getTrainingRecommendation, createRoom, type DebateHistoryItem, type TrainingRecommendation } from "../lib/api";
+import { useUserStore } from "../store/useUserStore";
 import {
   RadarChart,
   Radar,
@@ -54,7 +57,7 @@ function getGrade(score: number): Grade {
 const RADAR_DATA = [
   { axis: "근거 제시", userValue: 82, avgValue: 65 },
   { axis: "반박 능력", userValue: 68, avgValue: 55 },
-  { axis: "문해력", userValue: 75, avgValue: 60 },
+  { axis: "논리력", userValue: 75, avgValue: 60 },
   { axis: "일관성", userValue: 88, avgValue: 62 },
   { axis: "설득력", userValue: 71, avgValue: 58 },
 ];
@@ -131,81 +134,7 @@ const KPI_DATA = [
   },
 ];
 
-const RECOMMENDED_TRAINING = {
-  title: "반박 논리 보충 및 감정적 어조 순화",
-  description:
-    "최근 토론에서 감정적인 표현이 잦아 객관적 논거의 신뢰도가 떨어지는 경향이 있습니다. 주장을 인정한 뒤 논리적으로 재반박하는 연습을 해보세요.",
-  actionLabel: "연습방 바로가기",
-};
 
-const MOCK_REPORTS: ReportItem[] = [
-  {
-    id: 1,
-    date: "2026-03-13",
-    dateLabel: "2026.03.13",
-    topic: "기본소득제 도입 찬반",
-    score: 88,
-    category: "정치",
-    position: "찬성",
-    best: "구체적인 통계 자료를 활용한 근거 제시가 탁월하며 논리 흐름이 매우 체계적임",
-    needsImprovement: "상대방의 반박에 대한 재반박 논리 보충 필요",
-  },
-  {
-    id: 2,
-    date: "2026-03-08",
-    dateLabel: "2026.03.08",
-    topic: "원전 에너지 확대 정책",
-    score: 78,
-    category: "과학",
-    position: "반대",
-    best: "과학적 데이터 인용이 정확하고 신뢰도 높은 출처를 활용함",
-    needsImprovement: "감정적 어조를 줄이고 객관적 논거를 더 강화할 필요 있음",
-  },
-  {
-    id: 3,
-    date: "2026-03-03",
-    dateLabel: "2026.03.03",
-    topic: "인공지능 저작권 찬반",
-    score: 72,
-    category: "사회",
-    position: "찬성",
-    best: "다양한 관점에서 근거를 균형 있게 제시함",
-    needsImprovement: "결론부에서 논리적 연결 구조 보강 필요",
-  },
-  {
-    id: 4,
-    date: "2026-02-24",
-    dateLabel: "2026.02.24",
-    topic: "수행평가 절대평가 전환",
-    score: 65,
-    category: "사회",
-    position: "반대",
-    best: "전체 논리 흐름이 체계적으로 구성됨",
-    needsImprovement: "상대 주장을 인정한 후 반박 시도 논리 보완 필요",
-  },
-  {
-    id: 5,
-    date: "2026-02-17",
-    dateLabel: "2026.02.17",
-    topic: "학생 스마트폰 교내 사용 금지",
-    score: 61,
-    category: "자유",
-    position: "찬성",
-    best: "주제에 대한 사전 지식이 풍부하며 사례 활용이 적절함",
-    needsImprovement: "감정적 표현 줄이고 객관적 논거 강화 필요",
-  },
-  {
-    id: 6,
-    date: "2026-02-10",
-    dateLabel: "2026.02.10",
-    topic: "사형제도 폐지 여부",
-    score: 54,
-    category: "정치",
-    position: "반대",
-    best: "인권적 관점의 논거가 일관되게 유지됨",
-    needsImprovement: "반박 능력 및 재반박 논리 전반적으로 보완 시급",
-  },
-];
 
 /* ─── 커스텀 툴팁 (AreaChart) ──────────────────────────────── */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -282,25 +211,114 @@ function KPICard({ data }: { data: (typeof KPI_DATA)[0] }) {
 }
 
 function RecommendationSection() {
+  const navigate = useNavigate();
+  const [rec, setRec] = useState<TrainingRecommendation | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+
+  useEffect(() => {
+    getTrainingRecommendation()
+      .then(setRec)
+      .finally(() => setLoading(false));
+  }, []);
+
+  async function handlePractice() {
+    setCreating(true);
+    try {
+      const title = rec ? `[연습] ${rec.title}` : '연습방';
+      const room = rec?.topic
+        ? await createRoom(title, 'ai_debate', 'manual', rec.topic)
+        : await createRoom(title, 'ai_debate', 'ai_auto');
+      navigate(`/rooms/${room.id}`);
+    } catch {
+      setCreating(false);
+    }
+  }
+
   return (
     <div className={styles.recommendationCard}>
       <div className={styles.recommendationLeft}>
         <div className={styles.recommendationHeader}>
           <span className={styles.recommendationBadge}>오늘의 추천 훈련</span>
-          <h3 className={styles.chartTitle}>{RECOMMENDED_TRAINING.title}</h3>
+          <h3 className={styles.chartTitle}>
+            {loading ? '분석 중...' : (rec?.title ?? '훈련을 불러올 수 없습니다')}
+          </h3>
         </div>
         <p className={styles.recommendationDesc}>
-          {RECOMMENDED_TRAINING.description}
+          {loading ? '' : (rec?.description ?? '')}
         </p>
+        {rec?.topic && !loading && (
+          <p style={{ fontSize: '12px', color: 'var(--color-primary)', marginTop: '6px', fontWeight: 600 }}>
+            추천 주제: {rec.topic}
+          </p>
+        )}
       </div>
-      <button className={styles.recommendationBtn}>
-        {RECOMMENDED_TRAINING.actionLabel}
+      <button
+        className={styles.recommendationBtn}
+        onClick={handlePractice}
+        disabled={creating || loading}
+      >
+        {creating ? '방 생성 중...' : '연습방 바로가기'}
       </button>
     </div>
   );
 }
 
-function ReportCard({ item }: { item: ReportItem }) {
+function DetailModal({ item, onClose }: { item: DebateHistoryItem; onClose: () => void }) {
+  const scoreFields = [
+    { label: '논리력', key: 'logic' as const },
+    { label: '근거 제시', key: 'evidence' as const },
+    { label: '설득력', key: 'persuasion' as const },
+    { label: '반박력', key: 'rebuttal' as const },
+  ];
+  const resultLabel = item.result === 'win' ? '승리' : item.result === 'lose' ? '패배' : '무승부';
+  const resultColor = item.result === 'win' ? '#22C55E' : item.result === 'lose' ? '#EF4444' : '#8B949E';
+  const positionLabel = item.position === 'pro' ? '찬성' : '반대';
+  const positionColor = item.position === 'pro' ? '#22C55E' : '#EF4444';
+  const date = new Date(item.played_at).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' });
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }} onClick={onClose}>
+      <div style={{ background: '#161B22', border: '1px solid #30363D', borderRadius: '16px', padding: '28px', maxWidth: '520px', width: '100%', maxHeight: '82vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+          <div style={{ flex: 1, paddingRight: '12px' }}>
+            <div style={{ fontSize: '11px', color: '#8B949E', marginBottom: '6px' }}>{date}</div>
+            <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#E6EDF3', margin: 0, lineHeight: 1.4 }}>{item.topic}</h3>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8B949E', fontSize: '20px', padding: '4px', flexShrink: 0 }}>✕</button>
+        </div>
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+          <span style={{ padding: '4px 12px', borderRadius: '999px', fontSize: '12px', fontWeight: 600, background: `${positionColor}22`, color: positionColor }}>{positionLabel}</span>
+          <span style={{ padding: '4px 12px', borderRadius: '999px', fontSize: '12px', fontWeight: 600, background: `${resultColor}22`, color: resultColor }}>{resultLabel}</span>
+        </div>
+        <div style={{ background: '#0D1117', borderRadius: '10px', padding: '16px', marginBottom: '20px', textAlign: 'center' }}>
+          <div style={{ fontSize: '11px', color: '#8B949E', marginBottom: '4px' }}>종합 점수</div>
+          <div style={{ fontSize: '36px', fontWeight: 800, color: '#8B5CF6' }}>{item.score}<span style={{ fontSize: '16px', fontWeight: 500, color: '#8B949E' }}>점</span></div>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
+          {scoreFields.map(({ label, key }) => (
+            <div key={key}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                <span style={{ fontSize: '13px', color: '#8B949E' }}>{label}</span>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: '#E6EDF3' }}>{item[key]}</span>
+              </div>
+              <div style={{ height: '6px', background: '#21262D', borderRadius: '999px', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${item[key]}%`, background: 'linear-gradient(90deg, #7c3aed, #8B5CF6)', borderRadius: '999px' }} />
+              </div>
+            </div>
+          ))}
+        </div>
+        {item.advice && (
+          <div style={{ background: '#0D1117', borderRadius: '10px', padding: '14px' }}>
+            <div style={{ fontSize: '11px', color: '#8B5CF6', fontWeight: 600, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>AI 조언</div>
+            <p style={{ fontSize: '13px', lineHeight: 1.75, color: '#C9D1D9', margin: 0, whiteSpace: 'pre-wrap' }}>{item.advice}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ReportCard({ item, onDetail }: { item: ReportItem; onDetail?: () => void }) {
   const grade = getGrade(item.score);
 
   return (
@@ -359,7 +377,7 @@ function ReportCard({ item }: { item: ReportItem }) {
 
       {/* 4. 상세 보기 */}
       <div className="flex justify-end w-full mt-1">
-        <button className={styles.reportCardDetailBtn}>
+        <button className={styles.reportCardDetailBtn} onClick={onDetail}>
           상세 보기 →
         </button>
       </div>
@@ -370,13 +388,74 @@ function ReportCard({ item }: { item: ReportItem }) {
 /* ─── 섹션 컴포넌트 (MyPage 탭에서도 재사용) ─────────────────── */
 
 export function AnalyticsDashboardSection({ hideKpi = false }: { hideKpi?: boolean } = {}) {
+  const user = useUserStore((s) => s.user);
+  const [history, setHistory] = useState<DebateHistoryItem[]>([]);
+
+  useEffect(() => {
+    getDebateHistory().then(setHistory).catch(() => {});
+  }, []);
+
+  const lineData = useMemo(() => {
+    if (history.length === 0) return LINE_DATA;
+    return [...history]
+      .sort((a, b) => new Date(a.played_at).getTime() - new Date(b.played_at).getTime())
+      .slice(-10)
+      .map((h) => {
+        const d = new Date(h.played_at);
+        return {
+          date: `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`,
+          score: h.score,
+          topic: h.topic,
+        };
+      });
+  }, [history]);
+
+  const radarData = useMemo(() => {
+    if (history.length === 0) return RADAR_DATA;
+    const avg = (vals: number[]) => Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
+    return [
+      { axis: "근거 제시", userValue: avg(history.map((h) => h.evidence)), avgValue: 65 },
+      { axis: "반박 능력", userValue: avg(history.map((h) => h.rebuttal)), avgValue: 55 },
+      { axis: "논리력",   userValue: avg(history.map((h) => h.logic)),    avgValue: 60 },
+      { axis: "일관성",   userValue: avg(history.map((h) => Math.round((h.logic + h.evidence + h.persuasion + h.rebuttal) / 4))), avgValue: 62 },
+      { axis: "설득력",   userValue: avg(history.map((h) => h.persuasion)), avgValue: 58 },
+    ];
+  }, [history]);
+
+  const liveKpi = useMemo(() => {
+    const avgScore = history.length > 0
+      ? Math.round(history.reduce((s, h) => s + h.score, 0) / history.length)
+      : Math.round(user?.scoreAverage ?? 0);
+    const totalDebates = user?.debateCount ?? 0;
+    if (history.length < 2) return { avgScore, totalDebates, growthRate: 0 };
+    const sorted = [...history].sort(
+      (a, b) => new Date(a.played_at).getTime() - new Date(b.played_at).getTime()
+    );
+    const half = Math.max(1, Math.ceil(sorted.length / 2));
+    const avgEarly = sorted.slice(0, half).reduce((s, h) => s + h.score, 0) / half;
+    const avgRecent = sorted.slice(-half).reduce((s, h) => s + h.score, 0) / half;
+    const growthRate = avgEarly > 0 ? Math.round(((avgRecent - avgEarly) / avgEarly) * 100) : 0;
+    return { avgScore, totalDebates, growthRate };
+  }, [user, history]);
+
+  const kpiCards = [
+    { ...KPI_DATA[0], value: `${liveKpi.avgScore}점`, trend: "누적 평균 점수", trendUp: true },
+    { ...KPI_DATA[1], value: `${liveKpi.totalDebates}회`, trend: "총 누적 횟수", trendUp: true },
+    {
+      ...KPI_DATA[2],
+      value: `${liveKpi.growthRate >= 0 ? '+' : ''}${liveKpi.growthRate}%`,
+      trend: liveKpi.growthRate >= 0 ? "성장 중" : "하락 중",
+      trendUp: liveKpi.growthRate >= 0,
+    },
+  ];
+
   return (
     <div className={styles.bentoGridWrapper}>
       <div className={styles.bentoGridContainer}>
         {/* KPI Row */}
         {!hideKpi && (
           <div className={styles.kpiGrid}>
-            {KPI_DATA.map((kpi) => (
+            {kpiCards.map((kpi) => (
               <KPICard key={kpi.label} data={kpi} />
             ))}
           </div>
@@ -405,7 +484,7 @@ export function AnalyticsDashboardSection({ hideKpi = false }: { hideKpi?: boole
             <div className={styles.chartCardFlex}>
               <ResponsiveContainer width="100%" height="100%" debounce={0}>
                 <AreaChart
-                  data={LINE_DATA}
+                  data={lineData}
                   margin={{ top: 10, right: 20, bottom: 10, left: -20 }}
                 >
                   <defs>
@@ -495,7 +574,7 @@ export function AnalyticsDashboardSection({ hideKpi = false }: { hideKpi?: boole
             <div className={styles.chartCardFlex}>
               <ResponsiveContainer width="100%" height="100%" debounce={0}>
                 <RadarChart
-                  data={RADAR_DATA}
+                  data={radarData}
                   margin={{ top: 10, right: 30, bottom: 10, left: 30 }}
                 >
                   <PolarGrid stroke="#30363D" />
@@ -551,13 +630,45 @@ function relativeTime(dateStr: string): string {
 }
 
 
+function toReportItem(h: DebateHistoryItem): ReportItem {
+  const d = new Date(h.played_at);
+  const date = d.toISOString().slice(0, 10);
+  const dateLabel = date.replace(/-/g, ".");
+  return {
+    id: h.id,
+    date,
+    dateLabel,
+    topic: h.topic,
+    score: h.score,
+    category: "자유",
+    position: h.position === "pro" ? "찬성" : "반대",
+    best: h.advice ?? "",
+    needsImprovement: "",
+  };
+}
+
 export function AnalyticsHistorySection() {
   const [searchQuery, setSearchQuery] = useState("");
   const [category, setCategory] = useState<Category>("전체");
   const [sortKey, setSortKey] = useState<SortKey>("최신순");
+  const [reports, setReports] = useState<ReportItem[]>([]);
+  const [rawItems, setRawItems] = useState<DebateHistoryItem[]>([]);
+  const [selectedItem, setSelectedItem] = useState<DebateHistoryItem | null>(null);
+
+  useEffect(() => {
+    getDebateHistory().then((data) => {
+      setRawItems(data);
+      setReports(data.map(toReportItem));
+    });
+  }, []);
+
+  function openDetail(id: number) {
+    const raw = rawItems.find(h => h.id === id);
+    if (raw) setSelectedItem(raw);
+  }
 
   const filtered = useMemo(() => {
-    let list = [...MOCK_REPORTS];
+    let list = [...reports];
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
       list = list.filter((r) => r.topic.toLowerCase().includes(q));
@@ -569,16 +680,17 @@ export function AnalyticsHistorySection() {
     else if (sortKey === "낮은 점수순") list.sort((a, b) => a.score - b.score);
     else list.sort((a, b) => b.date.localeCompare(a.date));
     return list;
-  }, [searchQuery, category, sortKey]);
+  }, [searchQuery, category, sortKey, reports]);
 
   return (
     <>
+      {selectedItem && <DetailModal item={selectedItem} onClose={() => setSelectedItem(null)} />}
       {/* 최근 3건 성장 요약 */}
       <div className={styles.recentSummary}>
         <p className={styles.recentSummaryTitle}>최근 성장 요약</p>
         <div className={styles.recentBannerRow}>
-          {MOCK_REPORTS.slice(0, 3).map((item, idx) => {
-            const nextItem = MOCK_REPORTS[idx + 1];
+          {reports.slice(0, 3).map((item, idx) => {
+            const nextItem = reports[idx + 1];
             const delta = nextItem ? item.score - nextItem.score : null;
             const pct =
               delta !== null && nextItem
@@ -634,7 +746,7 @@ export function AnalyticsHistorySection() {
 
 
                 {/* 상세 보기 */}
-                <button className={styles.recentBannerDetailBtn}>
+                <button className={styles.recentBannerDetailBtn} onClick={() => openDetail(item.id)}>
                   상세 보기 →
                 </button>
               </div>
@@ -747,7 +859,7 @@ export function AnalyticsHistorySection() {
             </p>
           </div>
         ) : (
-          filtered.map((item) => <ReportCard key={item.id} item={item} />)
+          filtered.map((item) => <ReportCard key={item.id} item={item} onDetail={() => openDetail(item.id)} />)
         )}
       </div>
     </>

@@ -1,41 +1,30 @@
-import { useState } from "react";
-
-interface VoteTopic {
-  id: number;
-  badge?: "HOT" | "NEW";
-  category: string;
-  question: string;
-  proPercent: number;
-}
-
-const MOCK_TOPICS: VoteTopic[] = [
-  {
-    id: 1,
-    badge: "HOT",
-    category: "교육",
-    question: "학교 스마트폰 전면 금지, 찬성하시나요?",
-    proPercent: 62,
-  },
-  {
-    id: 2,
-    category: "교육",
-    question: "대입 수능, 절대평가로 전환해야 한다",
-    proPercent: 45,
-  },
-  {
-    id: 3,
-    badge: "NEW",
-    category: "기술·사회",
-    question: "AI 면접관 도입, 공정한가?",
-    proPercent: 31,
-  },
-];
+import { useState, useEffect } from "react";
+import { getCommunityTopics, voteOnTopic, type CommunityTopic } from "../../lib/api";
+import { useUserStore } from "../../store/useUserStore";
 
 export function CommunityVoteWidget() {
-  const [voted, setVoted] = useState<Record<number, "pro" | "con">>({});
+  const isLoggedIn = useUserStore((s) => s.isLoggedIn);
+  const [topics, setTopics] = useState<CommunityTopic[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  function handleVote(id: number, side: "pro" | "con") {
-    setVoted((prev) => ({ ...prev, [id]: side }));
+  useEffect(() => {
+    getCommunityTopics()
+      .then(setTopics)
+      .finally(() => setLoading(false));
+  }, []);
+
+  async function handleVote(id: number, side: "pro" | "con") {
+    if (!isLoggedIn) return;
+    try {
+      const res = await voteOnTopic(id, side);
+      setTopics((prev) =>
+        prev.map((t) =>
+          t.id === id ? { ...t, ...res.topic, myVote: res.myVote } : t
+        )
+      );
+    } catch {
+      // ignore
+    }
   }
 
   return (
@@ -50,53 +39,72 @@ export function CommunityVoteWidget() {
         <span className="vote-widget__live-label">투표 진행 중</span>
       </div>
 
-      <div className="vote-widget__list">
-        {MOCK_TOPICS.map((topic) => {
-          const conPercent = 100 - topic.proPercent;
-          const myVote = voted[topic.id];
-          return (
-            <div key={topic.id} className="vote-card">
-              <div className="vote-card__tags">
-                {topic.badge && (
-                  <span className={`vote-card__badge vote-card__badge--${topic.badge.toLowerCase()}`}>
-                    {topic.badge}
-                  </span>
-                )}
-                <span className="vote-card__category">{topic.category}</span>
-              </div>
+      {loading ? (
+        <div style={{ padding: "16px", color: "var(--color-text-muted)", fontSize: "13px", textAlign: "center" }}>
+          주제를 불러오는 중...
+        </div>
+      ) : (
+        <div className="vote-widget__list">
+          {(() => {
+            const maxVotes = Math.max(...topics.map((t) => t.pro_votes + t.con_votes));
+            return topics.map((topic) => {
+              const total = topic.pro_votes + topic.con_votes;
+              const proPercent = total > 0 ? Math.round((topic.pro_votes / total) * 100) : 50;
+              const conPercent = 100 - proPercent;
+              const myVote = topic.myVote;
+              const isHot = total > 0 && total === maxVotes;
+              const badge = isHot ? "HOT" : topic.badge === "NEW" ? "NEW" : null;
 
-              <p className="vote-card__question">{topic.question}</p>
+              return (
+                <div key={topic.id} className="vote-card">
+                  <div className="vote-card__tags">
+                    {badge && (
+                      <span className={`vote-card__badge vote-card__badge--${badge.toLowerCase()}`}>
+                        {badge}
+                      </span>
+                    )}
+                    <span className="vote-card__category">{topic.category}</span>
+                  </div>
 
-              <div className="vote-card__stats">
-                <span className="vote-card__stat vote-card__stat--pro">찬성 {topic.proPercent}%</span>
-                <span className="vote-card__stat vote-card__stat--con">반대 {conPercent}%</span>
-              </div>
+                  <p className="vote-card__question">{topic.question}</p>
 
-              <div className="vote-card__bar">
-                <div
-                  className="vote-card__bar-fill"
-                  style={{ width: `${topic.proPercent}%` }}
-                />
-              </div>
+                  <div className="vote-card__stats">
+                    <span className="vote-card__stat vote-card__stat--pro">찬성 {proPercent}%</span>
+                    <span className="vote-card__stat vote-card__stat--con">반대 {conPercent}%</span>
+                  </div>
 
-              <div className="vote-card__buttons">
-                <button
-                  className={`vote-card__btn vote-card__btn--pro${myVote === "pro" ? " is-active" : ""}`}
-                  onClick={() => handleVote(topic.id, "pro")}
-                >
-                  찬성
-                </button>
-                <button
-                  className={`vote-card__btn vote-card__btn--con${myVote === "con" ? " is-active" : ""}`}
-                  onClick={() => handleVote(topic.id, "con")}
-                >
-                  반대
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+                  <div className="vote-card__bar">
+                    <div className="vote-card__bar-fill" style={{ width: `${proPercent}%` }} />
+                  </div>
+
+                  {!isLoggedIn && (
+                    <p style={{ fontSize: "11px", color: "var(--color-text-muted)", margin: "4px 0 0", textAlign: "center" }}>
+                      로그인 후 투표 가능합니다
+                    </p>
+                  )}
+
+                  <div className="vote-card__buttons">
+                    <button
+                      className={`vote-card__btn vote-card__btn--pro${myVote === "pro" ? " is-active" : ""}`}
+                      onClick={() => handleVote(topic.id, "pro")}
+                      disabled={!isLoggedIn}
+                    >
+                      찬성
+                    </button>
+                    <button
+                      className={`vote-card__btn vote-card__btn--con${myVote === "con" ? " is-active" : ""}`}
+                      onClick={() => handleVote(topic.id, "con")}
+                      disabled={!isLoggedIn}
+                    >
+                      반대
+                    </button>
+                  </div>
+                </div>
+              );
+            });
+          })()}
+        </div>
+      )}
     </aside>
   );
 }

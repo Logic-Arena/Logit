@@ -69,7 +69,8 @@ export interface RoomContent {
   con_a_defense_player: string | null;
   con_a_defense_ai: string | null;
   con_a_counter: string | null;
-  coaching: string | null;
+  coaching_pro: string | null;
+  coaching_con: string | null;
   pro_final: string | null;
   con_final: string | null;
 }

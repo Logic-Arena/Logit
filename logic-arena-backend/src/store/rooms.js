@@ -8,21 +8,21 @@ export const phaseTimers = new Map(); // roomId -> timeoutId
 export const PHASE_DURATION_MS = {
   topic_selection: 35_000,
   arguing: 120_000,
-  pro_p_rebuttal: 150_000, // 2분 + 30초 보너스
-  pro_p_defense: 90_000,
-  pro_p_counter: 60_000,
-  con_p_rebuttal: 90_000,
-  con_p_defense: 90_000,
-  con_p_counter: 60_000,
-  pro_a_rebuttal: 60_000,
-  pro_a_defense: 90_000,
-  pro_a_counter: 60_000,
-  con_a_rebuttal: 60_000,
-  con_a_defense: 90_000,
-  con_a_counter: 60_000,
-  coaching: 30_000,
-  final_argument: 60_000,
-  judging: 30_000,
+  pro_p_rebuttal: 150_000, // 2분 + 30초 보너스 (첫 플레이어 주제 읽기 시간)
+  pro_p_defense: 90_000,   // 1분 30초
+  pro_p_counter: 60_000,   // 1분
+  con_p_rebuttal: 90_000,  // 1분 30초
+  con_p_defense: 90_000,   // 1분 30초
+  con_p_counter: 60_000,   // 1분
+  pro_a_rebuttal: 10_000,  // AI 자동 생성 후 즉시 진행 (fallback 10초)
+  pro_a_defense: 90_000,   // 1분 30초
+  pro_a_counter: 10_000,   // AI 자동 생성 후 즉시 진행 (fallback 10초)
+  con_a_rebuttal: 10_000,  // AI 자동 생성 후 즉시 진행 (fallback 10초)
+  con_a_defense: 90_000,   // 1분 30초
+  con_a_counter: 10_000,   // AI 자동 생성 후 즉시 진행 (fallback 10초)
+  coaching: 10_000,        // 훈수 AI (fallback 10초)
+  final_argument: 60_000,  // 1분
+  judging: 30_000,         // 30초
 };
 
 const AI_PHASE_SEQUENCE = [
@@ -113,7 +113,8 @@ export function createRoom({ title, mode = 'ai_debate', topicMode = 'ai_auto', t
       con_a_defense_player: null,
       con_a_defense_ai: null,
       con_a_counter: null,
-      coaching: null,
+      coaching_pro: null,
+      coaching_con: null,
       pro_final: null,
       con_final: null,
     },

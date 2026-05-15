@@ -4,6 +4,8 @@ import { socket } from '../lib/socket';
 import { useRoomStore } from '../store/useRoomStore';
 import { useDebateHistoryStore } from '../store/useDebateHistoryStore';
 import { useToast } from './useToast';
+import { useUserStore } from '../store/useUserStore';
+import { getMe } from '../lib/api';
 import type { Room, DebateResult, PlayerRole } from '../types/room';
 
 export function useRoomEvents() {
@@ -65,6 +67,8 @@ export function useRoomEvents() {
               : null,
         result,
       });
+      const { user, setUser } = useUserStore.getState();
+      if (user) { getMe().then(setUser).catch(() => {}); }
     };
 
     const onError = ({ message }: { message: string }) => toast(message, 'error');

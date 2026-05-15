@@ -46,7 +46,7 @@ export function CreateRoomPage() {
   };
 
   return (
-    <div className="page form-page">
+    <div className="page form-page" style={{ overflowY: 'auto', height: '100%' }}>
       <h1 className="page__title">새 토론방 만들기</h1>
       <div className="form-card">
       <form className="form-card__body" onSubmit={handleSubmit}>

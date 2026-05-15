@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useUserStore } from "../store/useUserStore";
+import { getDebateHistory, type DebateHistoryItem } from "../lib/api";
 import {
   AnalyticsDashboardSection,
   AnalyticsHistorySection,
@@ -41,6 +42,22 @@ function StatDelta({ delta, unit }: { delta: number; unit: string }) {
 export function MyPage() {
   const user = useUserStore((s) => s.user);
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
+  const [history, setHistory] = useState<DebateHistoryItem[]>([]);
+
+  useEffect(() => {
+    getDebateHistory().then(setHistory).catch(() => {});
+  }, []);
+
+  const growthRate = useMemo(() => {
+    if (history.length < 2) return 0;
+    const sorted = [...history].sort(
+      (a, b) => new Date(a.played_at).getTime() - new Date(b.played_at).getTime()
+    );
+    const half = Math.ceil(sorted.length / 2);
+    const avgEarly = sorted.slice(0, half).reduce((s, h) => s + h.score, 0) / half;
+    const avgRecent = sorted.slice(-half).reduce((s, h) => s + h.score, 0) / half;
+    return avgEarly > 0 ? Math.round(((avgRecent - avgEarly) / avgEarly) * 100) : 0;
+  }, [history]);
 
   if (!user) {
     return (
@@ -62,14 +79,8 @@ export function MyPage() {
   const badges = user.badges ?? [];
   const initial = user.name.charAt(0).toUpperCase();
 
-  const avgScore = 76;
-  const totalDebates = 34;
-  const growthRate = 12;
-  const prevWinCount = winCount - 3;
-  const prevWinRate = winRate - 5;
-  const prevAvgScore = 71;
-  const prevTotalDebates = 30;
-  const prevGrowthRate = 15;
+  const avgScore = Math.round(user.scoreAverage ?? 0);
+  const totalDebates = user.debateCount ?? 0;
 
   return (
     <div className={styles.myPage}>
@@ -128,10 +139,6 @@ export function MyPage() {
                 {winCount}
                 <span className={styles.statUnit}>회</span>
               </div>
-              <div className={styles.statFooter}>
-                <span className={styles.statPeriod}>지난 기간 대비</span>
-                <StatDelta delta={winCount - prevWinCount} unit="회" />
-              </div>
             </div>
             <div className={styles.statCard}>
               <div className={styles.statLabel}>승률</div>
@@ -139,19 +146,11 @@ export function MyPage() {
                 {winRate}
                 <span className={styles.statUnit}>%</span>
               </div>
-              <div className={styles.statFooter}>
-                <span className={styles.statPeriod}>지난 기간 대비</span>
-                <StatDelta delta={winRate - prevWinRate} unit="%" />
-              </div>
             </div>
             <div className={styles.statCard}>
               <div className={styles.statLabel}>평균 점수</div>
               <div className={styles.statValue}>
                 {avgScore}<span className={styles.statUnit}>점</span>
-              </div>
-              <div className={styles.statFooter}>
-                <span className={styles.statPeriod}>지난 기간 대비</span>
-                <StatDelta delta={avgScore - prevAvgScore} unit="점" />
               </div>
             </div>
             <div className={styles.statCard}>
@@ -159,19 +158,11 @@ export function MyPage() {
               <div className={styles.statValue}>
                 {totalDebates}<span className={styles.statUnit}>회</span>
               </div>
-              <div className={styles.statFooter}>
-                <span className={styles.statPeriod}>지난 기간 대비</span>
-                <StatDelta delta={totalDebates - prevTotalDebates} unit="회" />
-              </div>
             </div>
             <div className={styles.statCard}>
               <div className={styles.statLabel}>최근 성장률</div>
               <div className={styles.statValue}>
-                {growthRate}<span className={styles.statUnit}>%</span>
-              </div>
-              <div className={styles.statFooter}>
-                <span className={styles.statPeriod}>지난 기간 대비</span>
-                <StatDelta delta={growthRate - prevGrowthRate} unit="%" />
+                {growthRate >= 0 ? '+' : ''}{growthRate}<span className={styles.statUnit}>%</span>
               </div>
             </div>
           </div>

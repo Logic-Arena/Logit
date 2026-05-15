@@ -18,4 +18,6 @@ export const {
   generateCoaching,
   judgeDebate,
   generateAiResponse,
+  generateTrainingRecommendation,
+  generateCommunityTopics,
 } = service;
