@@ -39,12 +39,20 @@ app.locals.io = io;
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
+app.get('/api/health', (_req, res) => {
+  res.json({ status: 'ok' });
+});
 
 app.use('/rooms', roomsRouter);
 app.use('/auth', authRouter);
 app.use('/debate-history', historyRouter);
 app.use('/community-topics', communityRouter);
 app.use('/training-recommendation', trainingRouter);
+app.use('/api/rooms', roomsRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/debate-history', historyRouter);
+app.use('/api/community-topics', communityRouter);
+app.use('/api/training-recommendation', trainingRouter);
 
 io.use((socket, next) => {
   socket.data.roomId = null;

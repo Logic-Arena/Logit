@@ -4,7 +4,19 @@ dotenv.config();
 
 export const MAX_PARTICIPANTS = 4;
 export const PORT = process.env.PORT ?? 4000;
-export const CORS_ORIGIN = process.env.CORS_ORIGIN ?? 'http://localhost:5173';
+
+function parseCorsOrigin(value) {
+  const origins = value
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  return origins.length === 1 ? origins[0] : origins;
+}
+
+export const CORS_ORIGIN = parseCorsOrigin(
+  process.env.CORS_ORIGIN ?? 'http://localhost:5173'
+);
 
 export const DB_HOST = process.env.DB_HOST ?? 'localhost';
 export const DB_PORT = Number(process.env.DB_PORT ?? 5432);

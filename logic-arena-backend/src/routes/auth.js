@@ -23,35 +23,51 @@ import {
 import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
+const isGoogleAuthConfigured = Boolean(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET);
+const isKakaoAuthConfigured = Boolean(KAKAO_REST_API_KEY);
 
-passport.use(
-  new GoogleStrategy(
-    {
-      clientID: GOOGLE_CLIENT_ID,
-      clientSecret: GOOGLE_CLIENT_SECRET,
-      callbackURL: GOOGLE_CALLBACK_URL,
-    },
-    async (_accessToken, _refreshToken, profile, done) => {
-      try {
-        const user = await findOrCreateGoogleUser(profile);
-        done(null, user);
-      } catch (error) {
-        done(error, null);
+if (isGoogleAuthConfigured) {
+  passport.use(
+    new GoogleStrategy(
+      {
+        clientID: GOOGLE_CLIENT_ID,
+        clientSecret: GOOGLE_CLIENT_SECRET,
+        callbackURL: GOOGLE_CALLBACK_URL,
+      },
+      async (_accessToken, _refreshToken, profile, done) => {
+        try {
+          const user = await findOrCreateGoogleUser(profile);
+          done(null, user);
+        } catch (error) {
+          done(error, null);
+        }
       }
-    }
-  )
-);
+    )
+  );
+}
 
 passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((user, done) => done(null, user));
 
 router.get(
   '/google',
+  (_req, res, next) => {
+    if (!isGoogleAuthConfigured) {
+      return res.status(503).json({ message: 'Google 로그인 설정이 필요합니다.' });
+    }
+    next();
+  },
   passport.authenticate('google', { scope: ['profile', 'email'] })
 );
 
 router.get(
   '/google/callback',
+  (_req, res, next) => {
+    if (!isGoogleAuthConfigured) {
+      return res.status(503).json({ message: 'Google 로그인 설정이 필요합니다.' });
+    }
+    next();
+  },
   passport.authenticate('google', { session: false, failureRedirect: '/auth/fail' }),
   (req, res) => {
     const token = createAccessToken(req.user);
@@ -138,6 +154,10 @@ router.post('/login', async (req, res) => {
 });
 
 router.get('/kakao', (_req, res) => {
+  if (!isKakaoAuthConfigured) {
+    return res.status(503).json({ message: 'Kakao 로그인 설정이 필요합니다.' });
+  }
+
   const kakaoAuthUrl =
     `https://kauth.kakao.com/oauth/authorize` +
     `?client_id=${KAKAO_REST_API_KEY}` +
@@ -148,6 +168,10 @@ router.get('/kakao', (_req, res) => {
 });
 
 router.get('/kakao/callback', async (req, res) => {
+  if (!isKakaoAuthConfigured) {
+    return res.status(503).json({ message: 'Kakao 로그인 설정이 필요합니다.' });
+  }
+
   const code = String(req.query.code ?? '');
 
   try {

@@ -3,7 +3,7 @@ import type { User } from '../types/user';
 import { useUserStore } from '../store/useUserStore';
 import type { AuthUser } from '../store/useAuthStore';
 
-const BASE = import.meta.env.VITE_API_URL as string;
+const BASE = import.meta.env.VITE_API_URL ?? '/api';
 
 export interface AuthResponse {
   message: string;

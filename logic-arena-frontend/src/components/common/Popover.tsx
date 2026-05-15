@@ -11,10 +11,17 @@ export function Popover({ content, children, width = 280 }: Props) {
   const [visible, setVisible] = useState(false);
   const [style, setStyle] = useState<React.CSSProperties>({});
   const triggerRef = useRef<HTMLDivElement>(null);
-  const hideTimer = useRef<ReturnType<typeof setTimeout>>();
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearHideTimer = () => {
+    if (hideTimer.current) {
+      clearTimeout(hideTimer.current);
+      hideTimer.current = null;
+    }
+  };
 
   const show = () => {
-    clearTimeout(hideTimer.current);
+    clearHideTimer();
     if (!triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
 
@@ -45,7 +52,7 @@ export function Popover({ content, children, width = 280 }: Props) {
           <div
             className="popover"
             style={style}
-            onMouseEnter={() => clearTimeout(hideTimer.current)}
+            onMouseEnter={clearHideTimer}
             onMouseLeave={scheduleHide}
           >
             {content}

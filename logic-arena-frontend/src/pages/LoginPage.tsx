@@ -4,7 +4,7 @@ import { loginLocal, createHybridUser } from '../lib/api';
 import { useUserStore } from '../store/useUserStore';
 import { useToast } from '../hooks/useToast';
 
-const API_URL = import.meta.env.VITE_API_URL as string;
+const API_URL = import.meta.env.VITE_API_URL ?? '/api';
 
 export function LoginPage() {
   const [loginId, setLoginId] = useState('');

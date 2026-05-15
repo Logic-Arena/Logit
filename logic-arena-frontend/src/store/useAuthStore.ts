@@ -4,6 +4,7 @@ import { persist } from 'zustand/middleware';
 export interface AuthUserStats {
   tier: string;
   rank_point: number;
+  score_average: number;
   total_games: number;
   win_count: number;
   badges: unknown[];

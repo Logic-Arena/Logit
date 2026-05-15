@@ -28,17 +28,6 @@ function PillarIcon({ className }: { className?: string }) {
   );
 }
 
-function StatDelta({ delta, unit }: { delta: number; unit: string }) {
-  if (delta === 0) return null;
-  const up = delta > 0;
-  return (
-    <span className={up ? styles.statDeltaUp : styles.statDeltaDown}>
-      {up ? `+${delta}` : `${delta}`}
-      {unit} {up ? "↑" : "↓"}
-    </span>
-  );
-}
-
 export function MyPage() {
   const user = useUserStore((s) => s.user);
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
