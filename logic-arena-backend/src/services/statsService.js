@@ -106,16 +106,20 @@ export async function updateStats(participants, winner) {
 
       const rpDelta = isDraw ? 0 : isWinner ? WIN_RP : -LOSE_RP;
       const newRp = Math.max(0, stats.rank_point + rpDelta);
-      const newTotal = stats.total_games + 1;
-      const newWin = stats.win_count + (isWinner ? 1 : 0);
       const newTier = calcTier(newRp);
+
+      // total_games / win_count는 DebateHistory 실제 건수 기준으로 계산 (stats 단독 카운트 시 불일치 방지)
+      const [totalGames, winCount] = await Promise.all([
+        prisma.debateHistory.count({ where: { user_id: userId } }),
+        prisma.debateHistory.count({ where: { user_id: userId, result: 'win' } }),
+      ]);
 
       await prisma.userStats.update({
         where: { user_id: userId },
         data: {
           rank_point: newRp,
-          total_games: newTotal,
-          win_count: newWin,
+          total_games: totalGames + 1,
+          win_count: winCount + (isWinner ? 1 : 0),
           tier: newTier,
         },
       });

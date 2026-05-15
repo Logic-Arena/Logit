@@ -209,8 +209,8 @@ async function handleAiAutoPhase(io, roomId, phase) {
       const participants = [];
       if (room.proPlayer) participants.push({ userId: room.proPlayer.userId, vote: 'pro' });
       if (room.conPlayer) participants.push({ userId: room.conPlayer.userId, vote: 'con' });
-      await updateStats(participants, result.winner).catch(() => {});
-      await saveDebateHistory(participants, result, room.topic).catch(() => {});
+      await updateStats(participants, result.winner).catch((e) => console.error('[judging] updateStats 실패:', e.message));
+      await saveDebateHistory(participants, result, room.topic).catch((e) => console.error('[judging] saveDebateHistory 실패:', e.message));
       io.to(roomId).emit('debate_ended', { result, room: getRoomSerialized(roomId) });
       await startPhase(io, roomId, 'ended');
       return;
@@ -359,8 +359,8 @@ async function handleLeaveInternal(io, socket) {
         scores: [],
       };
       if (updatedRoom) setResult(roomId, earlyResult);
-      await updateStats(participants, earlyResult.winner).catch(() => {});
-      await saveDebateHistory(participants, earlyResult, room.topic ?? '').catch(() => {});
+      await updateStats(participants, earlyResult.winner).catch((e) => console.error('[earlyExit] updateStats 실패:', e.message));
+      await saveDebateHistory(participants, earlyResult, room.topic ?? '').catch((e) => console.error('[earlyExit] saveDebateHistory 실패:', e.message));
       io.to(roomId).emit('debate_ended', { result: earlyResult, room: getRoomSerialized(roomId) });
       if (updatedRoom) await startPhase(io, roomId, 'ended');
     } else {
@@ -369,8 +369,8 @@ async function handleLeaveInternal(io, socket) {
         const judgeResult = await judgeDebate({ topic: room.topic ?? '', content: room.content });
         judgeResult.winner = winnerVote; // 퇴장자는 무조건 패배
         if (updatedRoom) setResult(roomId, judgeResult);
-        await updateStats(participants, judgeResult.winner).catch(() => {});
-        await saveDebateHistory(participants, judgeResult, room.topic ?? '').catch(() => {});
+        await updateStats(participants, judgeResult.winner).catch((e) => console.error('[earlyExit-judge] updateStats 실패:', e.message));
+        await saveDebateHistory(participants, judgeResult, room.topic ?? '').catch((e) => console.error('[earlyExit-judge] saveDebateHistory 실패:', e.message));
         io.to(roomId).emit('debate_ended', { result: judgeResult, room: getRoomSerialized(roomId) });
         if (updatedRoom) await startPhase(io, roomId, 'ended');
       } catch (e) {
@@ -381,8 +381,8 @@ async function handleLeaveInternal(io, socket) {
           scores: [],
         };
         if (updatedRoom) setResult(roomId, fallback);
-        await updateStats(participants, fallback.winner).catch(() => {});
-        await saveDebateHistory(participants, fallback, room.topic ?? '').catch(() => {});
+        await updateStats(participants, fallback.winner).catch((e) => console.error('[earlyExit-fallback] updateStats 실패:', e.message));
+        await saveDebateHistory(participants, fallback, room.topic ?? '').catch((e) => console.error('[earlyExit-fallback] saveDebateHistory 실패:', e.message));
         io.to(roomId).emit('debate_ended', { result: fallback, room: getRoomSerialized(roomId) });
         if (updatedRoom) await startPhase(io, roomId, 'ended');
       }
