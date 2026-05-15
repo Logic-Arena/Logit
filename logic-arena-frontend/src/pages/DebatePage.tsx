@@ -85,7 +85,8 @@ const CONTENT_FLOW: Array<{
   { key: 'con_a_defense_player',  author: '찬성 플레이어', align: 'pro', variant: 'player' },
   { key: 'con_a_defense_ai',      author: '찬성 AI',       align: 'pro', variant: 'ai' },
   { key: 'con_a_counter',         author: '반대 AI',       align: 'con', variant: 'ai' },
-  { key: 'coaching',              author: '훈수 AI',       align: 'pro', variant: 'coach' },
+  { key: 'coaching_pro',          author: '훈수 AI (찬성P)', align: 'pro', variant: 'coach' },
+  { key: 'coaching_con',          author: '훈수 AI (반대P)', align: 'con', variant: 'coach' },
   { key: 'pro_final',             author: '찬성 플레이어', align: 'pro', variant: 'player' },
   { key: 'con_final',             author: '반대 플레이어', align: 'con', variant: 'player' },
 ];
@@ -97,7 +98,7 @@ const CONTENT_LABELS: Partial<Record<keyof RoomContent, string>> = {
   con_p_rebuttal: '반론', con_p_defense_player: '변론', con_p_defense_ai: 'AI 변론', con_p_counter: '재반론',
   pro_a_rebuttal: 'AI 반론', pro_a_defense_player: '변론 (vs AI)', pro_a_defense_ai: 'AI 변론', pro_a_counter: 'AI 재반론',
   con_a_rebuttal: 'AI 반론', con_a_defense_player: '변론 (vs AI)', con_a_defense_ai: 'AI 변론', con_a_counter: 'AI 재반론',
-  coaching: '훈수', pro_final: '최종 변론', con_final: '최종 변론',
+  coaching_pro: '훈수 (찬성P)', coaching_con: '훈수 (반대P)', pro_final: '최종 변론', con_final: '최종 변론',
 };
 
 const SUBMIT_LABELS: Partial<Record<Phase, string>> = {
@@ -142,7 +143,8 @@ function NotMyTurnBanner({ message }: { message: string }) {
 
 function InitialClaimsBar({ content }: { content: Room['content'] }) {
   const [open, setOpen] = useState(false);
-  if (!content.pro_argument && !content.con_argument) return null;
+  const hasAny = content.pro_argument || content.con_argument || content.pro_ai_argument || content.con_ai_argument;
+  if (!hasAny) return null;
   return (
     <div style={{ borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface-2)', flexShrink: 0 }}>
       <button
@@ -160,14 +162,26 @@ function InitialClaimsBar({ content }: { content: Room['content'] }) {
         <div style={{ padding: '0 20px 12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', alignItems: 'start' }}>
           {content.pro_argument && (
             <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-sm)', background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.25)' }}>
-              <div style={{ fontSize: '10px', color: 'var(--color-pro)', fontWeight: 700, marginBottom: '6px' }}>찬성 최초 주장</div>
+              <div style={{ fontSize: '10px', color: 'var(--color-pro)', fontWeight: 700, marginBottom: '6px' }}>찬성P 주장</div>
               <div style={{ fontSize: '12px', lineHeight: 1.65, color: 'var(--color-text)' }}>{content.pro_argument}</div>
             </div>
           )}
           {content.con_argument && (
             <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-sm)', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.25)' }}>
-              <div style={{ fontSize: '10px', color: 'var(--color-con)', fontWeight: 700, marginBottom: '6px' }}>반대 최초 주장</div>
+              <div style={{ fontSize: '10px', color: 'var(--color-con)', fontWeight: 700, marginBottom: '6px' }}>반대P 주장</div>
               <div style={{ fontSize: '12px', lineHeight: 1.65, color: 'var(--color-text)' }}>{content.con_argument}</div>
+            </div>
+          )}
+          {content.pro_ai_argument && (
+            <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-sm)', background: 'rgba(6,182,212,0.06)', border: '1px solid rgba(6,182,212,0.25)' }}>
+              <div style={{ fontSize: '10px', color: '#06b6d4', fontWeight: 700, marginBottom: '6px' }}>찬성AI 주장</div>
+              <div style={{ fontSize: '12px', lineHeight: 1.65, color: 'var(--color-text)' }}>{content.pro_ai_argument}</div>
+            </div>
+          )}
+          {content.con_ai_argument && (
+            <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-sm)', background: 'rgba(6,182,212,0.06)', border: '1px solid rgba(6,182,212,0.25)' }}>
+              <div style={{ fontSize: '10px', color: '#06b6d4', fontWeight: 700, marginBottom: '6px' }}>반대AI 주장</div>
+              <div style={{ fontSize: '12px', lineHeight: 1.65, color: 'var(--color-text)' }}>{content.con_ai_argument}</div>
             </div>
           )}
         </div>
@@ -193,14 +207,18 @@ function DebateChatView({ room, myRole }: { room: Room; myRole: PlayerRole | nul
   const messages = CONTENT_FLOW.flatMap((item) => {
     const text = content[item.key];
     if (!text) return [];
-    // During arguing: hide opponent's argument until both have submitted
+    // During arguing: hide opponent's argument and AI arguments until both humans have submitted
     if (phase === 'arguing') {
       const both = !!(content.pro_argument && content.con_argument);
       if (!both) {
         if (item.key === 'pro_argument' && myRole !== 'pro_player') return [];
         if (item.key === 'con_argument' && myRole !== 'con_player') return [];
+        if (item.key === 'pro_ai_argument' || item.key === 'con_ai_argument') return [];
       }
     }
+    // 훈수: 플레이어는 자신의 진영 훈수만 표시, 관전자는 둘 다 표시
+    if (item.key === 'coaching_pro' && myRole === 'con_player') return [];
+    if (item.key === 'coaching_con' && myRole === 'pro_player') return [];
     return [{ ...item, text }];
   });
 
@@ -249,7 +267,7 @@ function DebateChatView({ room, myRole }: { room: Room; myRole: PlayerRole | nul
               <span>{CONTENT_LABELS[item.key]}</span>
             </div>
             <div className="debate-bubble__body">
-              {item.key === 'coaching'
+              {(item.key === 'coaching_pro' || item.key === 'coaching_con')
                 ? item.text.split(/\n{2,}/).map((para, i) => (
                     <p key={i} style={{ margin: i === 0 ? 0 : '10px 0 0' }}>{para.trim()}</p>
                   ))
@@ -288,7 +306,7 @@ function DebateChatView({ room, myRole }: { room: Room; myRole: PlayerRole | nul
 
 // ─── Phase 별 뷰 (특수 케이스) ──────────────────────────────────
 
-function WaitingView({ room, myRole, mySocketId }: { room: Room; myRole: PlayerRole | null; mySocketId: string }) {
+function WaitingView({ room, myRole: _myRole, mySocketId }: { room: Room; myRole: PlayerRole | null; mySocketId: string }) {
   const isHost = room.host === mySocketId;
   const canStart = !!room.proPlayer && !!room.conPlayer;
   return (
@@ -332,7 +350,12 @@ function TopicSelectionView({ room, myRole }: { room: Room; myRole: PlayerRole |
           AI가 주제를 생성 중입니다...
         </div>
       )}
-      {isPlayer && !mySelection && (
+      {isPlayer && !mySelection && !room.topic && (
+        <p style={{ textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '13px', fontStyle: 'italic' }}>
+          주제가 확정된 후 진영을 선택할 수 있습니다.
+        </p>
+      )}
+      {isPlayer && !mySelection && !!room.topic && (
         <>
           <p style={{ textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '13px' }}>
             원하는 진영을 선택하세요{attempts > 0 ? ` (충돌 ${attempts}/3회, 다시 선택해 주세요)` : ''}.
@@ -568,13 +591,13 @@ export function DebatePage() {
     const onConnect = () => {
       if (didJoin.current) return;
       didJoin.current = true;
-      socket.emit('join_room', { roomId, userId, username, password });
+      socket.emit('join_room', { roomId, userId, username, password: password ?? undefined });
     };
     socket.on('connect', onConnect);
 
     if (socket.connected && !didJoin.current) {
       didJoin.current = true;
-      socket.emit('join_room', { roomId, userId, username, password });
+      socket.emit('join_room', { roomId, userId, username, password: password ?? undefined });
     }
 
     return () => {

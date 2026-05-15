@@ -30,7 +30,7 @@ import {
   judgeDebate,
 } from '../services/ai.js';
 
-import { updateStats } from '../services/statsService.js';
+import { updateStats, saveDebateHistory } from '../services/statsService.js';
 
 // ── Timer helpers ─────────────────────────────────────────────
 
@@ -146,12 +146,7 @@ async function handleAiArguing(io, roomId) {
   if (getRoom(roomId)?.phase !== 'arguing') return;
   setContent(roomId, 'pro_ai_argument', proContent);
   setContent(roomId, 'con_ai_argument', conContent);
-  io.to(roomId).emit('ai_content', {
-    pro_ai_argument: proContent,
-    con_ai_argument: conContent,
-    room: getRoomSerialized(roomId),
-  });
-
+  // 사람 플레이어가 모두 제출한 후에 공개 (checkArguingDone에서 emit)
   checkArguingDone(io, roomId);
 }
 
@@ -193,10 +188,21 @@ async function handleAiAutoPhase(io, roomId, phase) {
       });
       contentKey = 'con_a_counter';
       break;
-    case 'coaching':
-      content = await generateCoaching({ topic: room.topic, content: c });
-      contentKey = 'coaching';
-      break;
+    case 'coaching': {
+      const coachingResult = await generateCoaching({ topic: room.topic, content: c });
+      if (getRoom(roomId)) {
+        setContent(roomId, 'coaching_pro', coachingResult.pro);
+        setContent(roomId, 'coaching_con', coachingResult.con);
+        io.to(roomId).emit('ai_content', {
+          coaching_pro: coachingResult.pro,
+          coaching_con: coachingResult.con,
+          room: getRoomSerialized(roomId),
+        });
+        clearPhaseTimer(roomId);
+        await advancePhase(io, roomId);
+      }
+      return;
+    }
     case 'judging': {
       const result = await judgeDebate({ topic: room.topic, content: room.content });
       setResult(roomId, result);
@@ -204,6 +210,7 @@ async function handleAiAutoPhase(io, roomId, phase) {
       if (room.proPlayer) participants.push({ userId: room.proPlayer.userId, vote: 'pro' });
       if (room.conPlayer) participants.push({ userId: room.conPlayer.userId, vote: 'con' });
       await updateStats(participants, result.winner).catch(() => {});
+      await saveDebateHistory(participants, result, room.topic).catch(() => {});
       io.to(roomId).emit('debate_ended', { result, room: getRoomSerialized(roomId) });
       await startPhase(io, roomId, 'ended');
       return;
@@ -259,7 +266,13 @@ async function handleAiDefense(io, roomId, phase) {
 
   if (content && contentKey && getRoom(roomId)) {
     setContent(roomId, contentKey, content);
-    io.to(roomId).emit('ai_content', { [contentKey]: content, room: getRoomSerialized(roomId) });
+    // 사람이 이미 변론을 제출한 경우에만 AI 변론 공개 (사람 먼저, AI 나중)
+    const playerKey = contentKey.replace('_ai', '_player');
+    const currentRoom = getRoom(roomId);
+    if (currentRoom?.content[playerKey]) {
+      io.to(roomId).emit('ai_content', { [contentKey]: content, room: getRoomSerialized(roomId) });
+    }
+    // 사람이 아직 미제출이면 submit_content 핸들러에서 공개
   }
 }
 
@@ -272,6 +285,12 @@ function checkArguingDone(io, roomId) {
   const humanDone = c.pro_argument && c.con_argument;
   const aiDone = c.pro_ai_argument && c.con_ai_argument;
   if (humanDone && aiDone) {
+    // 사람이 모두 제출한 시점에 AI 주장도 함께 공개
+    io.to(roomId).emit('ai_content', {
+      pro_ai_argument: c.pro_ai_argument,
+      con_ai_argument: c.con_ai_argument,
+      room: getRoomSerialized(roomId),
+    });
     advancePhase(io, roomId);
   }
 }
@@ -452,6 +471,15 @@ export function registerHandlers(io, socket) {
         'pro_a_defense', 'con_a_defense',
       ]);
       if (singlePlayerPhases.has(phase)) {
+        // 변론 페이즈: AI가 이미 생성 완료했으면 지금 공개 (사람 제출 후 AI 순서)
+        const defensePhases = new Set(['pro_p_defense', 'con_p_defense', 'pro_a_defense', 'con_a_defense']);
+        if (defensePhases.has(phase)) {
+          const aiKey = contentKey.replace('_player', '_ai');
+          const updatedRoom = getRoom(roomId);
+          if (updatedRoom?.content[aiKey]) {
+            io.to(roomId).emit('ai_content', { [aiKey]: updatedRoom.content[aiKey], room: getRoomSerialized(roomId) });
+          }
+        }
         checkSinglePlayerDone(io, roomId, phase);
       }
     }

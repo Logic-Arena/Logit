@@ -15,11 +15,7 @@ export function AuthCallbackPage() {
       return;
     }
 
-    // 임시로 토큰을 저장해 getMe가 읽을 수 있게 함
-    const tempState = JSON.stringify({ state: { token } });
-    localStorage.setItem('logic-arena-auth', tempState);
-
-    getMe()
+    getMe(token)
       .then((user) => {
         setAuth(token, user);
         window.location.replace('/');

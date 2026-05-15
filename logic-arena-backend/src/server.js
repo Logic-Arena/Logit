@@ -7,6 +7,7 @@ import { Server as SocketIOServer } from 'socket.io';
 import { PORT, CORS_ORIGIN, SESSION_SECRET } from './config.js';
 import roomsRouter from './routes/rooms.js';
 import authRouter from './routes/auth.js';
+import historyRouter from './routes/history.js';
 import { registerHandlers } from './socket/handlers.js';
 
 const app = express();
@@ -39,6 +40,7 @@ app.get('/health', (_req, res) => {
 
 app.use('/rooms', roomsRouter);
 app.use('/auth', authRouter);
+app.use('/debate-history', historyRouter);
 
 io.use((socket, next) => {
   socket.data.roomId = null;

@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { getDebateHistory, type DebateHistoryItem } from "../lib/api";
 import {
   RadarChart,
   Radar,
@@ -138,74 +139,6 @@ const RECOMMENDED_TRAINING = {
   actionLabel: "연습방 바로가기",
 };
 
-const MOCK_REPORTS: ReportItem[] = [
-  {
-    id: 1,
-    date: "2026-03-13",
-    dateLabel: "2026.03.13",
-    topic: "기본소득제 도입 찬반",
-    score: 88,
-    category: "정치",
-    position: "찬성",
-    best: "구체적인 통계 자료를 활용한 근거 제시가 탁월하며 논리 흐름이 매우 체계적임",
-    needsImprovement: "상대방의 반박에 대한 재반박 논리 보충 필요",
-  },
-  {
-    id: 2,
-    date: "2026-03-08",
-    dateLabel: "2026.03.08",
-    topic: "원전 에너지 확대 정책",
-    score: 78,
-    category: "과학",
-    position: "반대",
-    best: "과학적 데이터 인용이 정확하고 신뢰도 높은 출처를 활용함",
-    needsImprovement: "감정적 어조를 줄이고 객관적 논거를 더 강화할 필요 있음",
-  },
-  {
-    id: 3,
-    date: "2026-03-03",
-    dateLabel: "2026.03.03",
-    topic: "인공지능 저작권 찬반",
-    score: 72,
-    category: "사회",
-    position: "찬성",
-    best: "다양한 관점에서 근거를 균형 있게 제시함",
-    needsImprovement: "결론부에서 논리적 연결 구조 보강 필요",
-  },
-  {
-    id: 4,
-    date: "2026-02-24",
-    dateLabel: "2026.02.24",
-    topic: "수행평가 절대평가 전환",
-    score: 65,
-    category: "사회",
-    position: "반대",
-    best: "전체 논리 흐름이 체계적으로 구성됨",
-    needsImprovement: "상대 주장을 인정한 후 반박 시도 논리 보완 필요",
-  },
-  {
-    id: 5,
-    date: "2026-02-17",
-    dateLabel: "2026.02.17",
-    topic: "학생 스마트폰 교내 사용 금지",
-    score: 61,
-    category: "자유",
-    position: "찬성",
-    best: "주제에 대한 사전 지식이 풍부하며 사례 활용이 적절함",
-    needsImprovement: "감정적 표현 줄이고 객관적 논거 강화 필요",
-  },
-  {
-    id: 6,
-    date: "2026-02-10",
-    dateLabel: "2026.02.10",
-    topic: "사형제도 폐지 여부",
-    score: 54,
-    category: "정치",
-    position: "반대",
-    best: "인권적 관점의 논거가 일관되게 유지됨",
-    needsImprovement: "반박 능력 및 재반박 논리 전반적으로 보완 시급",
-  },
-];
 
 /* ─── 커스텀 툴팁 (AreaChart) ──────────────────────────────── */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -551,13 +484,37 @@ function relativeTime(dateStr: string): string {
 }
 
 
+function toReportItem(h: DebateHistoryItem): ReportItem {
+  const d = new Date(h.played_at);
+  const date = d.toISOString().slice(0, 10);
+  const dateLabel = date.replace(/-/g, ".");
+  return {
+    id: h.id,
+    date,
+    dateLabel,
+    topic: h.topic,
+    score: h.score,
+    category: "자유",
+    position: h.position === "pro" ? "찬성" : "반대",
+    best: h.advice ?? "",
+    needsImprovement: "",
+  };
+}
+
 export function AnalyticsHistorySection() {
   const [searchQuery, setSearchQuery] = useState("");
   const [category, setCategory] = useState<Category>("전체");
   const [sortKey, setSortKey] = useState<SortKey>("최신순");
+  const [reports, setReports] = useState<ReportItem[]>([]);
+
+  useEffect(() => {
+    getDebateHistory().then((data) => {
+      setReports(data.map(toReportItem));
+    });
+  }, []);
 
   const filtered = useMemo(() => {
-    let list = [...MOCK_REPORTS];
+    let list = [...reports];
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
       list = list.filter((r) => r.topic.toLowerCase().includes(q));
@@ -569,7 +526,7 @@ export function AnalyticsHistorySection() {
     else if (sortKey === "낮은 점수순") list.sort((a, b) => a.score - b.score);
     else list.sort((a, b) => b.date.localeCompare(a.date));
     return list;
-  }, [searchQuery, category, sortKey]);
+  }, [searchQuery, category, sortKey, reports]);
 
   return (
     <>
@@ -577,8 +534,8 @@ export function AnalyticsHistorySection() {
       <div className={styles.recentSummary}>
         <p className={styles.recentSummaryTitle}>최근 성장 요약</p>
         <div className={styles.recentBannerRow}>
-          {MOCK_REPORTS.slice(0, 3).map((item, idx) => {
-            const nextItem = MOCK_REPORTS[idx + 1];
+          {reports.slice(0, 3).map((item, idx) => {
+            const nextItem = reports[idx + 1];
             const delta = nextItem ? item.score - nextItem.score : null;
             const pct =
               delta !== null && nextItem

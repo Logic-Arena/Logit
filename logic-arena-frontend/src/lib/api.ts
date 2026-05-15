@@ -38,9 +38,13 @@ export function createHybridUser(authUser: AuthUser): User {
   };
 }
 
-export async function getMe(): Promise<User> {
+export async function getMe(overrideToken?: string): Promise<User> {
+  const token = overrideToken ?? useUserStore.getState().token;
   const res = await fetch(`${BASE}/auth/me`, {
-    headers: authHeaders(),
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
   });
   if (!res.ok) throw new Error('인증 정보를 불러오지 못했습니다.');
 
@@ -98,6 +102,28 @@ export async function signupLocal(payload: {
     throw new Error((err as { error?: string }).error ?? '회원가입에 실패했습니다.');
   }
 
+  return res.json();
+}
+
+export interface DebateHistoryItem {
+  id: number;
+  topic: string;
+  position: string;
+  score: number;
+  logic: number;
+  evidence: number;
+  persuasion: number;
+  rebuttal: number;
+  advice: string | null;
+  result: 'win' | 'lose' | 'draw';
+  played_at: string;
+}
+
+export async function getDebateHistory(): Promise<DebateHistoryItem[]> {
+  const res = await fetch(`${BASE}/debate-history`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) return [];
   return res.json();
 }
 

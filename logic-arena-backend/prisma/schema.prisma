@@ -8,16 +8,17 @@ datasource db {
 }
 
 model User {
-  user_id          Int        @id @default(autoincrement())
+  user_id          Int             @id @default(autoincrement())
   provider         String
   provider_user_id String?
-  login_id         String?    @unique
+  login_id         String?         @unique
   password         String?
-  email            String?    @unique
+  email            String?         @unique
   name             String
   profile_image    String?
-  created_at       DateTime   @default(now())
+  created_at       DateTime        @default(now())
   stats            UserStats?
+  debate_histories DebateHistory[]
 }
 
 model UserStats {
@@ -30,4 +31,21 @@ model UserStats {
   badges        Json     @default("[]")
   updated_at    DateTime @updatedAt
   user          User     @relation(fields: [user_id], references: [user_id])
+}
+
+model DebateHistory {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  topic      String
+  position   String
+  score      Int      @default(0)
+  logic      Int      @default(0)
+  evidence   Int      @default(0)
+  persuasion Int      @default(0)
+  rebuttal   Int      @default(0)
+  advice     String?
+  result     String   @default("draw")
+  played_at  DateTime @default(now())
+
+  user       User     @relation(fields: [user_id], references: [user_id])
 }

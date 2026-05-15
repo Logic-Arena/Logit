@@ -40,6 +40,37 @@ const LOSE_RP = 15;
  * @param {Array<{userId: string, vote: 'pro'|'con'}>} participants
  * @param {'pro'|'con'|'draw'} winner
  */
+export async function saveDebateHistory(participants, result, topic) {
+  const dbParticipants = participants.filter((p) => /^\d+$/.test(p.userId));
+  if (dbParticipants.length === 0) return;
+
+  await Promise.all(
+    dbParticipants.map(async (p) => {
+      const userId = parseInt(p.userId, 10);
+      const isWinner = result.winner !== 'draw' && p.vote === result.winner;
+      const isDraw = result.winner === 'draw';
+      const resultLabel = isDraw ? 'draw' : isWinner ? 'win' : 'lose';
+
+      const scoreData = result.scores?.find((s) => s.vote === p.vote && s.type === 'player');
+
+      await prisma.debateHistory.create({
+        data: {
+          user_id: userId,
+          topic,
+          position: p.vote,
+          score: scoreData?.total ?? 0,
+          logic: scoreData?.logic ?? 0,
+          evidence: scoreData?.evidence ?? 0,
+          persuasion: scoreData?.persuasion ?? 0,
+          rebuttal: scoreData?.rebuttal ?? 0,
+          advice: scoreData?.advice ?? null,
+          result: resultLabel,
+        },
+      });
+    })
+  );
+}
+
 export async function updateStats(participants, winner) {
   const dbParticipants = participants.filter((p) => /^\d+$/.test(p.userId));
   if (dbParticipants.length === 0) return;
