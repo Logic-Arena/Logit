@@ -1,17 +1,9 @@
 import type { Room, RoomMode, TopicMode } from '../types/room';
 import type { User } from '../types/user';
 import { useUserStore } from '../store/useUserStore';
+import type { AuthUser } from '../store/useAuthStore';
 
 const BASE = import.meta.env.VITE_API_URL as string;
-
-export interface AuthUser {
-  id: number;
-  provider: string;
-  username: string | null;
-  email: string | null;
-  name: string | null;
-  profile_image?: string | null;
-}
 
 export interface AuthResponse {
   message: string;
@@ -19,7 +11,6 @@ export interface AuthResponse {
   user: AuthUser;
 }
 
-/** 인증 토큰 포함 헤더 헬퍼 */
 function authHeaders(): HeadersInit {
   const token = useUserStore.getState().token;
   return {
@@ -28,10 +19,6 @@ function authHeaders(): HeadersInit {
   };
 }
 
-/** 
- * 하이브리드 유저 객체 생성기 (UI 깨짐 방지용)
- * 실제 백엔드 계정 정보 + 프론트엔드 통계 목데이터
- */
 export function createHybridUser(authUser: AuthUser): User {
   return {
     id: authUser.id.toString(),
@@ -56,7 +43,7 @@ export async function getMe(): Promise<User> {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error('인증 정보를 불러오지 못했습니다.');
-  
+
   const data = await res.json();
   return createHybridUser(data);
 }
@@ -74,11 +61,16 @@ export async function createRoom(
   mode: RoomMode = 'free_debate',
   topicMode: TopicMode = 'ai_auto',
   topic?: string,
+  password?: string,
 ): Promise<Room> {
   const res = await fetch(`${BASE}/rooms`, {
     method: 'POST',
     headers: authHeaders(),
-    body: JSON.stringify({ title, mode, topicMode, ...(topic !== undefined && { topic }) }),
+    body: JSON.stringify({
+      title, mode, topicMode,
+      ...(topic !== undefined && { topic }),
+      ...(password !== undefined && { password }),
+    }),
   });
 
   if (!res.ok) {

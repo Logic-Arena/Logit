@@ -34,7 +34,9 @@ export async function findOrCreateGoogleUser(profile) {
       email,
       name,
       profile_image: profileImage,
+      stats: { create: {} },
     },
+    include: { stats: true },
   });
 
   return sanitizeUser(insertedUser);
@@ -64,7 +66,9 @@ export async function findOrCreateKakaoUser(kakaoUser) {
       email,
       name,
       profile_image: profileImage,
+      stats: { create: {} },
     },
+    include: { stats: true },
   });
 
   return sanitizeUser(insertedUser);
@@ -137,6 +141,14 @@ export function serializeAuthUser(user) {
     profile_image: user.profile_image ?? null,
     stats: user.stats ?? null,
   };
+}
+
+export async function getUserWithStats(userId) {
+  const user = await prisma.user.findUnique({
+    where: { user_id: userId },
+    include: { stats: true },
+  });
+  return user ? sanitizeUser(user) : null;
 }
 
 export function createAccessToken(user) {

@@ -1,20 +1,15 @@
-import type { ChatMessage as ChatMsg } from '../../types/room';
+import type { ChatMessage as ChatMessageType } from '../../types/room';
 
 interface Props {
-  message: ChatMsg;
+  message: ChatMessageType;
   isMe: boolean;
 }
 
-const roleLabel: Record<string, string> = {
+const roleLabel = {
   host: '방장',
   participant: '참가자',
   observer: '관전자',
   ai: 'AI',
-};
-
-const voteLabel: Record<string, string> = {
-  pro: '찬성',
-  con: '반대',
 };
 
 export function ChatMessage({ message, isMe }: Props) {
@@ -30,10 +25,8 @@ export function ChatMessage({ message, isMe }: Props) {
     <div className={`chat-msg ${positionClass} ${colorClass}`}>
       <div className="chat-msg__meta">
         <span>{message.username}</span>
-        <span className={`badge badge--${message.userRole}`}>{roleLabel[message.userRole]}</span>
-        {message.vote && (
-          <span className={`badge badge--${message.vote}`}>{voteLabel[message.vote]}</span>
-        )}
+        <span className={`badge badge--${message.userRole === 'participant' ? 'participant' : message.userRole}`}>{roleLabel[message.userRole]}</span>
+        {message.vote && <span className={`badge badge--${message.vote}`}>{message.vote === 'pro' ? '찬성' : '반대'}</span>}
         <span>{time}</span>
       </div>
       <div className="chat-msg__bubble">{message.content}</div>

@@ -13,7 +13,6 @@ import { AnalyticsPage } from './pages/AnalyticsPage';
 import { MyPage } from './pages/MyPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
 
-
 export default function App() {
   return (
     <BrowserRouter>
@@ -23,7 +22,7 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
 
-          {/*구글/카카오 로그인 후 백엔드가 브라우저를 보낼 도착지 */}
+          {/* 구글/카카오 로그인 후 백엔드가 브라우저를 보낼 도착지 */}
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
 
           {/* 인증 필요 — AppLayout 내부 */}

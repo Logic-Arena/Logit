@@ -29,7 +29,6 @@ export function Header() {
 
       <Link to="/" className="app-header__logo">Logit</Link>
 
-      {/* 우측: 유저 정보 + 로그아웃 */}
       <div className="header-user">
         {user && (
           <>

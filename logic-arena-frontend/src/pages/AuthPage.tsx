@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { loginLocal, signupLocal } from '../lib/api';
+import { useAuthStore } from '../store/useAuthStore';
 
 type AuthMode = 'login' | 'signup';
 
@@ -15,6 +16,7 @@ export function AuthPage() {
   const mode = getMode(location.pathname);
   const isSignup = mode === 'signup';
 
+  const { login } = useAuthStore();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -37,7 +39,7 @@ export function AuthPage() {
           })
         : await loginLocal({ username, password });
 
-      localStorage.setItem('token', response.token);
+      login(response.token, response.user);
       navigate('/', { replace: true });
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : '요청 처리에 실패했습니다.');

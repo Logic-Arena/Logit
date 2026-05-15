@@ -1,0 +1,73 @@
+import { prisma } from '../db/prisma.js';
+
+const TIERS = [
+  { name: '브론즈 5', min: 0 },
+  { name: '브론즈 4', min: 100 },
+  { name: '브론즈 3', min: 200 },
+  { name: '브론즈 2', min: 300 },
+  { name: '브론즈 1', min: 400 },
+  { name: '실버 5', min: 500 },
+  { name: '실버 4', min: 650 },
+  { name: '실버 3', min: 800 },
+  { name: '실버 2', min: 950 },
+  { name: '실버 1', min: 1100 },
+  { name: '골드 5', min: 1300 },
+  { name: '골드 4', min: 1500 },
+  { name: '골드 3', min: 1750 },
+  { name: '골드 2', min: 2000 },
+  { name: '골드 1', min: 2300 },
+  { name: '플래티넘 5', min: 2600 },
+  { name: '플래티넘 4', min: 3000 },
+  { name: '플래티넘 3', min: 3500 },
+  { name: '플래티넘 2', min: 4000 },
+  { name: '플래티넘 1', min: 4600 },
+  { name: '다이아몬드', min: 5000 },
+];
+
+function calcTier(rankPoint) {
+  let tier = TIERS[0].name;
+  for (const t of TIERS) {
+    if (rankPoint >= t.min) tier = t.name;
+    else break;
+  }
+  return tier;
+}
+
+const WIN_RP = 30;
+const LOSE_RP = 15;
+
+/**
+ * @param {Array<{userId: string, vote: 'pro'|'con'}>} participants
+ * @param {'pro'|'con'|'draw'} winner
+ */
+export async function updateStats(participants, winner) {
+  const dbParticipants = participants.filter((p) => /^\d+$/.test(p.userId));
+  if (dbParticipants.length === 0) return;
+
+  await Promise.all(
+    dbParticipants.map(async (p) => {
+      const userId = parseInt(p.userId, 10);
+      const isWinner = winner !== 'draw' && p.vote === winner;
+      const isDraw = winner === 'draw';
+
+      const stats = await prisma.userStats.findUnique({ where: { user_id: userId } });
+      if (!stats) return;
+
+      const rpDelta = isDraw ? 0 : isWinner ? WIN_RP : -LOSE_RP;
+      const newRp = Math.max(0, stats.rank_point + rpDelta);
+      const newTotal = stats.total_games + 1;
+      const newWin = stats.win_count + (isWinner ? 1 : 0);
+      const newTier = calcTier(newRp);
+
+      await prisma.userStats.update({
+        where: { user_id: userId },
+        data: {
+          rank_point: newRp,
+          total_games: newTotal,
+          win_count: newWin,
+          tier: newTier,
+        },
+      });
+    })
+  );
+}

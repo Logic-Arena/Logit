@@ -6,6 +6,7 @@ import { RoomList } from "../components/lobby/RoomList";
 import { UserTierWidget } from "../components/lobby/UserTierWidget";
 import { CommunityVoteWidget } from "../components/lobby/CommunityVoteWidget";
 import { useSidebar } from "../hooks/useSidebar";
+import { useUserStore } from "../store/useUserStore";
 import type { Room } from "../types/room";
 
 export function LobbyPage() {
@@ -13,6 +14,7 @@ export function LobbyPage() {
   const [loading, setLoading] = useState(true);
   const { sidebarOpen, closeSidebar } = useSidebar();
   const navigate = useNavigate();
+  const { isLoggedIn } = useUserStore();
 
   useEffect(() => {
     getRooms()
@@ -54,7 +56,7 @@ export function LobbyPage() {
 
           <button
             className="btn btn--primary"
-            onClick={() => navigate("/rooms/new")}
+            onClick={() => isLoggedIn ? navigate("/rooms/new") : navigate("/login")}
           >
             + 새 방 만들기
           </button>
