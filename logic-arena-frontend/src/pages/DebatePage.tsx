@@ -257,6 +257,121 @@ const AUTO_PHASES = new Set<Phase>([
   "judging",
 ]);
 
+const TYPEWRITER_THINKING_MS = 3000;
+const TYPEWRITER_CHAR_MS = 36;
+const TYPEWRITER_MAX_MS = 9000;
+
+type GraphemeSegmenter = {
+  segment: (input: string) => Iterable<{ segment: string }>;
+};
+
+function splitGraphemes(text: string) {
+  const Segmenter = (
+    Intl as typeof Intl & {
+      Segmenter?: new (
+        locale: string,
+        options: { granularity: "grapheme" },
+      ) => GraphemeSegmenter;
+    }
+  ).Segmenter;
+
+  if (Segmenter) {
+    return Array.from(
+      new Segmenter("ko", { granularity: "grapheme" }).segment(text),
+      ({ segment }) => segment,
+    );
+  }
+
+  return Array.from(text);
+}
+
+function TypewriterText({
+  text,
+  animationKey,
+  thinkingLabel = "AI가 생각 중입니다...",
+}: {
+  text: string;
+  animationKey: string;
+  thinkingLabel?: string;
+}) {
+  const [visibleText, setVisibleText] = useState("");
+  const [status, setStatus] = useState<"thinking" | "typing" | "done">(
+    "thinking",
+  );
+
+  useEffect(() => {
+    let active = true;
+    const timers: number[] = [];
+
+    const thinkingTimer = window.setTimeout(() => {
+      if (!active) return;
+
+      const segments = splitGraphemes(text);
+      if (segments.length === 0) {
+        setStatus("done");
+        return;
+      }
+
+      const maxTicks = Math.max(
+        1,
+        Math.floor(TYPEWRITER_MAX_MS / TYPEWRITER_CHAR_MS),
+      );
+      const segmentsPerTick = Math.max(
+        1,
+        Math.ceil(segments.length / maxTicks),
+      );
+      const tickCount = Math.ceil(segments.length / segmentsPerTick);
+
+      setStatus("typing");
+      Array.from({ length: tickCount }).forEach((_, index) => {
+        const endIndex = Math.min(
+          segments.length,
+          (index + 1) * segmentsPerTick,
+        );
+        const timer = window.setTimeout(
+          () => {
+            if (!active) return;
+
+            setVisibleText(segments.slice(0, endIndex).join(""));
+            if (endIndex === segments.length) setStatus("done");
+          },
+          TYPEWRITER_CHAR_MS * (index + 1),
+        );
+        timers.push(timer);
+      });
+    }, TYPEWRITER_THINKING_MS);
+
+    timers.push(thinkingTimer);
+
+    return () => {
+      active = false;
+      timers.forEach((timer) => window.clearTimeout(timer));
+    };
+  }, [animationKey, text]);
+
+  if (status === "thinking") {
+    return (
+      <span className="debate-bubble__thinking">
+        <span>{thinkingLabel}</span>
+        <span className="typing-dots" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </span>
+      </span>
+    );
+  }
+
+  return (
+    <>
+      {visibleText}
+      {status === "typing" && (
+        <span className="typewriter-caret" aria-hidden="true" />
+      )}
+    </>
+  );
+}
+
 // 4단계 매핑
 const DEBATE_STAGES: Array<{ label: string; phases: Set<Phase> }> = [
   { label: "최초 주장", phases: new Set<Phase>(["arguing"]) },
@@ -488,11 +603,12 @@ function DebateChatView({
                     <span>{CONTENT_LABELS[item.key]}</span>
                   </div>
                   <div className="debate-bubble__body">
-                    {item.text.split(/\n{2,}/).map((para, i) => (
-                      <p key={i} style={{ margin: i === 0 ? 0 : "10px 0 0" }}>
-                        {para.trim()}
-                      </p>
-                    ))}
+                    <TypewriterText
+                      key={`${item.key}:${item.text}`}
+                      text={item.text}
+                      animationKey={`${item.key}:${item.text}`}
+                      thinkingLabel="논점을 정리 중입니다..."
+                    />
                   </div>
                 </article>
               </div>
@@ -532,7 +648,15 @@ function DebateChatView({
                     </div>
                   ) : (
                     <div className="debate-bubble__body">
-                      {item.text}
+                      {item.variant === "ai" ? (
+                        <TypewriterText
+                          key={`${item.key}:${item.text}`}
+                          text={item.text}
+                          animationKey={`${item.key}:${item.text}`}
+                        />
+                      ) : (
+                        item.text
+                      )}
                       {isMyPlayerMsg && (
                         <button
                           className="debate-bubble__collapse-btn"
@@ -609,6 +733,8 @@ const DEBATE_TIPS = [
   "긴 문장보다 짧고 명확한 문장이 설득력이 강합니다.",
 ];
 
+const JUDGING_ANALYSIS_STEPS = ["논리", "근거", "반박", "설득"];
+
 function JudgingWaitView({
   room,
   myRole,
@@ -633,99 +759,58 @@ function JudgingWaitView({
   }, []);
 
   return (
-    <div
-      style={{
-        flex: 1,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: "24px",
-        padding: "32px 24px",
-      }}
-    >
-      <div style={{ fontSize: "52px" }}>⚖️</div>
-      <div style={{ textAlign: "center" }}>
-        <p style={{ fontSize: "17px", fontWeight: 700, marginBottom: "4px" }}>
-          AI가 토론을 분석하고 있습니다...
-        </p>
-        <p style={{ fontSize: "13px", color: "var(--color-text-muted)" }}>
-          결과가 곧 나옵니다. 잠시만 기다려 주세요
-        </p>
+    <div className="judging-wait">
+      <div className="judging-wait__scan" aria-hidden="true" />
+
+      <section className="judging-wait__hero" aria-live="polite">
+        <div className="judging-wait__side-chip judging-wait__side-chip--pro">
+          찬성
+        </div>
+        <div className="judging-wait__scale-stage" aria-hidden="true">
+          <div className="judging-wait__ring" />
+          <div className="judging-wait__scale">⚖️</div>
+          <div className="judging-wait__beam" />
+        </div>
+        <div className="judging-wait__side-chip judging-wait__side-chip--con">
+          반대
+        </div>
+      </section>
+
+      <div className="judging-wait__headline">
+        <p className="judging-wait__eyebrow">Cyber Courtroom</p>
+        <h2>AI 판정단이 논점을 심문 중...</h2>
+        <p>주장, 근거, 반박을 스캔해서 승부를 계산하고 있어요</p>
+      </div>
+
+      <div className="judging-wait__analysis-rail" aria-label="분석 항목">
+        {JUDGING_ANALYSIS_STEPS.map((step) => (
+          <span key={step} className="judging-wait__analysis-chip">
+            {step}
+          </span>
+        ))}
+      </div>
+
+      <div className="judging-wait__progress" aria-hidden="true">
+        <div className="judging-wait__progress-bar" />
+      </div>
+      <div className="judging-wait__status-badge">
+        <span />
+        판결문 작성 중
       </div>
 
       {myFinal && (
-        <div
-          style={{
-            width: "100%",
-            maxWidth: "600px",
-            background: "var(--color-surface-2)",
-            border: "1px solid var(--color-border)",
-            borderRadius: "var(--radius-md)",
-            padding: "16px 20px",
-          }}
-        >
-          <div
-            style={{
-              fontSize: "11px",
-              color: "var(--color-primary)",
-              fontWeight: 600,
-              textTransform: "uppercase",
-              letterSpacing: "0.5px",
-              marginBottom: "8px",
-            }}
-          >
-            내 최종 변론
-          </div>
-          <p
-            style={{
-              fontSize: "13px",
-              lineHeight: 1.7,
-              color: "var(--color-text-muted)",
-              margin: 0,
-              whiteSpace: "pre-wrap",
-            }}
-          >
-            {myFinal}
-          </p>
-        </div>
+        <article className="judging-wait__glass-card judging-wait__glass-card--final">
+          <div className="judging-wait__card-label">내 최종 변론</div>
+          <p>{myFinal}</p>
+        </article>
       )}
 
-      <div
-        style={{
-          width: "100%",
-          maxWidth: "600px",
-          background: "rgba(108,99,255,0.08)",
-          border: "1px solid rgba(108,99,255,0.2)",
-          borderRadius: "var(--radius-md)",
-          padding: "14px 18px",
-          minHeight: "60px",
-          transition: "opacity 0.3s",
-        }}
-      >
-        <div
-          style={{
-            fontSize: "10px",
-            color: "var(--color-primary)",
-            fontWeight: 600,
-            textTransform: "uppercase",
-            letterSpacing: "0.5px",
-            marginBottom: "6px",
-          }}
-        >
-          토론 꿀팁
-        </div>
-        <p
-          style={{
-            fontSize: "13px",
-            lineHeight: 1.65,
-            color: "var(--color-text)",
-            margin: 0,
-          }}
-        >
+      <article className="judging-wait__glass-card judging-wait__glass-card--tip">
+        <div className="judging-wait__card-label">토론 꿀팁</div>
+        <p key={tipIdx} className="judging-wait__tip-text">
           {DEBATE_TIPS[tipIdx]}
         </p>
-      </div>
+      </article>
     </div>
   );
 }
@@ -807,6 +892,59 @@ function WaitingView({
   );
 }
 
+const LOGIT_LETTERS = ["L", "O", "G", "I", "T"];
+
+function TopicGeneratingCard() {
+  return (
+    <div className="topic-generating-card" aria-live="polite">
+      <div className="topic-generating-card__logo" aria-label="LOGIT">
+        {LOGIT_LETTERS.map((letter, index) => (
+          <span
+            key={`${letter}-${index}`}
+            className="topic-generating-card__letter"
+            style={{ animationDelay: `${index * 0.09}s` }}
+          >
+            {letter}
+          </span>
+        ))}
+      </div>
+      <div className="topic-generating-card__message">
+        <span>주제 생성중</span>
+        <span className="topic-generating-card__dots" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </span>
+      </div>
+      <p>AI가 더 흥미로운 쟁점을 고르고 있어요.</p>
+    </div>
+  );
+}
+
+function SelectionWaitingCard({ side }: { side: "pro" | "con" }) {
+  const label = side === "pro" ? "찬성" : "반대";
+
+  return (
+    <div
+      className={`selection-waiting-card selection-waiting-card--${side}`}
+      aria-live="polite"
+    >
+      <div className="selection-waiting-card__header">
+        <span className="selection-waiting-card__gear" aria-hidden="true" />
+        <span>{label} 선택 완료</span>
+      </div>
+      <div className="selection-waiting-card__status">
+        <span>상대방 선택을 기다리는 중</span>
+        <span className="selection-waiting-card__dots" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function TopicSelectionView({
   room,
   myRole,
@@ -825,7 +963,10 @@ function TopicSelectionView({
     socket.emit("select_side", { roomId: room.id, side });
   };
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+    <div
+      className="topic-selection-view"
+      style={{ display: "flex", flexDirection: "column", gap: "20px" }}
+    >
       {room.topic ? (
         <div
           style={{
@@ -838,34 +979,46 @@ function TopicSelectionView({
         >
           <div
             style={{
-              fontSize: "11px",
-              color: "var(--color-primary)",
-              fontWeight: 600,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
               marginBottom: "8px",
-              textTransform: "uppercase",
-              letterSpacing: "0.5px",
             }}
           >
-            토론 주제
+            <span
+              style={{
+                fontSize: "11px",
+                color: "var(--color-primary)",
+                fontWeight: 600,
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
+              토론 주제
+            </span>
+            {room.topicSource === "fallback" && (
+              <span
+                style={{
+                  border: "1px solid rgba(240,160,112,0.55)",
+                  borderRadius: "999px",
+                  color: "#f0a070",
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  lineHeight: 1,
+                  padding: "4px 7px",
+                }}
+              >
+                폴백 데이터
+              </span>
+            )}
           </div>
           <div style={{ fontSize: "17px", fontWeight: 700, lineHeight: 1.5 }}>
             {room.topic}
           </div>
         </div>
       ) : (
-        <div
-          style={{
-            background: "var(--color-surface-2)",
-            border: "1px solid var(--color-border)",
-            borderRadius: "var(--radius-md)",
-            padding: "20px",
-            textAlign: "center",
-            color: "var(--color-text-muted)",
-            fontStyle: "italic",
-          }}
-        >
-          AI가 주제를 생성 중입니다...
-        </div>
+        <TopicGeneratingCard />
       )}
       {isPlayer && !mySelection && !room.topic && (
         <p
@@ -889,7 +1042,7 @@ function TopicSelectionView({
             }}
           >
             원하는 진영을 선택하세요
-            {attempts > 0 ? ` (충돌 ${attempts}/3회, 다시 선택해 주세요)` : ""}.
+            {attempts > 0 ? ` (충돌 ${attempts}/7회, 다시 선택해 주세요)` : ""}.
           </p>
           <div
             style={{
@@ -938,35 +1091,13 @@ function TopicSelectionView({
         </>
       )}
       {isPlayer && mySelection && (
-        <div
-          style={{
-            padding: "20px",
-            borderRadius: "var(--radius-md)",
-            textAlign: "center",
-            background:
-              mySelection === "pro"
-                ? "rgba(108,92,231,0.12)"
-                : "rgba(212,98,46,0.12)",
-            border: `2px solid ${mySelection === "pro" ? "rgba(108,92,231,0.5)" : "rgba(212,98,46,0.5)"}`,
-          }}
-        >
-          <div
-            style={{
-              fontSize: "20px",
-              fontWeight: 700,
-              marginBottom: "6px",
-              color: mySelection === "pro" ? "#9b8fff" : "#f0a070",
-            }}
-          >
-            {mySelection === "pro" ? "찬성" : "반대"} 선택 완료
-          </div>
-          <div style={{ fontSize: "13px", color: "var(--color-text-muted)" }}>
-            상대방 선택을 기다리는 중...
-          </div>
-        </div>
+        <SelectionWaitingCard side={mySelection} />
       )}
       {!isPlayer && (
         <NotMyTurnBanner message="플레이어들이 진영을 선택 중입니다..." />
+      )}
+      {room.topic && (
+        <div className="topic-selection-watermark-slot" aria-hidden="true" />
       )}
     </div>
   );

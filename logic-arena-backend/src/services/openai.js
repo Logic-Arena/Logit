@@ -10,12 +10,104 @@ if (!process.env.OPENAI_API_KEY) {
 }
 
 const FALLBACK_TOPICS = [
-  '인공지능이 인간의 일자리를 대체해야 한다',
-  '사형제도는 폐지되어야 한다',
-  '원격 근무는 사무실 근무보다 생산적이다',
-  '소셜 미디어는 사회에 해롭다',
-  '대학 교육은 무상으로 제공되어야 한다',
+  '초등학생 스마트폰 교내 보관을 의무화해야 하나?',
+  '청소년 SNS 사용 시간을 법으로 제한해야 하나?',
+  '딥페이크 탐지 표시를 모든 플랫폼에 의무화해야 하나?',
+  'AI 생성물 워터마크 표시를 의무화해야 하나?',
+  '대학 입시에 AI 활용 내역을 공개해야 하나?',
+  '수업 중 태블릿 필기를 제한해야 하나?',
+  '학교 시험에서 오픈북 평가를 확대해야 하나?',
+  '고교학점제 절대평가를 확대해야 하나?',
+  '학교 급식에 채식 선택권을 의무화해야 하나?',
+  '유튜브 키즈 광고 규제를 강화해야 하나?',
+  '직장 내 퇴근 후 메신저 응답 요구를 금지해야 하나?',
+  '주 4일제를 단계적으로 도입해야 하나?',
+  '최저임금을 업종별로 다르게 정해야 하나?',
+  '카페 장시간 자리 이용에 추가 요금을 받아야 하나?',
+  '배달앱 리뷰 블라인드 제도를 도입해야 하나?',
+  '온라인 중고거래 신원 인증을 의무화해야 하나?',
+  '무인점포 심야 운영을 제한해야 하나?',
+  '편의점 야간 무인 운영을 확대해야 하나?',
+  '택시 호출 플랫폼 수수료 상한제를 도입해야 하나?',
+  '공유 킥보드 헬멧 단속을 강화해야 하나?',
+  '전기차 충전 방해 과태료를 높여야 하나?',
+  '아파트 층간소음 기준을 더 엄격히 해야 하나?',
+  '공공장소 노키즈존을 허용해야 하나?',
+  '반려동물 보유세를 도입해야 하나?',
+  '지하철 무임승차 연령을 조정해야 하나?',
+  '대형마트 의무휴업을 완화해야 하나?',
+  '지역화폐 예산을 늘려야 하나?',
+  '지역 축제 바가지요금을 강하게 처벌해야 하나?',
+  '월세 상한제를 도입해야 하나?',
+  '공공 와이파이 확대에 세금을 더 써야 하나?',
+  '대학 축제 외부인 출입을 제한해야 하나?',
+  '미성년자 배달앱 주문 제한을 강화해야 하나?',
+  '공무원 점심시간 휴무제를 확대해야 하나?',
+  '도심 내 차량 진입 혼잡통행료를 확대해야 하나?',
+  '공공기관 민원 상담에 녹음 고지를 의무화해야 하나?',
 ];
+const MAX_TOPIC_GENERATION_ATTEMPTS = 3;
+const TOPIC_ANGLES = [
+  '학교와 청소년 생활',
+  '직장과 노동 문화',
+  '동네 생활과 소비자 권리',
+  '디지털 플랫폼과 개인정보',
+  '환경과 교통 정책',
+  '지역 사회와 공공서비스',
+  '문화 규범과 생활 윤리',
+];
+
+function cleanTopicResponse(topic) {
+  if (typeof topic !== 'string') return '';
+  return topic.trim().replace(/^["'“”‘’`]+|["'“”‘’`]+$/g, '').trim();
+}
+
+function normalizeTopic(topic) {
+  return cleanTopicResponse(topic)
+    .replace(/\s+/g, ' ')
+    .replace(/[.。．!?？！…]+$/u, '')
+    .trim()
+    .toLowerCase();
+}
+
+function matchesPreviousTopic(topic, previousTopics) {
+  const normalizedTopic = normalizeTopic(topic);
+  return !!normalizedTopic && previousTopics.some((previousTopic) =>
+    normalizeTopic(previousTopic) === normalizedTopic
+  );
+}
+
+function buildTopicPrompt(previousTopics, attempt) {
+  const angle = TOPIC_ANGLES[Math.floor(Math.random() * TOPIC_ANGLES.length)];
+  let prompt =
+    `찬반 토론이 가능한 한국어 주제를 하나만 추천해주세요.\n` +
+    `이번 초점: ${angle}\n` +
+    `조건:\n` +
+    `- 흔한 교과서식 주제는 피하세요.\n` +
+    `- 최근 사회 변화, 생활 밀착 문제, 세대 간 의견 차이가 있는 쟁점을 우선하세요.\n` +
+    `- 너무 넓은 주제가 아니라 바로 찬반을 고를 수 있는 구체적인 정책/규칙 형태로 쓰세요.\n` +
+    `- 일반적인 AI 규제, 사형제, 원격근무 생산성, 소셜 미디어 유해성, 대학 무상교육 같은 과사용 주제는 피하세요.\n` +
+    `- 35자 안팎의 질문형 한 문장만 답하세요.`;
+  if (previousTopics.length > 0) {
+    prompt += `\n이미 사용한 주제와 의미가 같거나 문장만 다른 주제는 제외해주세요: ${previousTopics.join(', ')}`;
+  }
+  if (attempt > 0) {
+    prompt += '\n방금 중복된 주제가 나왔습니다. 위 목록과 완전히 다른 새 주제로 답해주세요.';
+  }
+  return prompt;
+}
+
+function pickFallbackTopic(previousTopics) {
+  const unused = FALLBACK_TOPICS.filter((topic) => !matchesPreviousTopic(topic, previousTopics));
+  const pool = unused.length > 0 ? unused : FALLBACK_TOPICS;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function makeFallbackTopic(previousTopics) {
+  const topic = pickFallbackTopic(previousTopics);
+  console.warn(`[AI] topic fallback used: ${topic}`);
+  return { topic, source: 'fallback' };
+}
 
 async function ask(prompt) {
   const res = await client.chat.completions.create({
@@ -26,17 +118,17 @@ async function ask(prompt) {
 }
 
 export async function generateTopic(previousTopics = []) {
-  try {
-    let prompt = '찬반 토론이 가능한 주제를 한국어로 하나만 추천해주세요. 주제만 답해주세요.';
-    if (previousTopics.length > 0) {
-      prompt += `\n이미 사용한 주제는 제외해주세요: ${previousTopics.join(', ')}`;
+  for (let attempt = 0; attempt < MAX_TOPIC_GENERATION_ATTEMPTS; attempt++) {
+    try {
+      const topic = cleanTopicResponse(await ask(buildTopicPrompt(previousTopics, attempt)));
+      if (topic && !matchesPreviousTopic(topic, previousTopics)) {
+        return { topic, source: 'ai' };
+      }
+    } catch {
+      break;
     }
-    return await ask(prompt);
-  } catch {
-    const unused = FALLBACK_TOPICS.filter((t) => !previousTopics.includes(t));
-    const pool = unused.length > 0 ? unused : FALLBACK_TOPICS;
-    return pool[Math.floor(Math.random() * pool.length)];
   }
+  return makeFallbackTopic(previousTopics);
 }
 
 export async function generateArgument({ topic, vote }) {

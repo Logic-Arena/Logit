@@ -78,6 +78,7 @@ export function createRoom({ title, mode = 'ai_debate', topicMode = 'ai_auto', t
     mode,
     topicMode,
     topic,
+    topicSource: null,
     phase: 'waiting',
     phaseEndAt: null,
     createdAt: new Date(),
@@ -121,6 +122,7 @@ export function createRoom({ title, mode = 'ai_debate', topicMode = 'ai_auto', t
 
     result: null,
     pastTopics: [],
+    topicGenerationSeq: 0,
   };
   rooms.set(id, room);
   return serializeRoom(room);
@@ -265,7 +267,7 @@ export function selectSide(roomId, socketId, side) {
   room.sideSelectionAttempts++;
   room.pendingSelections.clear();
 
-  if (room.sideSelectionAttempts >= 3) {
+  if (room.sideSelectionAttempts > 7) {
     if (Math.random() < 0.5) {
       const tmp = room.proPlayer;
       room.proPlayer = room.conPlayer;
@@ -288,11 +290,26 @@ export function setPhase(roomId, phase) {
   return serializeRoom(room);
 }
 
-export function setTopic(roomId, topic) {
+export function setPhaseEndAt(roomId, phaseEndAt) {
+  const room = rooms.get(roomId);
+  if (!room) return null;
+  room.phaseEndAt = phaseEndAt;
+  return serializeRoom(room);
+}
+
+export function setTopic(roomId, topic, source = null) {
   const room = rooms.get(roomId);
   if (!room) return false;
   room.topic = topic;
+  room.topicSource = topic ? source : null;
   return true;
+}
+
+export function bumpTopicGenerationSeq(roomId) {
+  const room = rooms.get(roomId);
+  if (!room) return null;
+  room.topicGenerationSeq++;
+  return room.topicGenerationSeq;
 }
 
 // ── Content ──────────────────────────────────────────────────
@@ -319,7 +336,16 @@ export function setResult(roomId, result) {
 export function addPastTopic(roomId, topic) {
   const room = rooms.get(roomId);
   if (!room) return false;
-  room.pastTopics.push(topic);
+  const cleanTopic = typeof topic === 'string' ? topic.trim() : '';
+  const normalizedTopic = normalizeTopic(cleanTopic);
+  if (!normalizedTopic) return false;
+
+  const alreadyAdded = room.pastTopics.some((pastTopic) =>
+    normalizeTopic(pastTopic) === normalizedTopic
+  );
+  if (alreadyAdded) return false;
+
+  room.pastTopics.push(cleanTopic);
   return true;
 }
 
@@ -338,6 +364,7 @@ function serializeRoom(room) {
     mode: room.mode,
     topicMode: room.topicMode,
     topic: room.topic,
+    topicSource: room.topicSource,
     phase: room.phase,
     phaseEndAt: room.phaseEndAt,
     host: room.host,
@@ -349,4 +376,14 @@ function serializeRoom(room) {
     createdAt: room.createdAt,
     sideSelectionAttempts: room.sideSelectionAttempts,
   };
+}
+
+function normalizeTopic(topic) {
+  if (typeof topic !== 'string') return '';
+  return topic
+    .trim()
+    .replace(/\s+/g, ' ')
+    .replace(/[.。．!?？！…]+$/u, '')
+    .trim()
+    .toLowerCase();
 }

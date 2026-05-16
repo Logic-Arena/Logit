@@ -62,11 +62,13 @@ export function LobbyPage() {
           </button>
         </div>
 
-        {loading ? (
-          <div className="loading">불러오는 중...</div>
-        ) : (
-          <RoomList rooms={rooms} />
-        )}
+        <div className="lobby-room-stage">
+          {loading ? (
+            <div className="loading">불러오는 중...</div>
+          ) : (
+            <RoomList rooms={rooms} />
+          )}
+        </div>
       </div>
 
       <div className="lobby-report">

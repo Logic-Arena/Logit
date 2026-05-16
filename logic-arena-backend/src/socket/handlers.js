@@ -6,6 +6,7 @@ import {
   getRoomSerialized,
   getPlayerRole,
   setPhase,
+  setPhaseEndAt,
   setTopic,
   setContent,
   setResult,
@@ -16,6 +17,7 @@ import {
   AI_DEFENSE_PHASES,
   PHASE_SUBMIT_KEY,
   addPastTopic,
+  bumpTopicGenerationSeq,
   getPastTopics,
   phaseTimers,
 } from '../store/rooms.js';
@@ -39,22 +41,69 @@ function clearPhaseTimer(roomId) {
   if (t) { clearTimeout(t); phaseTimers.delete(roomId); }
 }
 
+function pausePhaseTimer(roomId) {
+  clearPhaseTimer(roomId);
+  setPhaseEndAt(roomId, null);
+}
+
+function startPhaseTimer(io, roomId, phase) {
+  const duration = PHASE_DURATION_MS[phase];
+  if (!duration) return false;
+
+  clearPhaseTimer(roomId);
+  setPhaseEndAt(roomId, Date.now() + duration);
+  const timer = setTimeout(() => advancePhase(io, roomId), duration);
+  phaseTimers.set(roomId, timer);
+  return true;
+}
+
+async function generateAndApplyTopic(io, roomId, { emit = true } = {}) {
+  const generationSeq = bumpTopicGenerationSeq(roomId);
+  if (generationSeq === null) return null;
+
+  try {
+    const past = getPastTopics(roomId);
+    const generatedTopic = await generateTopic(past);
+    const { topic, source } = generatedTopic;
+    const currentRoom = getRoom(roomId);
+    if (
+      !currentRoom ||
+      currentRoom.phase !== 'topic_selection' ||
+      currentRoom.topicGenerationSeq !== generationSeq
+    ) {
+      return null;
+    }
+
+    setTopic(roomId, topic, source);
+    addPastTopic(roomId, topic);
+    startPhaseTimer(io, roomId, 'topic_selection');
+    const serialized = getRoomSerialized(roomId);
+    if (emit) {
+      io.to(roomId).emit('topic_set', { topic, room: serialized });
+    }
+    return generatedTopic;
+  } catch (e) {
+    console.error('[AI] 주제 생성 실패:', e.message);
+    return null;
+  }
+}
+
 async function startPhase(io, roomId, phase) {
   const room = getRoom(roomId);
   if (!room) return;
 
   setPhase(roomId, phase);
+  const waitsForAiTopic = phase === 'topic_selection' && room.topicMode === 'ai_auto';
+  if (waitsForAiTopic) {
+    pausePhaseTimer(roomId);
+  } else {
+    startPhaseTimer(io, roomId, phase);
+  }
+
   const serialized = getRoomSerialized(roomId);
   io.to(roomId).emit('phase_changed', { phase, room: serialized });
 
   if (phase === 'ended') return;
-
-  const duration = PHASE_DURATION_MS[phase];
-  if (!duration) return;
-
-  clearPhaseTimer(roomId);
-  const timer = setTimeout(() => advancePhase(io, roomId), duration);
-  phaseTimers.set(roomId, timer);
 
   // AI 자동 페이즈 처리
   if (AI_AUTO_PHASES.has(phase)) {
@@ -79,18 +128,9 @@ async function startPhase(io, roomId, phase) {
 
   // topic_selection 시작 즉시 주제 생성 (ai_auto) — 35초 타이머 기다리지 않음
   if (phase === 'topic_selection' && room.topicMode === 'ai_auto') {
-    (async () => {
-      try {
-        const past = getPastTopics(roomId);
-        const topic = await generateTopic(past);
-        if (getRoom(roomId)?.phase === 'topic_selection') {
-          setTopic(roomId, topic);
-          io.to(roomId).emit('topic_set', { topic, room: getRoomSerialized(roomId) });
-        }
-      } catch (e) {
-        console.error('[AI] topic_selection 주제 생성 실패:', e.message);
-      }
-    })();
+    generateAndApplyTopic(io, roomId).catch((e) =>
+      console.error('[AI] topic_selection 주제 생성 실패:', e.message)
+    );
   }
 }
 
@@ -114,13 +154,7 @@ async function handleTopicSelectionEnd(io, roomId) {
 
   // 주제 생성 (ai_auto인 경우)
   if (!room.topic && room.topicMode === 'ai_auto') {
-    try {
-      const past = getPastTopics(roomId);
-      const topic = await generateTopic(past);
-      setTopic(roomId, topic);
-    } catch (e) {
-      console.error('[AI] 주제 생성 실패:', e.message);
-    }
+    await generateAndApplyTopic(io, roomId, { emit: false });
   }
 
   // 진영 미선택자 자동 배정 (한쪽이 선택 안 했을 때) — 현재 슬롯 그대로 유지
@@ -459,6 +493,7 @@ export function registerHandlers(io, socket) {
     const room = getRoom(roomId);
     if (!room) return socket.emit('error', { message: '방을 찾을 수 없습니다' });
     if (room.phase !== 'topic_selection') return socket.emit('error', { message: '진영 선택 시간이 아닙니다' });
+    if (!room.topic) return socket.emit('error', { message: 'AI가 주제를 생성 중입니다. 잠시만 기다려 주세요.' });
 
     const result = selectSide(roomId, socket.id, side);
     if (!result) return socket.emit('error', { message: '진영을 선택할 수 없습니다' });
@@ -476,25 +511,23 @@ export function registerHandlers(io, socket) {
         console.error('[select_side] 조기 진행 실패:', e.message)
       );
     } else if (result.status === 'retry') {
-      io.to(roomId).emit('side_selection_retry', {
-        attempts: result.attempts,
-        room: result.room,
-      });
       const retryRoom = getRoom(roomId);
       if (retryRoom && retryRoom.topicMode === 'ai_auto') {
+        addPastTopic(roomId, retryRoom.topic);
         setTopic(roomId, null);
-        ;(async () => {
-          try {
-            const past = getPastTopics(roomId);
-            const newTopic = await generateTopic(past);
-            if (getRoom(roomId)?.phase === 'topic_selection') {
-              setTopic(roomId, newTopic);
-              io.to(roomId).emit('topic_set', { topic: newTopic, room: getRoomSerialized(roomId) });
-            }
-          } catch (e) {
-            console.error('[AI] 재시도 주제 생성 실패:', e.message);
-          }
-        })();
+        pausePhaseTimer(roomId);
+        io.to(roomId).emit('side_selection_retry', {
+          attempts: result.attempts,
+          room: getRoomSerialized(roomId),
+        });
+        generateAndApplyTopic(io, roomId).catch((e) =>
+          console.error('[AI] 재시도 주제 생성 실패:', e.message)
+        );
+      } else {
+        io.to(roomId).emit('side_selection_retry', {
+          attempts: result.attempts,
+          room: result.room,
+        });
       }
     }
   });

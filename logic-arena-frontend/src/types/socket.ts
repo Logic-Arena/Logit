@@ -14,7 +14,7 @@ export interface ServerToClientEvents {
   player_joined: (payload: { room: Room }) => void;
   player_left: (payload: { room: Room | null }) => void;
   phase_changed: (payload: { phase: string; room: Room }) => void;
-  topic_set: (payload: { topic: string; room: Room }) => void;
+  topic_set: (payload: { topic: string | null; room: Room }) => void;
   sides_assigned: (payload: { random: boolean; room: Room }) => void;
   side_selection_update: (payload: { room: Room }) => void;
   side_selection_retry: (payload: { attempts: number; room: Room }) => void;

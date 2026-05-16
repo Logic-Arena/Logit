@@ -4,6 +4,7 @@ export type VoteOption = 'pro' | 'con';
 export type WinnerSide = 'pro' | 'con' | 'draw';
 export type RoomMode = 'free_debate' | 'ai_debate';
 export type TopicMode = 'manual' | 'ai_auto';
+export type TopicSource = 'ai' | 'fallback';
 
 export type Phase =
   | 'waiting'
@@ -101,6 +102,7 @@ export interface Room {
   mode: RoomMode;
   topicMode: TopicMode;
   topic: string | null;
+  topicSource: TopicSource | null;
   phase: Phase;
   phaseEndAt: number | null;
   host: string | null;

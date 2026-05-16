@@ -34,14 +34,14 @@ export function useRoomEvents() {
 
     const onSidesAssigned = ({ random, room }: { random: boolean; room: Room }) => {
       updateRoom(room);
-      if (random) toast('같은 진영을 3번 선택하여 무작위로 배정되었습니다', 'info');
+      if (random) toast('7회 재추천 후에도 같은 진영을 선택하여 무작위로 배정되었습니다', 'info');
     };
 
     const onSideSelectionUpdate = ({ room }: { room: Room }) => updateRoom(room);
 
     const onSideSelectionRetry = ({ attempts, room }: { attempts: number; room: Room }) => {
       updateRoom(room);
-      toast(`두 분이 같은 진영을 선택했습니다. 다시 선택해 주세요. (${attempts}/3)`, 'info');
+      toast(`두 분이 같은 진영을 선택했습니다. 다시 선택해 주세요. (${attempts}/7)`, 'info');
     };
 
     const onAiContent = ({ room }: { room: Room }) => updateRoom(room);
