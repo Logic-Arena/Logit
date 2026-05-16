@@ -1937,6 +1937,49 @@ textarea {
   gap: 12px;
 }
 
+/* ── Debate Chat Watermark ───────────────────────────────── */
+.debate-chat-scroll {
+  position: relative;
+  isolation: isolate;
+  background-color: var(--color-bg);
+  background-image:
+    linear-gradient(rgba(15, 17, 23, 0.86), rgba(15, 17, 23, 0.86)),
+    url("/logit-logo-watermark.png");
+  background-position:
+    center,
+    center 42%;
+  background-repeat: no-repeat;
+  background-size:
+    auto,
+    clamp(280px, 42vw, 640px) auto;
+  background-blend-mode: normal;
+}
+
+.debate-chat-scroll::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      ellipse at center 42%,
+      rgba(255, 255, 255, 0.035),
+      transparent 42%
+    ),
+    radial-gradient(
+      ellipse at center 43%,
+      rgba(0, 0, 0, 0.22),
+      transparent 58%
+    );
+  mix-blend-mode: overlay;
+}
+
+.debate-chat-scroll > * {
+  position: relative;
+  z-index: 1;
+}
+
 /* ── Bubble Row Layout ──────────────────────────────────── */
 .bubble-row {
   display: flex;
@@ -2017,10 +2060,18 @@ textarea {
 
 /* 찬성 팀: 보라 계열 */
 .debate-bubble--pro-player {
-  background: linear-gradient(145deg, #7c6ff5, #6c5ce7);
-  border-color: transparent;
+  background: linear-gradient(
+    145deg,
+    rgba(124, 111, 245, 0.42),
+    rgba(108, 92, 231, 0.24)
+  );
+  border-color: rgba(148, 136, 255, 0.52);
   border-bottom-right-radius: 5px;
-  color: #fff;
+  color: #f8f6ff;
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(3px);
 }
 .debate-bubble--pro-ai {
   background: rgba(108, 92, 231, 0.16);
@@ -2030,10 +2081,18 @@ textarea {
 
 /* 반대 팀: 코랄 계열 */
 .debate-bubble--con-player {
-  background: linear-gradient(145deg, #e07843, #d4622e);
-  border-color: transparent;
+  background: linear-gradient(
+    145deg,
+    rgba(224, 120, 67, 0.42),
+    rgba(212, 98, 46, 0.24)
+  );
+  border-color: rgba(232, 128, 76, 0.52);
   border-bottom-left-radius: 5px;
-  color: #fff;
+  color: #fff7f2;
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(3px);
 }
 .debate-bubble--con-ai {
   background: rgba(212, 98, 46, 0.16);

@@ -408,6 +408,7 @@ function DebateChatView({
       {/* 스크롤 채팅 영역 */}
       <div
         ref={chatRef}
+        className="debate-chat-scroll"
         style={{
           flex: 1,
           overflowY: "auto",
