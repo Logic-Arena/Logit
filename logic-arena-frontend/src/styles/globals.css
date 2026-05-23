@@ -3,28 +3,46 @@
 
 /* ── Design Tokens ─────────────────────────────────────── */
 :root {
-  --color-bg: #0f1117;
-  --color-surface: #181c2a;
-  --color-surface-2: #1e2235;
-  --color-border: #272b42;
-  --color-border: #272b42;
-  --color-text: #e8eaf0;
-  --color-text-muted: #8890a8;
-  --color-primary: #6c63ff;
-  --color-primary-hover: #7b74ff;
-  --color-pro: #22c55e;
-  --color-con: #ef4444;
-  --color-host: #f59e0b;
-  --color-observer: #64748b;
-  --color-danger: #ef4444;
-  --color-pro-glow: rgba(34, 197, 94, 0.2);
-  --color-con-glow: rgba(239, 68, 68, 0.2);
-  --color-pro-glow: rgba(34, 197, 94, 0.2);
-  --color-con-glow: rgba(239, 68, 68, 0.2);
+  /* ── 배경 · 서피스 ── */
+  --color-bg:           #EFEFEF;   /* 전체 배경 — 쿨그레이 */
+  --color-surface:      #F8F7F4;   /* 카드 표면 — 웜오프화이트 */
+  --color-surface-2:    #EEEDEA;   /* 중첩 표면 — 한단계 어두운 웜톤 */
+  --color-border:       #DDDBD5;   /* 테두리 — 웜그레이 */
 
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 20px;
+  /* ── 텍스트 ── */
+  --color-text:         #1E1C2E;   /* 기본 텍스트 — 딥 네이비 블랙 */
+  --color-text-muted:   #8A8799;   /* 보조 텍스트 — 뮤트 퍼플그레이 */
+
+  /* ── 브랜드 포인트 ── */
+  --color-primary:       #6C63FF;  /* 유지 */
+  --color-primary-hover: #5048CC;  /* 유지 */
+  --color-primary-soft:  #ECEAFF;  /* 라벤더 소프트 */
+
+  /* ── 찬성 ── */
+  --color-pro:           #52A068;  /* 진한 뮤트 그린 */
+  --color-pro-bg:        #EDF7F2;  /* 소프트 민트 배경 */
+  --color-pro-glow:      rgba(82, 160, 104, 0.18);
+
+  /* ── 반대 ── */
+  --color-con:           #C94040;  /* 뮤트 레드 */
+  --color-con-hover:     #9E3333;  /* 반대 다크 레드 */
+  --color-danger:        #C94040;
+  --color-con-bg:        #FBF0F0;  /* 소프트 핑크 배경 */
+  --color-con-glow:      rgba(201, 64, 64, 0.18);
+  --color-con-orange:    #C47A52;  /* 뮤트 테라코타 */
+
+  /* ── 호스트 ── */
+  --color-host:          #B07D2E;  /* 뮤트 앰버 */
+  --color-host-bg:       #FBF6E9;  /* 소프트 크림 배경 */
+
+  /* ── AI ── */
+  --color-ai:            #2A7FA8;  /* 뮤트 블루 */
+  --color-ai-bg:         #EBF6FA;  /* 소프트 스카이 배경 */
+
+  /* ── 관전자 ── */
+  --color-observer:      #6B7280;  /* 유지 */
+  --color-observer-bg:   #F4F4F5;  /* 쿨그레이 배경 */
+
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 20px;
@@ -134,9 +152,12 @@ textarea {
 
 .app-header__logo-img {
   height: 28px;
-  width: auto;
+  aspect-ratio: 602 / 252;
   display: block;
-  filter: brightness(0) invert(1);
+  content: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='602' height='252'></svg>");
+  background: linear-gradient(135deg, #6C63FF, #5048CC);
+  -webkit-mask: url("/logit-logo.png") no-repeat center / contain;
+  mask: url("/logit-logo.png") no-repeat center / contain;
 }
 
 .app-main {
@@ -166,13 +187,8 @@ textarea {
 }
 
 .btn--primary {
-  background: linear-gradient(135deg, var(--color-primary), #8b5cf6);
-  background: linear-gradient(135deg, var(--color-primary), #8b5cf6);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
   color: #fff;
-}
-.btn--primary:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
 }
 .btn--primary:hover {
   opacity: 0.9;
@@ -266,24 +282,20 @@ textarea {
   letter-spacing: 0.4px;
 }
 .badge--host {
-  background: rgba(245, 158, 11, 0.15);
+  background: var(--color-host-bg);
   color: var(--color-host);
 }
 .badge--participant {
-  background: rgba(108, 99, 255, 0.15);
+  background: var(--color-primary-soft);
   color: var(--color-primary);
 }
 .badge--observer {
-  background: rgba(100, 116, 139, 0.15);
+  background: var(--color-observer-bg);
   color: var(--color-observer);
 }
 .badge--ai {
-  background: rgba(6, 182, 212, 0.15);
-  color: #06b6d4;
-}
-.badge--ai {
-  background: rgba(6, 182, 212, 0.15);
-  color: #06b6d4;
+  background: var(--color-ai-bg);
+  color: var(--color-ai);
 }
 
 /* ── Toast ─────────────────────────────────────────────── */
@@ -479,7 +491,7 @@ textarea {
   height: 7px;
   border-radius: 50%;
   background: var(--color-pro);
-  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.25);
+  box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.25);
   animation: pulse-dot 2s infinite;
   flex-shrink: 0;
 }
@@ -531,14 +543,14 @@ textarea {
   line-height: 1.5;
 }
 .vote-card__badge--hot {
-  background: rgba(245, 158, 11, 0.18);
-  color: #f59e0b;
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  background: var(--color-host-bg);
+  color: var(--color-host);
+  border: 1px solid rgba(217, 119, 6, 0.3);
 }
 .vote-card__badge--new {
-  background: rgba(34, 197, 94, 0.15);
+  background: var(--color-pro-bg);
   color: var(--color-pro);
-  border: 1px solid rgba(34, 197, 94, 0.3);
+  border: 1px solid rgba(22, 163, 74, 0.3);
 }
 
 .vote-card__category {
@@ -587,7 +599,7 @@ textarea {
 .vote-card__bar-fill {
   height: 100%;
   border-radius: 99px;
-  background: linear-gradient(90deg, var(--color-primary), #8b5cf6);
+  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-hover));
   transition: width 0.4s ease;
 }
 
@@ -612,13 +624,13 @@ textarea {
 }
 .vote-card__btn--pro:hover,
 .vote-card__btn--pro.is-active {
-  background: rgba(108, 99, 255, 0.15);
+  background: rgba(108, 99, 255, 0.1);
   border-color: var(--color-primary);
   color: var(--color-primary);
 }
 .vote-card__btn--con:hover,
 .vote-card__btn--con.is-active {
-  background: rgba(239, 68, 68, 0.12);
+  background: var(--color-con-bg);
   border-color: var(--color-con);
   color: var(--color-con);
 }
@@ -639,41 +651,28 @@ textarea {
   isolation: isolate;
 }
 
-.lobby-room-stage::before {
+/* ── 로고 워터마크 공통 (로비 · 토론 주제선택 공유) ────────── */
+.lobby-room-stage::before,
+.topic-selection-watermark-slot::before {
   content: "";
   position: absolute;
   inset: 0;
   z-index: 0;
   pointer-events: none;
   background-image: url("/logit-logo-watermark.png");
-  background-position: center 48%;
   background-repeat: no-repeat;
-  background-size: clamp(360px, 42vw, 760px) auto;
-  opacity: 0.14;
+  opacity: 0.2;
   filter:
-    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.08))
-    drop-shadow(0 -2px 0 rgba(0, 0, 0, 0.42));
+    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.15))
+    drop-shadow(0 -2px 0 rgba(0, 0, 0, 0.22));
 }
 
-.lobby-room-stage::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(
-      ellipse at center 49%,
-      rgba(255, 255, 255, 0.024),
-      transparent 43%
-    ),
-    radial-gradient(
-      ellipse at center 51%,
-      rgba(0, 0, 0, 0.3),
-      transparent 64%
-    );
-  mix-blend-mode: overlay;
+/* 로비 전용 위치·크기 */
+.lobby-room-stage::before {
+  background-position: center 48%;
+  background-size: clamp(360px, 42vw, 760px) auto;
 }
+
 
 .lobby-room-stage > * {
   position: relative;
@@ -699,12 +698,6 @@ textarea {
   transform: translateY(-1px);
   box-shadow: 0 4px 20px rgba(108, 99, 255, 0.15);
 }
-.room-card:hover {
-  border-color: var(--color-primary);
-  background: var(--color-surface-2);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 20px rgba(108, 99, 255, 0.15);
-}
 
 .room-card__title {
   font-weight: 600;
@@ -722,11 +715,11 @@ textarea {
   border-radius: 999px;
 }
 .room-card__phase--waiting {
-  background: rgba(108, 99, 255, 0.15);
+  background: var(--color-primary-soft);
   color: var(--color-primary);
 }
 .room-card__phase--voting {
-  background: rgba(34, 197, 94, 0.15);
+  background: var(--color-pro-bg);
   color: var(--color-pro);
 }
 
@@ -777,13 +770,8 @@ textarea {
   background:
     radial-gradient(
       circle at top left,
-      rgba(108, 99, 255, 0.22),
+      rgba(108, 99, 255, 0.1),
       transparent 45%
-    ),
-    linear-gradient(
-      160deg,
-      rgba(255, 255, 255, 0.03),
-      rgba(255, 255, 255, 0.01)
     ),
     var(--color-surface);
 }
@@ -793,7 +781,7 @@ textarea {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.18em;
-  color: #b6b0ff;
+  color: var(--color-primary);
   margin-bottom: 16px;
 }
 
@@ -835,7 +823,7 @@ textarea {
 }
 
 .auth-form__error {
-  color: #ff8f8f;
+  color: var(--color-con);
   font-size: var(--text-body);
 }
 
@@ -925,17 +913,10 @@ textarea {
 .topic-banner {
   background: linear-gradient(
     135deg,
-    rgba(108, 99, 255, 0.2),
-    rgba(139, 92, 246, 0.1)
-  );
-  background: linear-gradient(
-    135deg,
-    rgba(108, 99, 255, 0.2),
-    rgba(139, 92, 246, 0.1)
+    rgba(108, 99, 255, 0.12),
+    rgba(108, 99, 255, 0.06)
   );
   border-bottom: 1px solid rgba(108, 99, 255, 0.3);
-  border-left: 3px solid var(--color-primary);
-  padding: 14px 20px;
   border-left: 3px solid var(--color-primary);
   padding: 14px 20px;
   text-align: center;
@@ -1045,44 +1026,32 @@ textarea {
 }
 
 .vote-btn--pro {
-  background: rgba(34, 197, 94, 0.12);
+  background: var(--color-pro-bg);
   color: var(--color-pro);
-  border-color: rgba(34, 197, 94, 0.25);
+  border-color: rgba(22, 163, 74, 0.25);
 }
 .vote-btn--pro:hover:not(:disabled) {
-  background: rgba(34, 197, 94, 0.2);
+  background: rgba(22, 163, 74, 0.2);
 }
 .vote-btn--pro.selected {
-  background: linear-gradient(135deg, #22c55e, #16a34a);
+  background: linear-gradient(135deg, var(--color-pro), #236B4F);
   color: #fff;
-  border-color: #22c55e;
-  box-shadow: 0 0 12px var(--color-pro-glow);
-}
-.vote-btn--pro.selected {
-  background: linear-gradient(135deg, #22c55e, #16a34a);
-  color: #fff;
-  border-color: #22c55e;
+  border-color: var(--color-pro);
   box-shadow: 0 0 12px var(--color-pro-glow);
 }
 
 .vote-btn--con {
-  background: rgba(239, 68, 68, 0.12);
+  background: var(--color-con-bg);
   color: var(--color-con);
-  border-color: rgba(239, 68, 68, 0.25);
+  border-color: rgba(220, 38, 38, 0.25);
 }
 .vote-btn--con:hover:not(:disabled) {
-  background: rgba(239, 68, 68, 0.2);
+  background: rgba(220, 38, 38, 0.2);
 }
 .vote-btn--con.selected {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
+  background: linear-gradient(135deg, var(--color-con), #9E3333);
   color: #fff;
-  border-color: #ef4444;
-  box-shadow: 0 0 12px var(--color-con-glow);
-}
-.vote-btn--con.selected {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
-  color: #fff;
-  border-color: #ef4444;
+  border-color: var(--color-con);
   box-shadow: 0 0 12px var(--color-con-glow);
 }
 
@@ -1135,7 +1104,7 @@ textarea {
   background: var(--color-danger);
 }
 .host-controls__btn--danger:hover {
-  background: #dc2626;
+  background: #9E3333;
 }
 
 /* ── Chat Panel ────────────────────────────────────────── */
@@ -1222,54 +1191,29 @@ textarea {
 
 /* Bubble color (isMe-based) */
 .chat-msg--mine .chat-msg__bubble {
-  background: linear-gradient(135deg, #6c63ff, #8b5cf6);
+  background: var(--color-primary);
   color: #fff;
 }
 .chat-msg--theirs .chat-msg__bubble {
   background: var(--color-surface-2);
+  border: 0.5px solid var(--color-border);
   color: var(--color-text);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 .chat-msg--ai .chat-msg__bubble {
-  background: rgba(6, 182, 212, 0.12);
-  color: var(--color-text);
-  border: 1px solid rgba(6, 182, 212, 0.25);
+  background: var(--color-ai-bg);
+  color: var(--color-ai);
+  border: 0.5px solid rgba(8, 145, 178, 0.3);
   border-radius: 14px;
 }
 
 /* Vote badges */
 .badge--pro {
-  background: rgba(34, 197, 94, 0.15);
+  background: var(--color-pro-bg);
   color: var(--color-pro);
 }
 .badge--con {
-  background: rgba(239, 68, 68, 0.15);
-  color: var(--color-con);
-}
-/* Bubble color (isMe-based) */
-.chat-msg--mine .chat-msg__bubble {
-  background: linear-gradient(135deg, #6c63ff, #8b5cf6);
-  color: #fff;
-}
-.chat-msg--theirs .chat-msg__bubble {
-  background: var(--color-surface-2);
-  color: var(--color-text);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
-}
-.chat-msg--ai .chat-msg__bubble {
-  background: rgba(6, 182, 212, 0.12);
-  color: var(--color-text);
-  border: 1px solid rgba(6, 182, 212, 0.25);
-  border-radius: 14px;
-}
-
-/* Vote badges */
-.badge--pro {
-  background: rgba(34, 197, 94, 0.15);
-  color: var(--color-pro);
-}
-.badge--con {
-  background: rgba(239, 68, 68, 0.15);
+  background: var(--color-con-bg);
   color: var(--color-con);
 }
 
@@ -1433,8 +1377,8 @@ textarea {
   letter-spacing: 0.4px;
   text-transform: uppercase;
 }
-.popover__claim-label--pro { color: #9b8fff; }
-.popover__claim-label--con { color: #f0a070; }
+.popover__claim-label--pro { color: var(--color-primary); }
+.popover__claim-label--con { color: var(--color-con-orange); }
 
 .popover__claim-text {
   font-size: 13px;
@@ -1486,8 +1430,8 @@ textarea {
   color: #fff;
 }
 .btn--danger:hover {
-  background: #dc2626;
-  border-color: #dc2626;
+  background: #9E3333;
+  border-color: #9E3333;
 }
 
 /* ── Vote Modal ─────────────────────────────────────────── */
@@ -1574,7 +1518,7 @@ textarea {
 }
 .mode-card--selected {
   border-color: var(--color-primary);
-  background: rgba(108, 99, 255, 0.1);
+  background: var(--color-primary-soft);
 }
 .mode-card--disabled {
   opacity: 0.45;
@@ -1597,7 +1541,7 @@ textarea {
   font-weight: 500;
   padding: 1px 7px;
   border-radius: 999px;
-  background: rgba(108, 99, 255, 0.15);
+  background: var(--color-primary-soft);
   color: var(--color-primary);
   margin-left: 8px;
   vertical-align: middle;
@@ -1609,11 +1553,11 @@ textarea {
   align-items: center;
   gap: 6px;
   padding: 8px 12px;
-  background: rgba(6, 182, 212, 0.08);
-  border-bottom: 1px solid rgba(6, 182, 212, 0.2);
+  background: var(--color-ai-bg);
+  border-bottom: 1px solid rgba(8, 145, 178, 0.2);
   font-size: var(--text-caption);
   font-weight: 500;
-  color: #06b6d4;
+  color: var(--color-ai);
   flex-shrink: 0;
 }
 
@@ -1621,8 +1565,8 @@ textarea {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #06b6d4;
-  box-shadow: 0 0 6px #06b6d4;
+  background: var(--color-ai);
+  box-shadow: 0 0 6px var(--color-ai);
   flex-shrink: 0;
 }
 
@@ -1673,13 +1617,13 @@ textarea {
   color: var(--color-text);
 }
 .participant-chip--pro {
-  border-color: rgba(34, 197, 94, 0.4);
-  background: rgba(34, 197, 94, 0.08);
+  border-color: rgba(22, 163, 74, 0.4);
+  background: var(--color-pro-bg);
   color: var(--color-pro);
 }
 .participant-chip--con {
-  border-color: rgba(239, 68, 68, 0.4);
-  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(220, 38, 38, 0.4);
+  background: var(--color-con-bg);
   color: var(--color-con);
 }
 
@@ -1727,7 +1671,7 @@ textarea {
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--color-primary), #8b5cf6);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1735,7 +1679,7 @@ textarea {
   font-weight: 700;
   color: #fff;
   flex-shrink: 0;
-  box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.25);
+  box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.2);
 }
 
 .tier-widget__name {
@@ -1750,7 +1694,7 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  background: rgba(108, 99, 255, 0.06);
+  background: var(--color-primary-soft);
   border: 1px solid rgba(108, 99, 255, 0.18);
   border-radius: var(--radius-md);
   padding: 10px 12px;
@@ -1780,14 +1724,14 @@ textarea {
 .tier-widget__progress-wrap {
   height: 6px;
   border-radius: 999px;
-  background: rgba(108, 99, 255, 0.2);
+  background: var(--color-border);
   overflow: hidden;
 }
 
 .tier-widget__progress-fill {
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--color-primary), #8b5cf6);
+  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-hover));
   transition: width 0.4s ease;
 }
 
@@ -2001,7 +1945,7 @@ textarea {
   isolation: isolate;
   background-color: var(--color-bg);
   background-image:
-    linear-gradient(rgba(15, 17, 23, 0.86), rgba(15, 17, 23, 0.86)),
+    linear-gradient(rgba(244, 243, 251, 0.88), rgba(244, 243, 251, 0.88)),
     url("/logit-logo-watermark.png");
   background-position:
     center,
@@ -2058,36 +2002,10 @@ textarea {
   pointer-events: none;
 }
 
+/* 주제선택 전용 위치·크기 (공통 스타일은 .lobby-room-stage::before와 공유) */
 .topic-selection-watermark-slot::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: url("/logit-logo-watermark.png");
   background-position: center 44%;
-  background-repeat: no-repeat;
   background-size: clamp(340px, 42vw, 720px) auto;
-  opacity: 0.15;
-  filter:
-    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.08))
-    drop-shadow(0 -2px 0 rgba(0, 0, 0, 0.38));
-}
-
-.topic-selection-watermark-slot::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(
-      ellipse at center 45%,
-      rgba(255, 255, 255, 0.025),
-      transparent 42%
-    ),
-    radial-gradient(
-      ellipse at center 47%,
-      rgba(0, 0, 0, 0.28),
-      transparent 62%
-    );
-  mix-blend-mode: overlay;
 }
 
 .topic-generating-card {
@@ -2136,14 +2054,14 @@ textarea {
   justify-content: center;
   gap: 5px;
   min-height: 48px;
-  color: #f7f1ff;
+  background: linear-gradient(135deg, #6C63FF, #5048CC);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
   font-size: clamp(30px, 5vw, 46px);
   font-weight: 900;
   line-height: 1;
   letter-spacing: 0;
-  text-shadow:
-    0 0 14px rgba(108, 99, 255, 0.36),
-    0 2px 0 rgba(0, 0, 0, 0.32);
+  filter: drop-shadow(0 0 14px rgba(108, 99, 255, 0.36));
 }
 
 .topic-generating-card__letter {
@@ -2237,8 +2155,8 @@ textarea {
 }
 
 .selection-waiting-card {
-  --selection-accent: #9b8fff;
-  --selection-accent-rgb: 155, 143, 255;
+  --selection-accent: #6C63FF;
+  --selection-accent-rgb: 108, 99, 255;
 
   overflow: hidden;
   position: relative;
@@ -2261,8 +2179,8 @@ textarea {
 }
 
 .selection-waiting-card--con {
-  --selection-accent: #f0a070;
-  --selection-accent-rgb: 240, 160, 112;
+  --selection-accent: var(--color-con-orange);
+  --selection-accent-rgb: 196, 122, 82;
 }
 
 .selection-waiting-card::before {
@@ -2411,10 +2329,10 @@ textarea {
 
 /* ── Judging Wait: Cyber Courtroom ─────────────────────── */
 .judging-wait {
-  --judge-cyan: #67e8f9;
-  --judge-mint: #34d399;
-  --judge-violet: #8b7cff;
-  --judge-coral: #f97368;
+  --judge-cyan: var(--color-ai);
+  --judge-mint: var(--color-pro);
+  --judge-violet: var(--color-primary);
+  --judge-coral: var(--color-con);
 
   position: relative;
   isolation: isolate;
@@ -2430,7 +2348,7 @@ textarea {
   background:
     linear-gradient(90deg, rgba(103, 232, 249, 0.035) 1px, transparent 1px),
     linear-gradient(0deg, rgba(139, 124, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(15, 17, 23, 0.2), rgba(10, 12, 20, 0.96));
+    var(--color-surface);
   background-size:
     58px 58px,
     58px 58px,
@@ -2553,9 +2471,9 @@ textarea {
 .judging-wait__side-chip {
   min-width: 76px;
   padding: 8px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
-  color: rgba(255, 255, 255, 0.86);
+  color: var(--color-text);
   font-size: 12px;
   font-weight: 800;
   text-align: center;
@@ -2602,7 +2520,7 @@ textarea {
 
 .judging-wait__headline h2 {
   margin: 0;
-  color: #f7fbff;
+  color: var(--color-text);
   font-size: 26px;
   line-height: 1.32;
   font-weight: 800;
@@ -2626,7 +2544,7 @@ textarea {
   padding: 8px;
   border: 1px solid rgba(103, 232, 249, 0.18);
   border-radius: 8px;
-  background: rgba(15, 17, 23, 0.42);
+  background: var(--color-surface-2);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.06),
     0 14px 38px rgba(0, 0, 0, 0.18);
@@ -2638,9 +2556,9 @@ textarea {
   min-width: 0;
   padding: 9px 6px;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.045);
-  border: 1px solid rgba(255, 255, 255, 0.075);
-  color: rgba(232, 234, 240, 0.74);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
   font-size: 12px;
   font-weight: 800;
   text-align: center;
@@ -2665,7 +2583,7 @@ textarea {
   padding: 2px;
   border-radius: 8px;
   border: 1px solid rgba(103, 232, 249, 0.22);
-  background: rgba(255, 255, 255, 0.035);
+  background: var(--color-surface-2);
   overflow: hidden;
   animation: judging-panel-in 0.6s ease-out 0.14s both;
 }
@@ -2687,7 +2605,7 @@ textarea {
   border-radius: 8px;
   border: 1px solid rgba(103, 232, 249, 0.26);
   background: rgba(103, 232, 249, 0.09);
-  color: rgba(229, 249, 252, 0.9);
+  color: var(--color-ai);
   font-size: 12px;
   font-weight: 700;
   box-shadow: 0 0 24px rgba(103, 232, 249, 0.1);
@@ -2708,9 +2626,7 @@ textarea {
   padding: 18px 22px;
   border-radius: 8px;
   border: 1px solid rgba(103, 232, 249, 0.18);
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.025)),
-    rgba(24, 28, 42, 0.72);
+  background: var(--color-surface);
   box-shadow:
     0 18px 44px rgba(0, 0, 0, 0.24),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
@@ -2724,9 +2640,7 @@ textarea {
 
 .judging-wait__glass-card--tip {
   border-color: rgba(103, 232, 249, 0.2);
-  background:
-    linear-gradient(135deg, rgba(103, 232, 249, 0.08), rgba(139, 124, 255, 0.035)),
-    rgba(17, 20, 32, 0.74);
+  background: var(--color-ai-bg);
   animation-delay: 0.32s;
 }
 
@@ -2748,7 +2662,7 @@ textarea {
 }
 
 .judging-wait__glass-card--final p {
-  color: rgba(232, 234, 240, 0.72);
+  color: var(--color-text-muted);
 }
 
 .judging-wait__tip-text {
@@ -2957,14 +2871,14 @@ textarea {
   margin-top: 18px;
 }
 .bubble-avatar--pro {
-  background: rgba(108, 92, 231, 0.2);
-  color: #9b8fff;
-  border: 1px solid rgba(108, 92, 231, 0.4);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  border: 1px solid rgba(108, 99, 255, 0.4);
 }
 .bubble-avatar--con {
-  background: rgba(212, 98, 46, 0.2);
-  color: #f0a070;
-  border: 1px solid rgba(212, 98, 46, 0.4);
+  background: rgba(196, 122, 82, 0.1);
+  color: var(--color-con-orange);
+  border: 1px solid rgba(196, 122, 82, 0.4);
 }
 
 .bubble-content {
@@ -3005,53 +2919,45 @@ textarea {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
 }
 
-/* 찬성 팀: 보라 계열 */
+/* 찬성 팀: 퍼플 계열 */
 .debate-bubble--pro-player {
-  background: linear-gradient(
-    145deg,
-    rgba(124, 111, 245, 0.42),
-    rgba(108, 92, 231, 0.24)
-  );
-  border-color: rgba(148, 136, 255, 0.52);
+  background: var(--color-primary);
+  border-color: rgba(108, 99, 255, 0.6);
   border-bottom-right-radius: 5px;
-  color: #f8f6ff;
+  color: #ffffff;
   box-shadow:
-    0 10px 28px rgba(0, 0, 0, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(3px);
+    0 10px 28px rgba(108, 99, 255, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 .debate-bubble--pro-ai {
-  background: rgba(108, 92, 231, 0.16);
-  border-color: rgba(108, 92, 231, 0.35);
+  background: var(--color-primary-soft);
+  border-color: rgba(108, 99, 255, 0.25);
   border-bottom-right-radius: 5px;
+  color: var(--color-primary-hover);
 }
 
-/* 반대 팀: 코랄 계열 */
+/* 반대 팀: 레드 계열 */
 .debate-bubble--con-player {
-  background: linear-gradient(
-    145deg,
-    rgba(224, 120, 67, 0.42),
-    rgba(212, 98, 46, 0.24)
-  );
-  border-color: rgba(232, 128, 76, 0.52);
+  background: var(--color-con);
+  border-color: rgba(201, 64, 64, 0.6);
   border-bottom-left-radius: 5px;
-  color: #fff7f2;
+  color: #ffffff;
   box-shadow:
-    0 10px 28px rgba(0, 0, 0, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(3px);
+    0 10px 28px rgba(201, 64, 64, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 .debate-bubble--con-ai {
-  background: rgba(212, 98, 46, 0.16);
-  border-color: rgba(212, 98, 46, 0.35);
+  background: var(--color-con-bg);
+  border-color: rgba(201, 64, 64, 0.25);
   border-bottom-left-radius: 5px;
+  color: var(--color-con-hover);
 }
 
 /* 훈수 AI */
 .debate-bubble--coach {
   max-width: min(90%, 680px);
-  border-color: rgba(245, 158, 11, 0.3);
-  background: linear-gradient(145deg, rgba(245, 158, 11, 0.12), rgba(24, 28, 42, 0.95));
+  border-color: var(--color-pro);
+  background: var(--color-pro-bg);
 }
 
 .debate-bubble__meta {
@@ -3059,7 +2965,7 @@ textarea {
   gap: 8px;
   flex-wrap: wrap;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--color-text-muted);
   margin-bottom: 8px;
 }
 
@@ -3074,9 +2980,8 @@ textarea {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  color: rgba(255, 255, 255, 0.82);
+  color: var(--color-text-muted);
   font-style: italic;
-  text-shadow: 0 0 14px rgba(103, 232, 249, 0.28);
   animation: thinking-glow 2.4s ease-in-out infinite;
 }
 
@@ -3091,8 +2996,8 @@ textarea {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: linear-gradient(180deg, #dffbff, #67e8f9);
-  box-shadow: 0 0 10px rgba(103, 232, 249, 0.5);
+  background: var(--color-ai);
+  box-shadow: 0 0 10px rgba(8, 145, 178, 0.4);
   opacity: 0.45;
   transform-origin: center bottom;
   animation: typing-dot 1.35s cubic-bezier(0.45, 0, 0.2, 1) infinite;
@@ -3181,13 +3086,13 @@ textarea {
   background: none;
   border: none;
   cursor: pointer;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--color-text-muted);
   font-size: 12px;
   padding: 0;
   white-space: nowrap;
 }
 .debate-bubble__expand-btn:hover {
-  color: #fff;
+  color: var(--color-text);
 }
 .debate-bubble__collapse-btn {
   display: block;
@@ -3195,14 +3100,14 @@ textarea {
   background: none;
   border: none;
   cursor: pointer;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--color-text-muted);
   font-size: 11px;
   padding: 0;
   text-align: right;
   width: 100%;
 }
 .debate-bubble__collapse-btn:hover {
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--color-text);
 }
 
 /* ── Slim Phase Bar ─────────────────────────────────────── */
@@ -3222,8 +3127,8 @@ textarea {
   height: 3px;
   border-radius: 2px;
 }
-.slim-phase-bar__seg--done { background: #22c55e; }
-.slim-phase-bar__seg--active { background: #7c6ff5; }
+.slim-phase-bar__seg--done { background: var(--color-pro); }
+.slim-phase-bar__seg--active { background: var(--color-primary); }
 .slim-phase-bar__seg--upcoming { background: var(--color-border); }
 .slim-phase-bar__row {
   display: flex;
@@ -3238,9 +3143,9 @@ textarea {
 .slim-phase-bar__chip {
   padding: 2px 9px;
   border-radius: 999px;
-  background: rgba(108, 99, 255, 0.12);
+  background: var(--color-primary-soft);
   border: 1px solid rgba(108, 99, 255, 0.3);
-  color: #9b8fff;
+  color: var(--color-primary);
   font-size: 11px;
   font-weight: 700;
 }
@@ -3282,14 +3187,14 @@ textarea {
   font-weight: 600;
 }
 .sidebar-badge--pro {
-  background: rgba(108, 92, 231, 0.14);
-  color: #9b8fff;
-  border: 1px solid rgba(108, 92, 231, 0.35);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  border: 1px solid rgba(108, 99, 255, 0.35);
 }
 .sidebar-badge--con {
-  background: rgba(212, 98, 46, 0.14);
-  color: #f0a070;
-  border: 1px solid rgba(212, 98, 46, 0.35);
+  background: rgba(196, 122, 82, 0.1);
+  color: var(--color-con-orange);
+  border: 1px solid rgba(196, 122, 82, 0.35);
 }
 .sidebar-badge--me {
   font-weight: 700;
@@ -3314,10 +3219,10 @@ textarea {
   border-radius: 50%;
   flex-shrink: 0;
 }
-.stage-item--done .stage-item__dot { background: #22c55e; }
+.stage-item--done .stage-item__dot { background: var(--color-pro); }
 .stage-item--active .stage-item__dot {
-  background: #7c6ff5;
-  box-shadow: 0 0 6px rgba(124, 111, 245, 0.7);
+  background: var(--color-primary);
+  box-shadow: 0 0 6px rgba(108, 99, 255, 0.5);
 }
 .stage-item--upcoming .stage-item__dot {
   background: transparent;
@@ -3329,7 +3234,7 @@ textarea {
   color: var(--color-text-muted);
 }
 .stage-item__badge--active {
-  color: #9b8fff;
+  color: var(--color-primary);
   font-weight: 700;
 }
 
@@ -3354,15 +3259,15 @@ textarea {
   opacity: 0.45;
 }
 .claim-summary--pro {
-  background: rgba(108, 92, 231, 0.08);
-  border: 1px solid rgba(108, 92, 231, 0.2);
+  background: var(--color-primary-soft);
+  border: 1px solid rgba(108, 99, 255, 0.2);
 }
-.claim-summary--pro .claim-summary__label { color: #9b8fff; }
+.claim-summary--pro .claim-summary__label { color: var(--color-primary); }
 .claim-summary--con {
   background: rgba(212, 98, 46, 0.08);
   border: 1px solid rgba(212, 98, 46, 0.2);
 }
-.claim-summary--con .claim-summary__label { color: #f0a070; }
+.claim-summary--con .claim-summary__label { color: var(--color-con-orange); }
 
 /* ── Media Queries ───────────────────────────────────────── */
 @media (max-width: 1024px) {
@@ -3574,9 +3479,13 @@ textarea {
     min-height: clamp(300px, 48vh, 480px);
   }
 
+  .lobby-room-stage::before,
+  .topic-selection-watermark-slot::before {
+    opacity: 0.12;
+  }
+
   .lobby-room-stage::before {
     background-size: clamp(260px, 72vw, 440px) auto;
-    opacity: 0.12;
   }
 
   .topic-selection-watermark-slot {
@@ -3586,7 +3495,6 @@ textarea {
   .topic-selection-watermark-slot::before {
     background-position: center 38%;
     background-size: clamp(260px, 70vw, 420px) auto;
-    opacity: 0.13;
   }
 
   .judging-wait {
@@ -3704,7 +3612,7 @@ textarea {
   background:
     radial-gradient(circle at 15% 15%, rgba(255, 255, 255, 0.12) 0%, transparent 50%),
     radial-gradient(circle at 85% 85%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
-    linear-gradient(145deg, #3730a3 0%, #4f46e5 40%, #7c3aed 75%, #9333ea 100%);
+    linear-gradient(145deg, var(--color-primary-hover) 0%, var(--color-primary-hover) 40%, var(--color-primary) 75%, var(--color-primary) 100%);
   padding: 44px 40px;
   border-radius: 16px;
   display: flex;
@@ -3778,11 +3686,14 @@ textarea {
 
 .auth-logo__text {
   display: block;
+  width: fit-content;
+  margin: 0 auto 6px;
   font-size: var(--text-title);
   font-weight: 700;
-  color: var(--color-primary);
+  background: linear-gradient(135deg, #6C63FF, #5048CC);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
   letter-spacing: -1px;
-  margin-bottom: 6px;
 }
 
 .auth-logo__sub {
@@ -3860,7 +3771,7 @@ textarea {
 }
 .auth-social__icon-btn:hover {
   border-color: var(--color-primary);
-  background: rgba(108, 99, 255, 0.06);
+  background: var(--color-primary-soft);
 }
 .auth-social__icon-btn--kakao {
   background: #fee500;
@@ -3890,7 +3801,7 @@ textarea {
 }
 .auth-social__btn:hover {
   border-color: var(--color-primary);
-  background: rgba(108, 99, 255, 0.05);
+  background: var(--color-primary-soft);
 }
 .auth-social__btn--kakao {
   background: #fee500;
@@ -3964,4 +3875,125 @@ textarea {
   100% {
     background-position: -200% 0;
   }
+}
+
+/* ── Glassmorphism ──────────────────────────────────────── */
+
+/* 글래스 카드 — 주요 강조 카드에 사용 */
+.glass-card {
+  background: rgba(248, 247, 244, 0.72);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  border: 0.5px solid rgba(255, 255, 255, 0.6);
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.06),
+    0 1px 4px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  border-radius: 16px;
+}
+
+/* 글래스 배지 — 역할 뱃지, 상태 태그 */
+.glass-badge {
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 0.5px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+/* ── Gradients ──────────────────────────────────────────── */
+
+/* Primary 버튼 그라데이션 */
+.btn-gradient {
+  background: linear-gradient(135deg, #7B74FF 0%, #6C63FF 50%, #5B52E8 100%);
+  box-shadow:
+    0 4px 16px rgba(108, 99, 255, 0.3),
+    0 1px 4px rgba(108, 99, 255, 0.2);
+  transition: all 0.2s ease;
+}
+.btn-gradient:hover {
+  background: linear-gradient(135deg, #8B85FF 0%, #7B74FF 50%, #6C63FF 100%);
+  box-shadow:
+    0 6px 20px rgba(108, 99, 255, 0.38),
+    0 2px 6px rgba(108, 99, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+/* 찬성 그라데이션 */
+.gradient-pro {
+  background: linear-gradient(135deg, #34A876 0%, #2D9B6F 100%);
+  box-shadow: 0 4px 14px rgba(45, 155, 111, 0.28);
+}
+
+/* 반대 그라데이션 */
+.gradient-con {
+  background: linear-gradient(135deg, #D44E4E 0%, #C94040 100%);
+  box-shadow: 0 4px 14px rgba(201, 64, 64, 0.28);
+}
+
+/* Judge 모드 헤더 그라데이션 */
+.gradient-judge {
+  background: linear-gradient(
+    135deg,
+    rgba(108, 99, 255, 0.12) 0%,
+    rgba(45, 127, 168, 0.08) 50%,
+    rgba(108, 99, 255, 0.06) 100%
+  );
+}
+
+/* 히어로/배너 그라데이션 */
+.gradient-hero {
+  background: linear-gradient(
+    135deg,
+    #E8E6FF 0%,
+    #F0EDF8 40%,
+    #E6EEF5 100%
+  );
+}
+
+/* ── Animations ─────────────────────────────────────────── */
+
+/* 글로우 펄스 — 찬성/반대 선택 상태 강조 */
+@keyframes glow-pro {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(45, 155, 111, 0); }
+  50%       { box-shadow: 0 0 0 6px rgba(45, 155, 111, 0.18); }
+}
+@keyframes glow-con {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(201, 64, 64, 0); }
+  50%       { box-shadow: 0 0 0 6px rgba(201, 64, 64, 0.18); }
+}
+
+/* 포인트 요소 float — 카드, 모달 등장 */
+@keyframes float-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-float-in {
+  animation: float-in 0.28s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
+}
+
+/* 버튼 shimmer — Primary 버튼 idle 상태 */
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.btn-shimmer {
+  background: linear-gradient(
+    90deg,
+    #6C63FF 0%,
+    #9B95FF 40%,
+    #6C63FF 60%,
+    #5048CC 100%
+  );
+  background-size: 200% auto;
+  animation: shimmer 3s linear infinite;
+}
+
+/* 페이드인 — 페이지/섹션 전환 */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fade-in 0.22s ease-out forwards;
 }

@@ -38,9 +38,9 @@ interface ReportItem {
 
 /* ─── 상수 ─────────────────────────────────────────────────── */
 const GRADE_COLOR: Record<Grade, string> = {
-  A: "#7b74ff",
-  B: "#00f5a0",
-  C: "#fe7250",
+  A: "var(--color-primary)",
+  B: "var(--color-pro)",
+  C: "var(--color-con)",
 };
 
 
@@ -54,13 +54,13 @@ function getGrade(score: number): Grade {
 }
 
 const KPI_ICONS = [
-  <svg key="score" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg key="score" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M7.5 14.25v2.25m3-4.5v4.5m3-6.75v6.75m3-9v9M6 20.25h12A2.25 2.25 0 0 0 20.25 18V6A2.25 2.25 0 0 0 18 3.75H6A2.25 2.25 0 0 0 3.75 6v12A2.25 2.25 0 0 0 6 20.25Z" />
   </svg>,
-  <svg key="count" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg key="count" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 0 1-.825-.242m9.345-8.334a2.126 2.126 0 0 0-.476-.095 48.64 48.64 0 0 0-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0 0 11.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
   </svg>,
-  <svg key="growth" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg key="growth" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941" />
   </svg>,
 ];
@@ -76,8 +76,8 @@ function CustomLineTooltip({ active, payload }: any) {
     <div
       className={`${styles.kpiCard} !p-3 bg-opacity-90 backdrop-blur-sm z-50`}
     >
-      <div className="text-gray-100 font-semibold mb-1">{d.topic}</div>
-      <div className="text-[#8B5CF6] font-bold">{d.score}점</div>
+      <div style={{ color: 'var(--color-text)' }} className="font-semibold mb-1">{d.topic}</div>
+      <div style={{ color: 'var(--color-primary)' }} className="font-bold">{d.score}점</div>
     </div>
   );
 }
@@ -91,8 +91,8 @@ function CustomDot(props: any) {
       cx={cx}
       cy={cy}
       r={5}
-      fill="#8B5CF6"
-      stroke="#0D1117"
+      fill="var(--color-primary)"
+      stroke="var(--color-surface)"
       strokeWidth={2}
     />
   );
@@ -110,7 +110,7 @@ function RadarCustomTick(props: any) {
     <g transform={`translate(${x},${y})`}>
       <text
         textAnchor={textAnchor}
-        fill="#8B949E"
+        fill="var(--color-text-muted)"
         fontSize="12"
         fontWeight="500"
         dy={dy}
@@ -134,7 +134,8 @@ function KPICard({ data }: { data: KpiCardData }) {
       <div>
         <div className={styles.kpiValue}>{data.value}</div>
         <div
-          className={`${styles.kpiTrendWrapper} ${data.trendUp ? styles.kpiTrendUp : "text-[#EF4444]"}`}
+          className={`${styles.kpiTrendWrapper} ${data.trendUp ? styles.kpiTrendUp : ""}`}
+          style={!data.trendUp ? { color: 'var(--color-con)' } : undefined}
         >
           {data.trend}
         </div>
@@ -205,45 +206,50 @@ function DetailModal({ item, onClose }: { item: DebateHistoryItem; onClose: () =
     { label: '반박력', key: 'rebuttal' as const },
   ];
   const resultLabel = item.result === 'win' ? '승리' : item.result === 'lose' ? '패배' : '무승부';
-  const resultColor = item.result === 'win' ? '#22C55E' : item.result === 'lose' ? '#EF4444' : '#8B949E';
+  const resultColor = item.result === 'win' ? 'var(--color-pro)' : item.result === 'lose' ? 'var(--color-con)' : 'var(--color-text-muted)';
   const positionLabel = item.position === 'pro' ? '찬성' : '반대';
-  const positionColor = item.position === 'pro' ? '#22C55E' : '#EF4444';
+  const positionColor = item.position === 'pro' ? 'var(--color-pro)' : 'var(--color-con)';
   const date = new Date(item.played_at).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' });
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }} onClick={onClose}>
-      <div style={{ background: '#161B22', border: '1px solid #30363D', borderRadius: '16px', padding: '28px', maxWidth: '520px', width: '100%', maxHeight: '82vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+      <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '16px', padding: '28px', maxWidth: '520px', width: '100%', maxHeight: '82vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
           <div style={{ flex: 1, paddingRight: '12px' }}>
-            <div style={{ fontSize: '11px', color: '#8B949E', marginBottom: '6px' }}>{date}</div>
-            <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#E6EDF3', margin: 0, lineHeight: 1.4 }}>{item.topic}</h3>
+            <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '6px' }}>{date}</div>
+            <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-text)', margin: 0, lineHeight: 1.4 }}>{item.topic}</h3>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8B949E', fontSize: '20px', padding: '4px', flexShrink: 0 }}>✕</button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)', fontSize: '20px', padding: '4px', flexShrink: 0 }}>✕</button>
         </div>
         <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
-          <span style={{ padding: '4px 12px', borderRadius: '999px', fontSize: '12px', fontWeight: 600, background: `${positionColor}22`, color: positionColor }}>{positionLabel}</span>
-          <span style={{ padding: '4px 12px', borderRadius: '999px', fontSize: '12px', fontWeight: 600, background: `${resultColor}22`, color: resultColor }}>{resultLabel}</span>
+          <span style={{ padding: '4px 12px', borderRadius: '999px', fontSize: '12px', fontWeight: 600, background: `${positionColor === 'var(--color-pro)' ? 'var(--color-pro-bg)' : 'var(--color-con-bg)'}`, color: positionColor }}>{positionLabel}</span>
+          <span style={{ padding: '4px 12px', borderRadius: '999px', fontSize: '12px', fontWeight: 600, background: `${resultColor === 'var(--color-pro)' ? 'var(--color-pro-bg)' : resultColor === 'var(--color-con)' ? 'var(--color-con-bg)' : 'var(--color-surface-2)'}`, color: resultColor }}>{resultLabel}</span>
         </div>
-        <div style={{ background: '#0D1117', borderRadius: '10px', padding: '16px', marginBottom: '20px', textAlign: 'center' }}>
-          <div style={{ fontSize: '11px', color: '#8B949E', marginBottom: '4px' }}>종합 점수</div>
-          <div style={{ fontSize: '36px', fontWeight: 800, color: '#8B5CF6' }}>{item.score}<span style={{ fontSize: '16px', fontWeight: 500, color: '#8B949E' }}>점</span></div>
+        <div style={{ background: 'var(--color-surface-2)', borderRadius: '10px', padding: '16px', marginBottom: '20px', textAlign: 'center' }}>
+          <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>종합 점수</div>
+          <div style={{ fontSize: '36px', fontWeight: 800, color: 'var(--color-primary)' }}>{item.score}<span style={{ fontSize: '16px', fontWeight: 500, color: 'var(--color-text-muted)' }}>점</span></div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
-          {scoreFields.map(({ label, key }) => (
+          {scoreFields.map(({ label, key }) => {
+            // 세부 항목은 0~25 척도로 저장 → 표시용으로 0~100으로 정규화 (×4)
+            const rawVal = item[key];
+            const displayVal = Math.min(100, rawVal * 4);
+            return (
             <div key={key}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                <span style={{ fontSize: '13px', color: '#8B949E' }}>{label}</span>
-                <span style={{ fontSize: '13px', fontWeight: 600, color: '#E6EDF3' }}>{item[key]}</span>
+                <span style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>{label}</span>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text)' }}>{displayVal}</span>
               </div>
-              <div style={{ height: '6px', background: '#21262D', borderRadius: '999px', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${item[key]}%`, background: 'linear-gradient(90deg, #7c3aed, #8B5CF6)', borderRadius: '999px' }} />
+              <div style={{ height: '6px', background: 'var(--color-border)', borderRadius: '999px', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${displayVal}%`, background: 'linear-gradient(90deg, var(--color-primary-hover), var(--color-primary))', borderRadius: '999px' }} />
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
         {item.advice && (
-          <div style={{ background: '#0D1117', borderRadius: '10px', padding: '14px' }}>
-            <div style={{ fontSize: '11px', color: '#8B5CF6', fontWeight: 600, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>AI 조언</div>
-            <p style={{ fontSize: '13px', lineHeight: 1.75, color: '#C9D1D9', margin: 0, whiteSpace: 'pre-wrap' }}>{item.advice}</p>
+          <div style={{ background: 'var(--color-surface-2)', borderRadius: '10px', padding: '14px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--color-primary)', fontWeight: 600, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>AI 조언</div>
+            <p style={{ fontSize: '13px', lineHeight: 1.75, color: 'var(--color-text)', margin: 0, whiteSpace: 'pre-wrap' }}>{item.advice}</p>
           </div>
         )}
       </div>
@@ -258,15 +264,15 @@ function ReportCard({ item, onDetail }: { item: ReportItem; onDetail?: () => voi
     <div className={styles.reportCard}>
       {/* 1. 날짜 + 등급 + 점수 */}
       <div className="flex flex-col gap-2 w-full">
-        <div className="text-xs text-[#8B949E]">{item.dateLabel}</div>
+        <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{item.dateLabel}</div>
         <div className="flex items-center gap-2">
           <div
-            className="flex items-center justify-center w-8 h-8 rounded-full font-bold text-[#0D1117] text-sm flex-shrink-0"
-            style={{ background: GRADE_COLOR[grade] }}
+            className="flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm flex-shrink-0"
+            style={{ color: '#fff', background: GRADE_COLOR[grade] }}
           >
             {grade}
           </div>
-          <span className="text-base font-bold text-gray-200">
+          <span className="text-base font-bold" style={{ color: 'var(--color-text)' }}>
             {item.score}점
           </span>
         </div>
@@ -275,22 +281,23 @@ function ReportCard({ item, onDetail }: { item: ReportItem; onDetail?: () => voi
       {/* 2. 주제 + 포지션 + 카테고리 칩 */}
       <div className="flex flex-col gap-2 w-full min-w-0">
         <h3
-          className="text-base font-bold text-gray-100 truncate m-0"
+          className="text-base font-bold truncate m-0"
+          style={{ color: 'var(--color-text)' }}
           title={item.topic}
         >
           {item.topic}
         </h3>
         <div className="flex items-center gap-2">
           <span
-            className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-              item.position === "찬성"
-                ? "bg-[#22C55E]/15 text-[#22C55E]"
-                : "bg-[#EF4444]/15 text-[#EF4444]"
-            }`}
+            className="px-2.5 py-0.5 rounded-full text-xs font-semibold"
+            style={{
+              background: item.position === "찬성" ? 'var(--color-pro-bg)' : 'var(--color-con-bg)',
+              color: item.position === "찬성" ? 'var(--color-pro)' : 'var(--color-con)',
+            }}
           >
             {item.position}
           </span>
-          <span className="text-xs font-medium px-2 py-0.5 rounded bg-white/5 text-[#8B949E]">
+          <span className="text-xs font-medium px-2 py-0.5 rounded" style={{ background: 'var(--color-surface-2)', color: 'var(--color-text-muted)' }}>
             {item.category}
           </span>
         </div>
@@ -333,9 +340,10 @@ export function AnalyticsDashboardSection({ hideKpi = false }: { hideKpi?: boole
     return [...history]
       .sort((a, b) => new Date(a.played_at).getTime() - new Date(b.played_at).getTime())
       .slice(-10)
-      .map((h) => {
+      .map((h, i) => {
         const d = new Date(h.played_at);
         return {
+          idx: i,  // 고유 인덱스 — 같은 날짜가 여러 개여도 XAxis가 각 점을 구분
           date: `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`,
           score: h.score,
           topic: h.topic,
@@ -351,13 +359,16 @@ export function AnalyticsDashboardSection({ hideKpi = false }: { hideKpi?: boole
       { axis: "일관성",   userValue: 0, avgValue: 62 },
       { axis: "설득력",   userValue: 0, avgValue: 58 },
     ];
+    // 세부 항목(logic, evidence 등)은 0~25점 척도로 저장됨.
+    // 레이더 차트 도메인(0~100)에 맞게 4를 곱해 정규화.
     const avg = (vals: number[]) => Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
+    const toScale = (val: number) => Math.min(100, val * 4);
     return [
-      { axis: "근거 제시", userValue: avg(history.map((h) => h.evidence)), avgValue: 65 },
-      { axis: "반박 능력", userValue: avg(history.map((h) => h.rebuttal)), avgValue: 55 },
-      { axis: "논리력",   userValue: avg(history.map((h) => h.logic)),    avgValue: 60 },
-      { axis: "일관성",   userValue: avg(history.map((h) => Math.round((h.logic + h.evidence + h.persuasion + h.rebuttal) / 4))), avgValue: 62 },
-      { axis: "설득력",   userValue: avg(history.map((h) => h.persuasion)), avgValue: 58 },
+      { axis: "근거 제시", userValue: avg(history.map((h) => toScale(h.evidence))), avgValue: 65 },
+      { axis: "반박 능력", userValue: avg(history.map((h) => toScale(h.rebuttal))), avgValue: 55 },
+      { axis: "논리력",   userValue: avg(history.map((h) => toScale(h.logic))),    avgValue: 60 },
+      { axis: "일관성",   userValue: avg(history.map((h) => h.score)),              avgValue: 62 },
+      { axis: "설득력",   userValue: avg(history.map((h) => toScale(h.persuasion))), avgValue: 58 },
     ];
   }, [history]);
 
@@ -411,7 +422,7 @@ export function AnalyticsDashboardSection({ hideKpi = false }: { hideKpi?: boole
                 width="20"
                 height="20"
                 fill="none"
-                stroke="#8B5CF6"
+                stroke="var(--color-primary)"
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -423,7 +434,7 @@ export function AnalyticsDashboardSection({ hideKpi = false }: { hideKpi?: boole
             </div>
             <div className={styles.chartCardFlex}>
               {lineData.length === 0 ? (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#8B949E', fontSize: '13px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--color-text-muted)', fontSize: '13px' }}>
                   토론을 완료하면 점수 추이가 표시됩니다
                 </div>
               ) : (
@@ -434,25 +445,29 @@ export function AnalyticsDashboardSection({ hideKpi = false }: { hideKpi?: boole
                 >
                   <defs>
                     <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.4} />
-                      <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#6C63FF" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#6C63FF" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid
-                    stroke="#30363D"
+                    stroke="var(--color-border)"
                     strokeDasharray="3 3"
                     vertical={false}
                   />
                   <XAxis
-                    dataKey="date"
-                    tick={{ fill: "#8B949E", fontSize: 12 }}
+                    dataKey="idx"
+                    type="number"
+                    domain={[0, Math.max(0, lineData.length - 1)]}
+                    ticks={lineData.map((_, i) => i)}
+                    tickFormatter={(value: number) => lineData[value]?.date ?? ''}
+                    tick={{ fill: "var(--color-text-muted)", fontSize: 12 }}
                     axisLine={false}
                     tickLine={false}
                     dy={10}
                   />
                   <YAxis
                     domain={[0, 100]}
-                    tick={{ fill: "#8B949E", fontSize: 12 }}
+                    tick={{ fill: "var(--color-text-muted)", fontSize: 12 }}
                     axisLine={false}
                     tickLine={false}
                     dx={-10}
@@ -460,7 +475,7 @@ export function AnalyticsDashboardSection({ hideKpi = false }: { hideKpi?: boole
                   <Tooltip
                     content={<CustomLineTooltip />}
                     cursor={{
-                      stroke: "#8B5CF6",
+                      stroke: "var(--color-primary)",
                       strokeWidth: 1,
                       strokeDasharray: "4 4",
                     }}
@@ -468,15 +483,15 @@ export function AnalyticsDashboardSection({ hideKpi = false }: { hideKpi?: boole
                   <Area
                     type="monotone"
                     dataKey="score"
-                    stroke="#8B5CF6"
+                    stroke="var(--color-primary)"
                     strokeWidth={3}
                     fillOpacity={1}
                     fill="url(#colorScore)"
                     dot={<CustomDot />}
                     activeDot={{
                       r: 7,
-                      fill: "#8B5CF6",
-                      stroke: "#0D1117",
+                      fill: "var(--color-primary)",
+                      stroke: "var(--color-surface)",
                       strokeWidth: 2,
                     }}
                     isAnimationActive={false}
@@ -497,7 +512,7 @@ export function AnalyticsDashboardSection({ hideKpi = false }: { hideKpi?: boole
                   height="20"
                   fill="none"
                   viewBox="0 0 24 24"
-                  stroke="#8B5CF6"
+                  stroke="var(--color-primary)"
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -523,21 +538,21 @@ export function AnalyticsDashboardSection({ hideKpi = false }: { hideKpi?: boole
                   data={radarData}
                   margin={{ top: 10, right: 30, bottom: 10, left: 30 }}
                 >
-                  <PolarGrid stroke="#30363D" />
+                  <PolarGrid stroke="var(--color-border)" />
                   <PolarAngleAxis dataKey="axis" tick={<RadarCustomTick />} />
                   <PolarRadiusAxis
                     angle={90}
                     domain={[0, 100]}
-                    tick={{ fill: "#8B949E", fontSize: 10 }}
+                    tick={{ fill: "var(--color-text-muted)", fontSize: 10 }}
                     tickCount={5}
-                    stroke="#30363D"
+                    stroke="var(--color-border)"
                   />
                   <Radar
                     name="전체 평균"
                     dataKey="avgValue"
-                    stroke="#8B949E"
-                    fill="#8B949E"
-                    fillOpacity={0.15}
+                    stroke="var(--color-text-muted)"
+                    fill="var(--color-text-muted)"
+                    fillOpacity={0.1}
                     strokeWidth={1}
                     strokeDasharray="4 4"
                     isAnimationActive={false}
@@ -545,9 +560,9 @@ export function AnalyticsDashboardSection({ hideKpi = false }: { hideKpi?: boole
                   <Radar
                     name="나의 점수"
                     dataKey="userValue"
-                    stroke="#8B5CF6"
-                    fill="#8B5CF6"
-                    fillOpacity={0.25}
+                    stroke="var(--color-primary)"
+                    fill="var(--color-primary)"
+                    fillOpacity={0.2}
                     strokeWidth={2}
                     isAnimationActive={false}
                   />
@@ -680,8 +695,8 @@ export function AnalyticsHistorySection() {
                     className={styles.recentBannerPosition}
                     style={
                       item.position === "찬성"
-                        ? { background: "rgba(34,197,94,0.15)", color: "#22C55E" }
-                        : { background: "rgba(239,68,68,0.15)", color: "#EF4444" }
+                        ? { background: "var(--color-pro-bg)", color: "var(--color-pro)" }
+                        : { background: "var(--color-con-bg)", color: "var(--color-con)" }
                     }
                   >
                     {item.position}
@@ -782,9 +797,10 @@ export function AnalyticsHistorySection() {
       {/* 리포트 카드 리스트 */}
       <div className={styles.reportGrid}>
         {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 bg-[#161B22] border border-[#30363D] border-dashed rounded-xl">
+          <div className="flex flex-col items-center justify-center py-20 rounded-xl" style={{ background: 'var(--color-surface)', border: '1px dashed var(--color-border)' }}>
             <svg
-              className="text-[#8B949E] mb-4"
+              className="mb-4"
+              style={{ color: 'var(--color-text-muted)' }}
               xmlns="http://www.w3.org/2000/svg"
               width="48"
               height="48"
@@ -797,10 +813,10 @@ export function AnalyticsHistorySection() {
               <circle cx="11" cy="11" r="8" />
               <path d="m21 21-4.3-4.3" />
             </svg>
-            <p className="text-[#8B949E] text-lg font-medium">
+            <p className="text-lg font-medium" style={{ color: 'var(--color-text-muted)' }}>
               검색 결과가 없습니다.
             </p>
-            <p className="text-[#8B949E]/70 text-sm mt-1">
+            <p className="text-sm mt-1" style={{ color: 'var(--color-text-muted)', opacity: 0.7 }}>
               다른 키워드나 필터로 검색해보세요.
             </p>
           </div>

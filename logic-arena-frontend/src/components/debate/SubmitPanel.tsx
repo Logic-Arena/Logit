@@ -48,19 +48,19 @@ export function SubmitPanel({
     return (
       <div
         style={{
-          background: 'rgba(34,197,94,0.08)',
-          border: '1px solid rgba(34,197,94,0.3)',
+          background: 'linear-gradient(180deg, #6AC982 0%, #52A068 100%)',
+          border: '1px solid rgba(82,160,104,0.4)',
           borderRadius: 'var(--radius-md)',
           padding: '14px 16px',
         }}
       >
-        <div style={{ fontSize: '11px', color: 'var(--color-pro)', fontWeight: 600, marginBottom: '6px' }}>
+        <div style={{ fontSize: '11px', color: '#fff', fontWeight: 700, marginBottom: '6px', textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
           제출 완료
         </div>
         {submittedText ? (
-          <p style={{ fontSize: '14px', lineHeight: 1.6, color: 'var(--color-text)', margin: 0 }}>{submittedText}</p>
+          <p style={{ fontSize: '14px', lineHeight: 1.6, color: '#fff', margin: 0, fontWeight: 500 }}>{submittedText}</p>
         ) : (
-          <p style={{ fontSize: '13px', lineHeight: 1.6, color: 'var(--color-text-muted)', margin: 0 }}>
+          <p style={{ fontSize: '13px', lineHeight: 1.6, color: 'rgba(255,255,255,0.85)', margin: 0 }}>
             입력 없이 이 단계를 넘겼습니다.
           </p>
         )}
@@ -80,8 +80,8 @@ export function SubmitPanel({
       <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text)' }}>{label}</label>
       <textarea
         style={{
-          background: 'var(--color-surface-2)',
-          border: '1px solid var(--color-border)',
+          background: 'linear-gradient(180deg, rgba(106, 201, 130, 0.15) 0%, rgba(82, 160, 104, 0.2) 100%)',
+          border: '1px solid rgba(82, 160, 104, 0.3)',
           borderRadius: 'var(--radius-sm)',
           padding: '12px 14px',
           color: 'var(--color-text)',
@@ -97,10 +97,10 @@ export function SubmitPanel({
         value={text}
         onChange={(e) => setText(e.target.value)}
         onFocus={(e) => {
-          e.currentTarget.style.borderColor = 'var(--color-primary)';
+          e.currentTarget.style.borderColor = 'var(--color-pro)';
         }}
         onBlur={(e) => {
-          e.currentTarget.style.borderColor = 'var(--color-border)';
+          e.currentTarget.style.borderColor = 'rgba(82, 160, 104, 0.3)';
         }}
       />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
