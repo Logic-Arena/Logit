@@ -10,7 +10,9 @@ import authRouter from './routes/auth.js';
 import historyRouter from './routes/history.js';
 import communityRouter from './routes/community.js';
 import trainingRouter from './routes/training.js';
+import adminRouter from './routes/admin.js';
 import { registerHandlers } from './socket/handlers.js';
+import { initializeSlots, startPollScheduler } from './scheduler/pollScheduler.js';
 
 const app = express();
 const httpServer = createServer(app);
@@ -48,11 +50,13 @@ app.use('/auth', authRouter);
 app.use('/debate-history', historyRouter);
 app.use('/community-topics', communityRouter);
 app.use('/training-recommendation', trainingRouter);
+app.use('/admin', adminRouter);
 app.use('/api/rooms', roomsRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/debate-history', historyRouter);
 app.use('/api/community-topics', communityRouter);
 app.use('/api/training-recommendation', trainingRouter);
+app.use('/api/admin', adminRouter);
 
 io.use((socket, next) => {
   socket.data.roomId = null;
@@ -65,6 +69,10 @@ io.on('connection', (socket) => {
   registerHandlers(io, socket);
 });
 
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, async () => {
   console.log(`Logic Arena Backend listening on port ${PORT}`);
+
+  // 빈 슬롯 AI 자동 초기화 후 스케줄러 등록
+  await initializeSlots(io);
+  startPollScheduler(io);
 });

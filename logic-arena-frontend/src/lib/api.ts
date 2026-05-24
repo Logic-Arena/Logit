@@ -137,26 +137,69 @@ export interface CommunityTopic {
   id: number;
   question: string;
   category: string;
-  badge: 'HOT' | 'NEW' | null;
+  badge: string | null; // 'HOT' 배지 (서버에서 계산)
   pro_votes: number;
   con_votes: number;
-  myVote: 'pro' | 'con' | null;
+  myVote?: 'pro' | 'con' | null;
+  expires_at: string;
+  activated_at: string | null; // 주제 활성화 시각 (NEW 배지 계산용)
+  slot: string;
+  category_fixed?: string;
+  display_order?: number;
+  status?: string;
 }
 
 export async function getCommunityTopics(): Promise<CommunityTopic[]> {
-  const res = await fetch(`${BASE}/community-topics`, { headers: authHeaders() });
-  if (!res.ok) return [];
-  return res.json();
+  try {
+    const res = await fetch(`${BASE}/community-topics`, { headers: authHeaders() });
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.error || `주제 목록을 불러올 수 없습니다. (상태: ${res.status})`);
+    }
+    return res.json();
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw new Error('네트워크 연결을 확인해주세요.');
+    }
+    throw error;
+  }
 }
 
 export async function voteOnTopic(id: number, vote: 'pro' | 'con'): Promise<{ myVote: 'pro' | 'con' | null; topic: CommunityTopic }> {
-  const res = await fetch(`${BASE}/community-topics/${id}/vote`, {
-    method: 'POST',
-    headers: authHeaders(),
-    body: JSON.stringify({ vote }),
-  });
-  if (!res.ok) throw new Error('투표에 실패했습니다.');
-  return res.json();
+  try {
+    const res = await fetch(`${BASE}/community-topics/${id}/vote`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ vote }),
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        throw new Error('로그인이 필요합니다.');
+      }
+      if (res.status === 404) {
+        throw new Error('투표 주제를 찾을 수 없습니다.');
+      }
+      if (res.status === 410) {
+        throw new Error('이 주제는 만료되었습니다.');
+      }
+      if (res.status === 409) {
+        throw new Error('이미 투표한 주제입니다.');
+      }
+      if (res.status === 503) {
+        throw new Error('서버에 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요.');
+      }
+      throw new Error(errorData.error || '투표에 실패했습니다.');
+    }
+
+    return res.json();
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw new Error('네트워크 연결을 확인해주세요.');
+    }
+    throw error;
+  }
 }
 
 export interface TrainingRecommendation {

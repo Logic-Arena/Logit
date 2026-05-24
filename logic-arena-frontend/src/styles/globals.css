@@ -131,6 +131,15 @@ textarea {
   flex-shrink: 0;
 }
 
+/* 특이성을 높여서 .btn 클래스의 display를 오버라이드 */
+.btn.app-header__hamburger {
+  display: none;
+  padding: 4px; /* SVG 아이콘을 외곽선에 밀착 */
+  margin-right: 8px;
+  min-width: auto; /* btn 기본 스타일 오버라이드 */
+  aspect-ratio: 1 / 1; /* 정사각형 비율 유지 */
+}
+
 .app-header__logo {
   display: flex;
   align-items: center;
@@ -573,6 +582,16 @@ textarea {
   color: var(--color-pro);
   border: 0.5px solid rgba(52, 211, 153, 0.4);
 }
+.vote-card__badge--danger {
+  background: rgba(201, 64, 64, 0.12);
+  color: var(--color-con);
+  border: 0.5px solid rgba(201, 64, 64, 0.4);
+}
+.vote-card__badge--warning {
+  background: rgba(180, 125, 46, 0.12);
+  color: var(--color-host);
+  border: 0.5px solid rgba(180, 125, 46, 0.4);
+}
 
 .vote-card__category {
   font-size: var(--text-caption);
@@ -666,6 +685,34 @@ textarea {
   background: var(--color-con-bg);
   border-color: var(--color-con);
   color: var(--color-con);
+}
+
+.vote-card__btn--secondary:hover {
+  background: var(--color-surface-3, var(--color-surface-2));
+  border-color: var(--color-text-muted);
+  color: var(--color-text);
+}
+
+.vote-card__btn--primary {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+}
+
+.vote-card__btn--primary:hover {
+  background: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+}
+
+.vote-card__btn.is-voting {
+  opacity: 0.6;
+  cursor: wait;
+  pointer-events: none;
+}
+
+.vote-card__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .room-list {
@@ -3477,6 +3524,12 @@ textarea {
 
   .app-header {
     padding: 0 24px;
+  }
+
+  .app-header__hamburger {
+    display: flex !important; /* 반응형에서 햄버거 아이콘 표시 */
+    align-items: center;
+    justify-content: center;
   }
 
   .chat-input-area {

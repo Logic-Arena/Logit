@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(cd logic-arena-backend; $env:NODE_ENV='development'; npm run dev)",
+      "PowerShell($env:PGPASSWORD='1234'; psql -h localhost -p 5432 -U postgres -d logit_db -f logic-arena-backend/fix-slots.sql)",
+      "Bash(npx prisma *)",
+      "PowerShell(Get-Process -Name node -ErrorAction SilentlyContinue | Where-Object { $_.Id -in @\\(23968, 29280\\) } | ForEach-Object { Stop-Process -Id $_.Id -Force; Write-Output \"Stopped process $\\($_.Id\\)\" })"
+    ]
+  }
+}

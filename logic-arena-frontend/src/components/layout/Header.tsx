@@ -1,10 +1,12 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { useUserStore } from "../../store/useUserStore";
+import { useSidebar } from "../../hooks/useSidebar";
 import { Modal } from "../common/Modal";
 
 export function Header() {
   const { user, logout } = useUserStore();
+  const { toggleSidebar } = useSidebar();
   const navigate = useNavigate();
   const location = useLocation();
   const [showExitModal, setShowExitModal] = useState(false);
@@ -23,6 +25,20 @@ export function Header() {
 
   return (
     <header className="app-header">
+      {!isDebatePage && (
+        <button
+          className="btn btn--ghost app-header__hamburger"
+          onClick={toggleSidebar}
+          aria-label="사이드바 열기/닫기"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+      )}
+
       {isDebatePage ? (
         <button
           className="app-header__logo app-header__logo--btn"
