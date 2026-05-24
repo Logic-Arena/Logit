@@ -1,4 +1,5 @@
 import type { Room, PlayerRole, DebateResult } from './room';
+import type { CommunityTopic } from '../lib/api';
 
 export interface ClientToServerEvents {
   join_room: (payload: { roomId: string; userId: string; username: string; password?: string }) => void;
@@ -21,5 +22,8 @@ export interface ServerToClientEvents {
   ai_content: (payload: { room: Room }) => void;
   content_submitted: (payload: { phase: string; contentKey: string; room: Room }) => void;
   debate_ended: (payload: { result: DebateResult; room: Room }) => void;
+  community_vote_update: (payload: { topicId: number; topic: CommunityTopic }) => void;
+  poll_slot_updated: (payload: { slot: string; poll: CommunityTopic }) => void;
+  hot_badges_updated: (payload: { topics: CommunityTopic[] }) => void;
   error: (payload: { message: string }) => void;
 }

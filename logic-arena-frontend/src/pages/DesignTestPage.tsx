@@ -1,24 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import "./DesignTestPage.css";
 
-// ============================================================
-// Type Definitions
-// ============================================================
-type Phase =
-  | 'waiting'
-  | 'topic_selection'
-  | 'arguing'
-  | 'pro_p_rebuttal'
-  | 'pro_p_defense'
-  | 'pro_p_counter'
-  | 'con_p_rebuttal'
-  | 'con_p_defense'
-  | 'con_p_counter'
-  | 'coaching'
-  | 'final_argument'
-  | 'judging'
-  | 'ended';
-
 type AlignSide = "pro" | "con";
 type BubbleVariant = "player" | "ai" | "coach";
 
