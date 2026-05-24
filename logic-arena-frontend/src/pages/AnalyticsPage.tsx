@@ -267,8 +267,8 @@ function ReportCard({ item, onDetail }: { item: ReportItem; onDetail?: () => voi
         <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{item.dateLabel}</div>
         <div className="flex items-center gap-2">
           <div
-            className="flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm flex-shrink-0"
-            style={{ color: '#fff', background: GRADE_COLOR[grade] }}
+            className={styles.gradeBadge}
+            style={{ background: GRADE_COLOR[grade] }}
           >
             {grade}
           </div>
@@ -797,26 +797,24 @@ export function AnalyticsHistorySection() {
       {/* 리포트 카드 리스트 */}
       <div className={styles.reportGrid}>
         {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 rounded-xl" style={{ background: 'var(--color-surface)', border: '1px dashed var(--color-border)' }}>
-            <svg
-              className="mb-4"
-              style={{ color: 'var(--color-text-muted)' }}
-              xmlns="http://www.w3.org/2000/svg"
-              width="48"
-              height="48"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.3-4.3" />
-            </svg>
-            <p className="text-lg font-medium" style={{ color: 'var(--color-text-muted)' }}>
-              검색 결과가 없습니다.
-            </p>
-            <p className="text-sm mt-1" style={{ color: 'var(--color-text-muted)', opacity: 0.7 }}>
+          <div className={styles.emptyState}>
+            <div className={styles.emptyIconWrapper}>
+              <svg
+                className={styles.emptyIcon}
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.3-4.3" />
+              </svg>
+            </div>
+            <h3 className={styles.emptyTitle}>검색 결과가 없습니다.</h3>
+            <p className={styles.emptyDescription}>
               다른 키워드나 필터로 검색해보세요.
             </p>
           </div>

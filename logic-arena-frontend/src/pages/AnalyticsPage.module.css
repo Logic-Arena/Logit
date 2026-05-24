@@ -338,21 +338,37 @@
 }
 
 .controlBar {
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 0.75rem;
+  background: linear-gradient(135deg,
+    rgba(108, 99, 255, 0.08) 0%,
+    rgba(255, 255, 255, 0.15) 50%,
+    rgba(108, 99, 255, 0.08) 100%
+  );
+  border: 0.5px solid rgba(255, 255, 255, 0.4);
+  border-radius: 16px;
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 16px;
   align-items: center;
   justify-content: space-between;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 8px 32px rgba(0, 0, 0, 0.08),
+    0 2px 8px rgba(0, 0, 0, 0.04);
   position: sticky;
   top: 16px;
   z-index: 10;
-  backdrop-filter: blur(12px);
-  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  transition: all 0.3s ease;
+}
+
+.controlBar:hover {
+  border-color: rgba(108, 99, 255, 0.6);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 12px 40px rgba(108, 99, 255, 0.12),
+    0 4px 12px rgba(0, 0, 0, 0.06);
 }
 
 @media (min-width: 768px) {
@@ -408,6 +424,16 @@
 .searchContainer {
   position: relative;
   flex: 1 1 0%;
+  background: #FFFFFF;
+  border: 0.5px solid var(--color-border);
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition: border-color 0.15s;
+}
+
+.searchContainer:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 0 0 3px rgba(108, 99, 255, 0.1);
 }
 
 @media (min-width: 768px) {
@@ -432,23 +458,32 @@
 
 .searchInput {
   width: 100%;
-  background-color: var(--color-surface-2);
-  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  border: none;
   border-radius: 0.5rem;
   padding: 8px 16px 8px 40px;
   font-size: var(--text-subtitle);
   color: var(--color-text);
-  transition: border-color 0.15s;
   outline: none;
 }
 
-.searchInput:focus {
-  border-color: var(--color-primary);
+.searchInput::placeholder {
+  color: var(--color-text-muted);
 }
 
 .selectWrapper {
   position: relative;
   flex: 1 1 0%;
+  background: #FFFFFF;
+  border: 0.5px solid var(--color-border);
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition: border-color 0.15s;
+}
+
+.selectWrapper:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 0 0 3px rgba(108, 99, 255, 0.1);
 }
 
 @media (min-width: 768px) {
@@ -461,19 +496,14 @@
 .sortSelect {
   width: 100%;
   padding: 8px 32px 8px 16px;
-  background-color: var(--color-surface-2);
-  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  border: none;
   border-radius: 0.5rem;
   font-size: var(--text-subtitle);
   color: var(--color-text);
   outline: none;
   cursor: pointer;
   appearance: none;
-  transition: border-color 0.15s;
-}
-
-.sortSelect:focus {
-  border-color: var(--color-primary);
 }
 
 .selectArrow {
@@ -494,6 +524,7 @@
   display: grid;
   grid-template-columns: repeat(1, minmax(0, 1fr));
   gap: 16px;
+  min-height: 75vh;
 }
 
 @media (min-width: 768px) {
@@ -704,8 +735,14 @@
   font-size: var(--text-caption);
   font-weight: 600;
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: 9999px;
   flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.08);
+  border: 0.5px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
 /* 5. 점수 + 변화율 */
@@ -734,20 +771,47 @@
   font-size: var(--text-body);
   font-weight: 700;
   color: var(--color-pro);
-  background: var(--color-pro-bg);
+  background: rgba(52, 211, 153, 0.12);
   padding: 3px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(22, 163, 74, 0.2);
+  border-radius: 9999px;
+  border: 0.5px solid rgba(52, 211, 153, 0.4);
+  backdrop-filter: blur(10px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
 .recentDeltaDown {
   font-size: var(--text-body);
   font-weight: 700;
   color: var(--color-con);
-  background: var(--color-con-bg);
+  background: rgba(220, 38, 38, 0.12);
   padding: 3px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(220, 38, 38, 0.2);
+  border-radius: 9999px;
+  border: 0.5px solid rgba(220, 38, 38, 0.4);
+  backdrop-filter: blur(10px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+/* 등급 배지 (Liquid Glass Pill) */
+.gradeBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+  color: #fff;
+  backdrop-filter: blur(10px);
+  border: 0.5px solid rgba(255, 255, 255, 0.4);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
 /* 구분선 */
@@ -777,4 +841,106 @@
 .recentBannerDetailBtn:hover {
   background: var(--color-surface-2);
   color: var(--color-text);
+}
+
+/* ── Empty State ────────────────────────────────────────── */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 40px;
+  min-height: 100%;
+  grid-column: 1 / -1;
+  background: linear-gradient(135deg,
+    rgba(108, 99, 255, 0.03) 0%,
+    rgba(248, 250, 252, 0.6) 50%,
+    rgba(108, 99, 255, 0.03) 100%
+  );
+  border: 2px dashed var(--color-border);
+  border-radius: 16px;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.emptyState:hover {
+  border-color: rgba(108, 99, 255, 0.3);
+  background: linear-gradient(135deg,
+    rgba(108, 99, 255, 0.05) 0%,
+    rgba(248, 250, 252, 0.8) 50%,
+    rgba(108, 99, 255, 0.05) 100%
+  );
+}
+
+.emptyIconWrapper {
+  width: 96px;
+  height: 96px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg,
+    var(--color-primary-soft) 0%,
+    rgba(248, 250, 252, 0.4) 100%
+  );
+  border-radius: 50%;
+  border: 2px solid rgba(108, 99, 255, 0.15);
+  position: relative;
+  animation: emptyIconFloat 3s ease-in-out infinite;
+}
+
+.emptyIconWrapper::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  background: linear-gradient(135deg,
+    rgba(108, 99, 255, 0.1) 0%,
+    transparent 100%
+  );
+  opacity: 0;
+  animation: emptyIconPulse 3s ease-in-out infinite;
+}
+
+.emptyIcon {
+  width: 48px;
+  height: 48px;
+  color: var(--color-primary);
+  opacity: 0.8;
+}
+
+.emptyTitle {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0 0 12px 0;
+  letter-spacing: -0.02em;
+}
+
+.emptyDescription {
+  font-size: 15px;
+  color: var(--color-text-muted);
+  margin: 0;
+  line-height: 1.6;
+  max-width: 400px;
+}
+
+@keyframes emptyIconFloat {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes emptyIconPulse {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.3;
+    transform: scale(1.15);
+  }
 }

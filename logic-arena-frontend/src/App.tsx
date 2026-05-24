@@ -1,17 +1,19 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
-import { AppLayout } from './components/layout/AppLayout';
-import { ToastProvider } from './components/layout/ToastProvider';
-import { ProtectedRoute } from './components/auth/ProtectedRoute';
-import { LoginPage } from './pages/LoginPage';
-import { SignupPage } from './pages/SignupPage';
+import { DesignTestPage } from "./pages/DesignTestPage";
 
-import { LobbyPage } from './pages/LobbyPage';
-import { CreateRoomPage } from './pages/CreateRoomPage';
-import { RoomEntryPage } from './pages/RoomEntryPage';
-import { DebatePage } from './pages/DebatePage';
-import { AnalyticsPage } from './pages/AnalyticsPage';
-import { MyPage } from './pages/MyPage';
-import { AuthCallbackPage } from './pages/AuthCallbackPage';
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { AppLayout } from "./components/layout/AppLayout";
+import { ToastProvider } from "./components/layout/ToastProvider";
+import { ProtectedRoute } from "./components/auth/ProtectedRoute";
+import { LoginPage } from "./pages/LoginPage";
+import { SignupPage } from "./pages/SignupPage";
+
+import { LobbyPage } from "./pages/LobbyPage";
+import { CreateRoomPage } from "./pages/CreateRoomPage";
+import { RoomEntryPage } from "./pages/RoomEntryPage";
+import { DebatePage } from "./pages/DebatePage";
+import { AnalyticsPage } from "./pages/AnalyticsPage";
+import { MyPage } from "./pages/MyPage";
+import { AuthCallbackPage } from "./pages/AuthCallbackPage";
 
 export default function App() {
   return (
@@ -21,6 +23,7 @@ export default function App() {
           {/* 인증 불필요 */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
+          <Route path="/design-test" element={<DesignTestPage />} />
 
           {/* 구글/카카오 로그인 후 백엔드가 브라우저를 보낼 도착지 */}
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
