@@ -6,9 +6,9 @@ interface Props {
 }
 
 const SIDE_COLORS = {
-  pro: { border: 'rgba(34,197,94,0.3)', bg: 'rgba(34,197,94,0.06)', label: 'var(--color-pro)' },
-  con: { border: 'rgba(239,68,68,0.3)', bg: 'rgba(239,68,68,0.06)', label: 'var(--color-con)' },
-  ai: { border: 'rgba(6,182,212,0.3)', bg: 'rgba(6,182,212,0.06)', label: '#06b6d4' },
+  pro: { border: 'rgba(22,163,74,0.3)', bg: 'rgba(22,163,74,0.06)', label: 'var(--color-pro)' },
+  con: { border: 'rgba(220,38,38,0.3)', bg: 'rgba(220,38,38,0.06)', label: 'var(--color-con)' },
+  ai: { border: 'rgba(8,145,178,0.3)', bg: 'rgba(8,145,178,0.06)', label: 'var(--color-ai)' },
   neutral: { border: 'var(--color-border)', bg: 'var(--color-surface-2)', label: 'var(--color-text-muted)' },
 };
 

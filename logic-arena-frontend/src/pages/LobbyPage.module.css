@@ -184,11 +184,17 @@
 .report-item__badge {
   font-size: var(--text-caption);
   font-weight: 700;
-  color: #0f1117;
+  color: var(--color-text);
   padding: 1px 6px;
-  border-radius: 99px;
+  border-radius: 9999px;
   flex-shrink: 0;
   line-height: 1.6;
+  background: rgba(255, 255, 255, 0.08);
+  border: 0.5px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
 /* Best / 보완점 / 성장 라인 */
@@ -211,18 +217,18 @@
 }
 
 .report-item__line-text--best .report-item__label {
-  background: #1e2235;
-  color: #e8eaf0;
+  background: var(--color-surface-2);
+  color: var(--color-text);
 }
 
 .report-item__line-text--improve .report-item__label {
-  background: #1e2235;
-  color: #e8eaf0;
+  background: var(--color-surface-2);
+  color: var(--color-text);
 }
 
 .report-item__line-text--growth .report-item__label {
-  background: #1e2235;
-  color: #e8eaf0;
+  background: var(--color-surface-2);
+  color: var(--color-text);
 }
 
 .report-item__detail {
@@ -241,12 +247,12 @@
 /* ── 툴팁 ───────────────────────────────────────────────── */
 .report-tooltip {
   z-index: 9999;
-  background: #0f1117;
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 10px;
   padding: 12px 14px;
-  color: #e8eaf0;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  color: var(--color-text);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   pointer-events: none;
   width: max-content;
   max-width: 480px;
@@ -263,22 +269,28 @@
 .report-tooltip__topic {
   font-size: var(--text-subtitle);
   font-weight: 600;
-  color: #e8eaf0;
+  color: var(--color-text);
   white-space: nowrap;
 }
 
 .report-tooltip__badge {
   font-size: var(--text-caption);
   font-weight: 700;
-  color: #0f1117;
+  color: var(--color-text);
   padding: 1px 7px;
-  border-radius: 99px;
+  border-radius: 9999px;
   flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.08);
+  border: 0.5px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
 .report-tooltip__score {
   font-size: var(--text-caption);
-  color: #8890a8;
+  color: var(--color-text-muted);
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -296,24 +308,24 @@
 .report-tooltip__label {
   font-size: var(--text-caption);
   font-weight: 700;
-  color: #8890a8;
+  color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.4px;
 }
 
 .report-tooltip__label--best {
-  color: #8890a8;
+  color: var(--color-text-muted);
 }
 .report-tooltip__label--improve {
-  color: #8890a8;
+  color: var(--color-text-muted);
 }
 .report-tooltip__label--growth {
-  color: #8890a8;
+  color: var(--color-text-muted);
 }
 
 .report-tooltip__text {
   font-size: var(--text-caption);
-  color: #e8eaf0;
+  color: var(--color-text);
   line-height: 1.5;
   white-space: nowrap;
 }
@@ -416,7 +428,7 @@
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--color-primary), #8b5cf6);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -454,14 +466,14 @@
 .tier-widget__pillar-icon {
   width: 18px;
   height: 18px;
-  color: #a78bfa;
+  color: var(--color-primary);
   flex-shrink: 0;
 }
 
 .tier-widget__tier-name {
   font-size: var(--text-subtitle);
   font-weight: 700;
-  color: #c4b5fd;
+  color: var(--color-primary);
   letter-spacing: 0.2px;
 }
 
@@ -476,7 +488,7 @@
 .tier-widget__progress-fill {
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--color-primary), #8b5cf6);
+  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-hover));
   transition: width 0.4s ease;
 }
 
@@ -559,19 +571,23 @@
   width: 34px;
   height: 34px;
   border-radius: var(--radius-sm);
-  background: var(--color-surface-2);
-  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.08);
+  border: 0.5px solid rgba(255, 255, 255, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: var(--text-subtitle);
   cursor: default;
+  backdrop-filter: blur(10px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 1px 4px rgba(0, 0, 0, 0.06);
   transition:
     border-color var(--transition),
     transform var(--transition);
 }
 .tier-widget__badge:hover {
-  border-color: var(--color-primary);
+  border-color: rgba(108, 99, 255, 0.6);
   transform: translateY(-2px);
 }
 

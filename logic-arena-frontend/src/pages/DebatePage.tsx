@@ -424,16 +424,16 @@ function StatusChip({
         fontSize: "12px",
         fontWeight: 500,
         background: done
-          ? "rgba(34,197,94,0.12)"
+          ? "var(--color-pro-bg)"
           : isMe
-            ? "rgba(108,99,255,0.1)"
+            ? "var(--color-primary-soft)"
             : "var(--color-surface-2)",
         color: done
           ? "var(--color-pro)"
           : isMe
             ? "var(--color-primary)"
             : "var(--color-text-muted)",
-        border: `1px solid ${done ? "rgba(34,197,94,0.3)" : isMe ? "rgba(108,99,255,0.3)" : "var(--color-border)"}`,
+        border: `1px solid ${done ? "rgba(22,163,74,0.3)" : isMe ? "rgba(108,99,255,0.3)" : "var(--color-border)"}`,
       }}
     >
       {done ? "✓" : "⏳"} {label}
@@ -568,7 +568,7 @@ function DebateChatView({
           <div
             style={{
               textAlign: "center",
-              color: isAutoPhase ? "#67e8f9" : "var(--color-text-muted)",
+              color: isAutoPhase ? "var(--color-ai)" : "var(--color-text-muted)",
               padding: "40px 0",
               fontSize: "13px",
               fontStyle: "italic",
@@ -704,7 +704,7 @@ function DebateChatView({
               textAlign: "center",
               padding: "8px 0",
               fontSize: "13px",
-              color: isAutoPhase ? "#67e8f9" : "var(--color-text-muted)",
+              color: isAutoPhase ? "var(--color-ai)" : "var(--color-text-muted)",
             }}
           >
             {isAutoPhase
@@ -970,7 +970,7 @@ function TopicSelectionView({
       {room.topic ? (
         <div
           style={{
-            background: "rgba(108,99,255,0.1)",
+            background: "var(--color-primary-soft)",
             border: "1px solid rgba(108,99,255,0.3)",
             borderRadius: "var(--radius-md)",
             padding: "20px",
@@ -1002,7 +1002,7 @@ function TopicSelectionView({
                 style={{
                   border: "1px solid rgba(240,160,112,0.55)",
                   borderRadius: "999px",
-                  color: "#f0a070",
+                  color: "var(--color-con-orange)",
                   fontSize: "10px",
                   fontWeight: 700,
                   lineHeight: 1,
@@ -1053,14 +1053,14 @@ function TopicSelectionView({
           >
             {(["pro", "con"] as const).map((side) => {
               const label = side === "pro" ? "찬성" : "반대";
-              const color = side === "pro" ? "#9b8fff" : "#f0a070";
+              const color = side === "pro" ? "var(--color-primary)" : "var(--color-con-orange)";
               const bg =
                 side === "pro"
-                  ? "rgba(108,92,231,0.12)"
-                  : "rgba(212,98,46,0.12)";
+                  ? "var(--color-primary-soft)"
+                  : "rgba(212,98,46,0.1)";
               const border =
                 side === "pro"
-                  ? "rgba(108,92,231,0.45)"
+                  ? "rgba(108,99,255,0.45)"
                   : "rgba(212,98,46,0.45)";
               return (
                 <button
@@ -1136,7 +1136,7 @@ function ScoreBar({ value }: { value: number }) {
               value >= 20
                 ? "var(--color-pro)"
                 : value >= 13
-                  ? "#eab308"
+                  ? "var(--color-host)"
                   : "var(--color-con)",
             borderRadius: "3px",
             transition: "width 0.4s",
@@ -1186,9 +1186,9 @@ function EndedView({
         : "무승부";
   const winnerColor =
     result.winner === "pro"
-      ? "#9b8fff"
+      ? "var(--color-primary)"
       : result.winner === "con"
-        ? "#f0a070"
+        ? "var(--color-con-orange)"
         : "var(--color-text-muted)";
   const sorted = [...(result.scores ?? [])].sort((a, b) => a.rank - b.rank);
   const playerScores = sorted.filter((s) => s.type === "player");
@@ -1283,11 +1283,11 @@ function EndedView({
             </thead>
             <tbody>
               {sorted.map((s) => {
-                const sideColor = s.vote === "pro" ? "#9b8fff" : "#f0a070";
+                const sideColor = s.vote === "pro" ? "var(--color-primary)" : "var(--color-con-orange)";
                 return (
                   <tr
                     key={s.name}
-                    style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}
+                    style={{ borderBottom: "1px solid var(--color-border)" }}
                   >
                     <td style={{ padding: "10px 12px", fontSize: "16px" }}>
                       {RANK_BADGE[s.rank - 1] ?? s.rank}
@@ -1323,7 +1323,7 @@ function EndedView({
                               s[key] >= 20
                                 ? "var(--color-pro)"
                                 : s[key] >= 13
-                                  ? "#eab308"
+                                  ? "var(--color-host)"
                                   : "var(--color-con)",
                           }}
                         >
@@ -1358,16 +1358,16 @@ function EndedView({
           }}
         >
           {sorted.map((s) => {
-            const sideColor = s.vote === "pro" ? "#9b8fff" : "#f0a070";
+            const sideColor = s.vote === "pro" ? "var(--color-primary)" : "var(--color-con-orange)";
             return (
               <div
                 key={s.name}
                 style={{
                   background:
                     s.vote === "pro"
-                      ? "rgba(108,92,231,0.08)"
+                      ? "var(--color-primary-soft)"
                       : "rgba(212,98,46,0.08)",
-                  border: `1px solid ${s.vote === "pro" ? "rgba(108,92,231,0.25)" : "rgba(212,98,46,0.25)"}`,
+                  border: `1px solid ${s.vote === "pro" ? "rgba(108,99,255,0.25)" : "rgba(212,98,46,0.25)"}`,
                   borderRadius: "var(--radius-md)",
                   padding: "14px 16px",
                   display: "flex",
@@ -1448,7 +1448,7 @@ function EndedView({
                   style={{
                     fontSize: "12px",
                     fontWeight: 700,
-                    color: s.vote === "pro" ? "#9b8fff" : "#f0a070",
+                    color: s.vote === "pro" ? "var(--color-primary)" : "var(--color-con-orange)",
                     marginBottom: "6px",
                   }}
                 >

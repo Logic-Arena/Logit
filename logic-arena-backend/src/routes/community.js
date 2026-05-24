@@ -1,37 +1,21 @@
 import { Router } from 'express';
 import { prisma } from '../db/prisma.js';
 import { requireAuth, optionalAuth } from '../middleware/auth.js';
-import { generateCommunityTopics } from '../services/ai.js';
 
 const router = Router();
 
-async function getOrCreateActiveTopics() {
-  const now = new Date();
-  const active = await prisma.communityTopic.findMany({
-    where: { expires_at: { gt: now } },
-    orderBy: { created_at: 'desc' },
-    take: 3,
-  });
-
-  if (active.length >= 3) return active;
-
-  const generated = await generateCommunityTopics();
-  const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-
-  const created = await Promise.all(
-    generated.map((t) =>
-      prisma.communityTopic.create({
-        data: { question: t.question, category: t.category, badge: t.badge ?? null, expires_at: expiresAt },
-      })
-    )
-  );
-
-  return created;
-}
-
 router.get('/', optionalAuth, async (req, res) => {
   try {
-    const topics = await getOrCreateActiveTopics();
+    // status='active'인 주제만 조회 (스케줄러가 관리)
+    const topics = await prisma.communityTopic.findMany({
+      where: { status: 'active' },
+      orderBy: { activated_at: 'desc' },
+    });
+
+    if (!topics || topics.length === 0) {
+      return res.json([]);
+    }
+
     const userId = req.user?.id ?? null;
 
     let userVotes = {};
@@ -42,25 +26,43 @@ router.get('/', optionalAuth, async (req, res) => {
       userVotes = Object.fromEntries(votes.map((v) => [v.topic_id, v.vote]));
     }
 
+    // activated_at 포함하여 응답
     res.json(topics.map((t) => ({ ...t, myVote: userVotes[t.id] ?? null })));
   } catch (error) {
     console.error('[Community] 주제 조회 실패:', error.message);
-    res.status(500).json({ error: '주제를 불러오지 못했습니다.' });
+
+    if (error.code === 'P2002') {
+      return res.status(500).json({ error: '데이터베이스 오류가 발생했습니다.' });
+    }
+
+    res.status(500).json({ error: '주제를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.' });
   }
 });
 
 router.post('/:id/vote', requireAuth, async (req, res) => {
   try {
     const topicId = parseInt(req.params.id, 10);
+
+    if (isNaN(topicId) || topicId <= 0) {
+      return res.status(400).json({ error: '유효하지 않은 주제 ID입니다.' });
+    }
+
     const userId = req.user.id;
     const { vote } = req.body;
 
-    if (!['pro', 'con'].includes(vote)) {
-      return res.status(400).json({ error: '잘못된 투표 값입니다.' });
+    if (!vote || !['pro', 'con'].includes(vote)) {
+      return res.status(400).json({ error: '찬성(pro) 또는 반대(con)를 선택해주세요.' });
     }
 
     const topic = await prisma.communityTopic.findUnique({ where: { id: topicId } });
-    if (!topic) return res.status(404).json({ error: '주제를 찾을 수 없습니다.' });
+    if (!topic) {
+      return res.status(404).json({ error: '투표 주제를 찾을 수 없습니다.' });
+    }
+
+    // 주제 만료 확인
+    if (new Date(topic.expires_at) < new Date()) {
+      return res.status(410).json({ error: '이 주제는 만료되었습니다.' });
+    }
 
     const existing = await prisma.communityVote.findFirst({ where: { topic_id: topicId, user_id: userId } });
 
@@ -72,6 +74,13 @@ router.post('/:id/vote', requireAuth, async (req, res) => {
           data: vote === 'pro' ? { pro_votes: { decrement: 1 } } : { con_votes: { decrement: 1 } },
         });
         const updated = await prisma.communityTopic.findUnique({ where: { id: topicId } });
+
+        // 실시간 투표 업데이트 브로드캐스트 (투표 취소)
+        req.app.locals.io.emit('community_vote_update', {
+          topicId,
+          topic: updated,
+        });
+
         return res.json({ myVote: null, topic: updated });
       } else {
         await prisma.communityVote.update({ where: { id: existing.id }, data: { vote } });
@@ -82,6 +91,13 @@ router.post('/:id/vote', requireAuth, async (req, res) => {
             : { con_votes: { increment: 1 }, pro_votes: { decrement: 1 } },
         });
         const updated = await prisma.communityTopic.findUnique({ where: { id: topicId } });
+
+        // 실시간 투표 업데이트 브로드캐스트 (투표 변경)
+        req.app.locals.io.emit('community_vote_update', {
+          topicId,
+          topic: updated,
+        });
+
         return res.json({ myVote: vote, topic: updated });
       }
     }
@@ -92,10 +108,32 @@ router.post('/:id/vote', requireAuth, async (req, res) => {
       data: vote === 'pro' ? { pro_votes: { increment: 1 } } : { con_votes: { increment: 1 } },
     });
     const updated = await prisma.communityTopic.findUnique({ where: { id: topicId } });
+
+    // 실시간 투표 업데이트 브로드캐스트
+    req.app.locals.io.emit('community_vote_update', {
+      topicId,
+      topic: updated,
+    });
+
     res.json({ myVote: vote, topic: updated });
   } catch (error) {
-    console.error('[Community] 투표 실패:', error.message);
-    res.status(500).json({ error: '투표에 실패했습니다.' });
+    console.error('[Community] 투표 실패:', error);
+
+    // Prisma 에러 처리
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: '주제를 찾을 수 없습니다.' });
+    }
+
+    if (error.code === 'P2002') {
+      return res.status(409).json({ error: '이미 투표한 주제입니다.' });
+    }
+
+    // 데이터베이스 연결 오류
+    if (error.code === 'P1001' || error.code === 'P1002') {
+      return res.status(503).json({ error: '서버에 일시적인 문제가 발생했습니다.' });
+    }
+
+    res.status(500).json({ error: '투표 처리 중 오류가 발생했습니다. 다시 시도해주세요.' });
   }
 });
 

@@ -378,6 +378,54 @@ export async function generateCommunityTopics() {
   }
 }
 
+/**
+ * 특정 슬롯(A/B/C)에 맞는 커뮤니티 주제 1개 생성
+ * @param {string} slot - 슬롯 이름 ('A', 'B', 'C')
+ * @returns {Promise<{question: string, category: string}>}
+ */
+export async function generateCommunityTopicForSlot(slot) {
+  const categoryMap = {
+    A: '사회·정치',
+    B: '경제·과학',
+    C: '문화·환경',
+  };
+
+  const category = categoryMap[slot] || '사회';
+
+  const prompt =
+    `당신은 토론 주제 생성 전문가입니다.\n` +
+    `아래 카테고리에 맞는 논쟁적인 토론 주제를 **1개만** 생성해주세요.\n\n` +
+    `카테고리: ${category}\n\n` +
+    `요구사항:\n` +
+    `- 찬반이 명확하게 나뉠 수 있는 주제\n` +
+    `- 간결하고 명확한 질문 형태\n` +
+    `- 40자 이내\n` +
+    `- 한국 사회에서 실제로 논의되는 주제\n\n` +
+    `JSON 형식으로만 응답해주세요 (설명 없이 JSON만):\n` +
+    `{"question": "주제 질문", "category": "${category}"}`;
+
+  try {
+    const raw = await ask(prompt);
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('JSON 파싱 실패');
+    const parsed = JSON.parse(jsonMatch[0]);
+
+    return {
+      question: parsed.question,
+      category: parsed.category || category,
+    };
+  } catch (error) {
+    console.error(`[AI] 슬롯 ${slot} 주제 생성 실패:`, error.message);
+    // Fallback 주제
+    const fallbackTopics = {
+      A: { question: '사형제도, 폐지해야 하나요?', category: '사회·정치' },
+      B: { question: 'AI 기술 발전, 일자리를 위협할까요?', category: '경제·과학' },
+      C: { question: '학교 급식, 채식 메뉴를 늘려야 할까요?', category: '문화·환경' },
+    };
+    return fallbackTopics[slot] || fallbackTopics.A;
+  }
+}
+
 // Legacy - kept for compatibility
 export async function generateAiResponse({ topic, vote, chatHistory, triggerMessage }) {
   const stance = vote === 'pro' ? '찬성' : '반대';

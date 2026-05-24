@@ -51,15 +51,20 @@ model DebateHistory {
 }
 
 model CommunityTopic {
-  id         Int             @id @default(autoincrement())
-  question   String
-  category   String
-  badge      String?
-  pro_votes  Int             @default(0)
-  con_votes  Int             @default(0)
-  expires_at DateTime
-  created_at DateTime        @default(now())
-  votes      CommunityVote[]
+  id             Int             @id @default(autoincrement())
+  question       String
+  category       String
+  badge          String?
+  pro_votes      Int             @default(0)
+  con_votes      Int             @default(0)
+  expires_at     DateTime
+  created_at     DateTime        @default(now())
+  activated_at   DateTime?       // 주제 활성화 시각 (NEW 배지 계산용)
+  slot           String          @default("A") // A/B/C 슬롯
+  category_fixed String          @default("사회") // 슬롯별 고정 카테고리
+  display_order  Int             @default(0) // 순서
+  status         String          @default("active") // active/pending/closed
+  votes          CommunityVote[]
 }
 
 model CommunityVote {
