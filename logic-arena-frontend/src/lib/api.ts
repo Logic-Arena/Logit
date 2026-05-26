@@ -151,7 +151,10 @@ export interface CommunityTopic {
 
 export async function getCommunityTopics(): Promise<CommunityTopic[]> {
   try {
-    const res = await fetch(`${BASE}/community-topics`, { headers: authHeaders() });
+    const res = await fetch(`${BASE}/community-topics`, {
+      headers: authHeaders(),
+      cache: 'no-store' // 항상 최신 데이터 가져오기
+    });
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({}));
       throw new Error(errorData.error || `주제 목록을 불러올 수 없습니다. (상태: ${res.status})`);
