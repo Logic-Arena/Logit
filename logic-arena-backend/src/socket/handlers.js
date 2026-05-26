@@ -105,25 +105,32 @@ async function startPhase(io, roomId, phase) {
 
   if (phase === 'ended') return;
 
-  // AI 자동 페이즈 처리
-  if (AI_AUTO_PHASES.has(phase)) {
-    handleAiAutoPhase(io, roomId, phase).catch((e) =>
-      console.error(`[AI] ${phase} 자동 생성 실패:`, e.message)
-    );
-  }
+  const isHumanMode = room.mode === 'human_debate';
 
-  // Defense 페이즈에서 AI 자동 변론 생성
-  if (AI_DEFENSE_PHASES.has(phase)) {
-    handleAiDefense(io, roomId, phase).catch((e) =>
-      console.error(`[AI] ${phase} 변론 자동 생성 실패:`, e.message)
-    );
-  }
-
-  // arguing 페이즈에서 AI 주장 자동 생성
-  if (phase === 'arguing') {
-    handleAiArguing(io, roomId).catch((e) =>
-      console.error('[AI] arguing 자동 생성 실패:', e.message)
-    );
+  if (isHumanMode) {
+    // 인간 vs 인간: coaching과 judging만 AI 사용
+    if (phase === 'coaching' || phase === 'judging') {
+      handleAiAutoPhase(io, roomId, phase).catch((e) =>
+        console.error(`[AI] ${phase} 생성 실패:`, e.message)
+      );
+    }
+  } else {
+    // ai_debate: 기존 로직 그대로
+    if (AI_AUTO_PHASES.has(phase)) {
+      handleAiAutoPhase(io, roomId, phase).catch((e) =>
+        console.error(`[AI] ${phase} 자동 생성 실패:`, e.message)
+      );
+    }
+    if (AI_DEFENSE_PHASES.has(phase)) {
+      handleAiDefense(io, roomId, phase).catch((e) =>
+        console.error(`[AI] ${phase} 변론 자동 생성 실패:`, e.message)
+      );
+    }
+    if (phase === 'arguing') {
+      handleAiArguing(io, roomId).catch((e) =>
+        console.error('[AI] arguing 자동 생성 실패:', e.message)
+      );
+    }
   }
 
   // topic_selection 시작 즉시 주제 생성 (ai_auto) — 35초 타이머 기다리지 않음
@@ -144,7 +151,7 @@ async function advancePhase(io, roomId) {
     return;
   }
 
-  const next = getNextPhase(room.phase);
+  const next = getNextPhase(room.phase, room.mode);
   await startPhase(io, roomId, next);
 }
 
@@ -238,7 +245,7 @@ async function handleAiAutoPhase(io, roomId, phase) {
       return;
     }
     case 'judging': {
-      const result = await judgeDebate({ topic: room.topic, content: room.content });
+      const result = await judgeDebate({ topic: room.topic, content: room.content, mode: room.mode });
       setResult(roomId, result);
       const participants = [];
       if (room.proPlayer) participants.push({ userId: room.proPlayer.userId, vote: 'pro' });
@@ -316,16 +323,23 @@ function checkArguingDone(io, roomId) {
   const room = getRoom(roomId);
   if (!room || room.phase !== 'arguing') return;
   const c = room.content;
-  const humanDone = c.pro_argument && c.con_argument;
-  const aiDone = c.pro_ai_argument && c.con_ai_argument;
-  if (humanDone && aiDone) {
-    // 사람이 모두 제출한 시점에 AI 주장도 함께 공개
-    io.to(roomId).emit('ai_content', {
-      pro_ai_argument: c.pro_ai_argument,
-      con_ai_argument: c.con_ai_argument,
-      room: getRoomSerialized(roomId),
-    });
-    advancePhase(io, roomId);
+  const isHumanMode = room.mode === 'human_debate';
+
+  if (isHumanMode) {
+    if (c.pro_argument && c.con_argument) {
+      advancePhase(io, roomId);
+    }
+  } else {
+    const humanDone = c.pro_argument && c.con_argument;
+    const aiDone = c.pro_ai_argument && c.con_ai_argument;
+    if (humanDone && aiDone) {
+      io.to(roomId).emit('ai_content', {
+        pro_ai_argument: c.pro_ai_argument,
+        con_ai_argument: c.con_ai_argument,
+        room: getRoomSerialized(roomId),
+      });
+      advancePhase(io, roomId);
+    }
   }
 }
 
@@ -400,7 +414,7 @@ async function handleLeaveInternal(io, socket) {
     } else {
       // 3단계 이상: 현재까지 내용으로 부분 리포트 생성
       try {
-        const judgeResult = await judgeDebate({ topic: room.topic ?? '', content: room.content });
+        const judgeResult = await judgeDebate({ topic: room.topic ?? '', content: room.content, mode: room.mode });
         judgeResult.winner = winnerVote; // 퇴장자는 무조건 패배
         if (updatedRoom) setResult(roomId, judgeResult);
         await updateStats(participants, judgeResult.winner).catch((e) => console.error('[earlyExit-judge] updateStats 실패:', e.message));

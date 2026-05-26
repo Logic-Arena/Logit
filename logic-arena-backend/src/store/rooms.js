@@ -34,6 +34,13 @@ const AI_PHASE_SEQUENCE = [
   'coaching', 'final_argument', 'judging', 'ended',
 ];
 
+const HUMAN_PHASE_SEQUENCE = [
+  'waiting', 'topic_selection', 'arguing',
+  'pro_p_rebuttal', 'pro_p_defense', 'pro_p_counter',
+  'con_p_rebuttal', 'con_p_defense', 'con_p_counter',
+  'coaching', 'final_argument', 'judging', 'ended',
+];
+
 // 각 페이즈에서 AI가 자동으로 콘텐츠를 생성하는지
 export const AI_AUTO_PHASES = new Set([
   'pro_a_rebuttal', 'pro_a_counter',
@@ -61,10 +68,11 @@ export const PHASE_SUBMIT_KEY = {
   final_argument: { pro_player: 'pro_final', con_player: 'con_final' },
 };
 
-export function getNextPhase(currentPhase) {
-  const idx = AI_PHASE_SEQUENCE.indexOf(currentPhase);
-  if (idx === -1 || idx >= AI_PHASE_SEQUENCE.length - 1) return 'ended';
-  return AI_PHASE_SEQUENCE[idx + 1];
+export function getNextPhase(currentPhase, mode = 'ai_debate') {
+  const sequence = mode === 'human_debate' ? HUMAN_PHASE_SEQUENCE : AI_PHASE_SEQUENCE;
+  const idx = sequence.indexOf(currentPhase);
+  if (idx === -1 || idx >= sequence.length - 1) return 'ended';
+  return sequence[idx + 1];
 }
 
 // ── Room CRUD ────────────────────────────────────────────────
