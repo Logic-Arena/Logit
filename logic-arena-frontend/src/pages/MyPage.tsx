@@ -77,7 +77,7 @@ export function MyPage() {
   const totalDebates = user.debateCount ?? 0;
 
   async function handleSaveName() {
-    if (!nameInput.trim() || nameInput.trim() === user.name) {
+    if (!user || !nameInput.trim() || nameInput.trim() === user.name) {
       setEditingName(false);
       return;
     }
