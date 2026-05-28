@@ -14,7 +14,7 @@ export function RoomCard({ room }: Props) {
   const isInProgress = room.phase !== 'waiting' && room.phase !== 'ended';
 
   return (
-    <div className="room-card" onClick={() => navigate(`/rooms/${room.id}`)}>
+    <div className="room-card" onClick={() => navigate(`/rooms/${room.id}`, { state: { hasPassword: room.hasPassword } })}>
       <div>
         <div className="room-card__title">
           {room.hasPassword && '🔒 '}

@@ -1175,11 +1175,8 @@ function EndedView({
         }}
       >
         <p style={{ color: "var(--color-text-muted)" }}>
-          결과를 불러올 수 없습니다.
+          결과를 집계하는 중입니다...
         </p>
-        <button className="btn btn--ghost" onClick={() => navigate("/")}>
-          로비로 돌아가기
-        </button>
       </div>
     );
   const winnerLabel =
@@ -1288,27 +1285,35 @@ function EndedView({
             <tbody>
               {sorted.map((s) => {
                 const sideColor = s.vote === "pro" ? "var(--color-primary)" : "var(--color-con-orange)";
+                const isMe = s.type === "player" && ((s.vote === "pro" && myRole === "pro_player") || (s.vote === "con" && myRole === "con_player"));
+                const displayName = s.type === "player"
+                  ? (s.vote === "pro" ? room.proPlayer?.username : room.conPlayer?.username) ?? s.name
+                  : s.name;
                 return (
                   <tr
                     key={s.name}
-                    style={{ borderBottom: "1px solid var(--color-border)" }}
+                    style={{
+                      borderBottom: "1px solid var(--color-border)",
+                      ...(isMe ? { background: "var(--color-surface-2)" } : {}),
+                    }}
                   >
                     <td style={{ padding: "10px 12px", fontSize: "16px" }}>
                       {RANK_BADGE[s.rank - 1] ?? s.rank}
                     </td>
                     <td style={{ padding: "10px 12px" }}>
                       <span style={{ fontWeight: 600, color: sideColor }}>
-                        {s.name}
+                        {displayName}
                       </span>
-                      {s.type === "player" && (
+                      {isMe && (
                         <span
                           style={{
-                            fontSize: "10px",
-                            color: "var(--color-text-muted)",
-                            marginLeft: "4px",
+                            fontSize: "11px",
+                            fontWeight: 700,
+                            color: sideColor,
+                            marginLeft: "5px",
                           }}
                         >
-                          P
+                          (나)
                         </span>
                       )}
                     </td>
@@ -1657,6 +1662,7 @@ export function DebatePage() {
   const username = currentUser?.name;
   const { room, myRole, mySocketId, resetRoom } = useRoomStore();
   const didJoin = useRef(false);
+  const joinSucceeded = useRef(false);
   const isLeavingRef = useRef(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
@@ -1669,13 +1675,20 @@ export function DebatePage() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const s = socket as any;
     const handlePreJoinError = ({ message }: { message: string }) => {
-      if (!useRoomStore.getState().room) setJoinError(message);
+      if (!joinSucceeded.current) setJoinError(message);
     };
+    const handleRoomState = () => { joinSucceeded.current = true; };
     s.on("error", handlePreJoinError);
-    return () => s.off("error", handlePreJoinError);
+    s.on("room_state", handleRoomState);
+    return () => {
+      s.off("error", handlePreJoinError);
+      s.off("room_state", handleRoomState);
+    };
   }, []);
 
   useEffect(() => {
+    resetRoom();
+    joinSucceeded.current = false;
     if (!roomId || !username) {
       navigate(`/rooms/${roomId}`, { replace: true });
       return;

@@ -6,10 +6,18 @@ import { useToast } from '../hooks/useToast';
 
 const API_URL = import.meta.env.VITE_API_URL ?? '/api';
 
+type RecoveryMode = 'find-account' | 'reset-password' | null;
+
 export function LoginPage() {
   const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [recoveryMode, setRecoveryMode] = useState<RecoveryMode>(null);
+  const [recoveryEmail, setRecoveryEmail] = useState('');
+  const [recoveryLoginId, setRecoveryLoginId] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [recoveryResult, setRecoveryResult] = useState<string | null>(null);
+  const [recoveryLoading, setRecoveryLoading] = useState(false);
 
   const setAuth = useUserStore((s) => s.setAuth);
   const isLoggedIn = useUserStore((s) => s.isLoggedIn);
@@ -38,8 +46,133 @@ export function LoginPage() {
     }
   }
 
+  async function handleFindAccount(e: React.FormEvent) {
+    e.preventDefault();
+    if (!recoveryEmail.trim()) return;
+    setRecoveryLoading(true);
+    setRecoveryResult(null);
+    try {
+      const res = await fetch(`${API_URL}/auth/find-account`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: recoveryEmail.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setRecoveryResult(`아이디: ${data.loginId}`);
+    } catch (err) {
+      setRecoveryResult(err instanceof Error ? err.message : '계정을 찾을 수 없습니다.');
+    } finally {
+      setRecoveryLoading(false);
+    }
+  }
+
+  async function handleResetPassword(e: React.FormEvent) {
+    e.preventDefault();
+    if (!recoveryLoginId.trim() || !recoveryEmail.trim() || !newPassword.trim()) return;
+    setRecoveryLoading(true);
+    setRecoveryResult(null);
+    try {
+      const res = await fetch(`${API_URL}/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ loginId: recoveryLoginId.trim(), email: recoveryEmail.trim(), newPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setRecoveryResult('비밀번호가 변경되었습니다. 다시 로그인해주세요.');
+    } catch (err) {
+      setRecoveryResult(err instanceof Error ? err.message : '비밀번호 재설정에 실패했습니다.');
+    } finally {
+      setRecoveryLoading(false);
+    }
+  }
+
+  function closeRecovery() {
+    setRecoveryMode(null);
+    setRecoveryEmail('');
+    setRecoveryLoginId('');
+    setNewPassword('');
+    setRecoveryResult(null);
+  }
+
   return (
     <div className="auth-page">
+      {recoveryMode && (
+        <div className="auth-recovery-overlay" onClick={closeRecovery}>
+          <div className="auth-recovery-modal" onClick={(e) => e.stopPropagation()}>
+            <h2 className="auth-recovery-modal__title">
+              {recoveryMode === 'find-account' ? '아이디 찾기' : '비밀번호 찾기'}
+            </h2>
+
+            {recoveryMode === 'find-account' ? (
+              <form onSubmit={handleFindAccount} className="auth-recovery-modal__form">
+                <div className="form-field">
+                  <label className="form-label">가입 이메일</label>
+                  <input
+                    className="form-input"
+                    type="email"
+                    placeholder="가입 시 입력한 이메일"
+                    value={recoveryEmail}
+                    onChange={(e) => setRecoveryEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <button className="btn btn--primary" type="submit" disabled={recoveryLoading}>
+                  {recoveryLoading ? '조회 중...' : '아이디 찾기'}
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleResetPassword} className="auth-recovery-modal__form">
+                <div className="form-field">
+                  <label className="form-label">아이디</label>
+                  <input
+                    className="form-input"
+                    placeholder="아이디 입력"
+                    value={recoveryLoginId}
+                    onChange={(e) => setRecoveryLoginId(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="form-field">
+                  <label className="form-label">가입 이메일</label>
+                  <input
+                    className="form-input"
+                    type="email"
+                    placeholder="가입 시 입력한 이메일"
+                    value={recoveryEmail}
+                    onChange={(e) => setRecoveryEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="form-field">
+                  <label className="form-label">새 비밀번호</label>
+                  <input
+                    className="form-input"
+                    type="password"
+                    placeholder="새 비밀번호 (6자 이상)"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                    minLength={6}
+                  />
+                </div>
+                <button className="btn btn--primary" type="submit" disabled={recoveryLoading}>
+                  {recoveryLoading ? '처리 중...' : '비밀번호 변경'}
+                </button>
+              </form>
+            )}
+
+            {recoveryResult && (
+              <p className="auth-recovery-modal__result">{recoveryResult}</p>
+            )}
+            <button className="btn btn--ghost auth-recovery-modal__close" onClick={closeRecovery}>
+              닫기
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="auth-split">
 
         {/* ── Left: Brand ── */}
@@ -135,6 +268,15 @@ export function LoginPage() {
             계정이 없으신가요?{' '}
             <Link to="/signup" className="auth-footer__link">회원가입</Link>
           </p>
+          <div className="auth-recovery-links">
+            <button type="button" className="auth-recovery-link" onClick={() => setRecoveryMode('find-account')}>
+              아이디 찾기
+            </button>
+            <span className="auth-recovery-divider">|</span>
+            <button type="button" className="auth-recovery-link" onClick={() => setRecoveryMode('reset-password')}>
+              비밀번호 찾기
+            </button>
+          </div>
         </div>
 
       </div>

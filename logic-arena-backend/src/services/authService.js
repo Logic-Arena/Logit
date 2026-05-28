@@ -159,7 +159,7 @@ export async function getUserWithStats(userId) {
   return user ? sanitizeUser(user) : null;
 }
 
-export function createAccessToken(user) {
+export function createAccessToken(user, nonce) {
   return jwt.sign(
     {
       id: user.user_id,
@@ -167,6 +167,7 @@ export function createAccessToken(user) {
       username: user.login_id,
       email: user.email,
       name: user.name,
+      ...(nonce ? { nonce } : {}),
     },
     JWT_SECRET,
     { expiresIn: '7d' }

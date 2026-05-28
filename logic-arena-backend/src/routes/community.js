@@ -6,7 +6,6 @@ const router = Router();
 
 router.get('/', optionalAuth, async (req, res) => {
   try {
-    // status='active'인 주제만 조회 (스케줄러가 관리)
     const topics = await prisma.communityTopic.findMany({
       where: { status: 'active' },
       orderBy: { activated_at: 'desc' },
@@ -59,8 +58,7 @@ router.post('/:id/vote', requireAuth, async (req, res) => {
       return res.status(404).json({ error: '투표 주제를 찾을 수 없습니다.' });
     }
 
-    // 주제 만료 확인
-    if (new Date(topic.expires_at) < new Date()) {
+    if (topic.status !== 'active') {
       return res.status(410).json({ error: '이 주제는 만료되었습니다.' });
     }
 

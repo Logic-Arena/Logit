@@ -33,8 +33,8 @@ function calcTier(rankPoint) {
   return tier;
 }
 
-const WIN_RP = 30;
-const LOSE_RP = 15;
+const WIN_RP = 20;
+const LOSE_RP = 20;
 
 /**
  * @param {Array<{userId: string, vote: 'pro'|'con'}>} participants
