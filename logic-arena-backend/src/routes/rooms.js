@@ -7,7 +7,7 @@ router.get('/', (req, res) => {
   res.json(getAllRooms());
 });
 
-const VALID_MODES = ['free_debate', 'ai_debate'];
+const VALID_MODES = ['free_debate', 'ai_debate', 'human_debate'];
 const VALID_TOPIC_MODES = ['manual', 'ai_auto'];
 
 router.post('/', (req, res) => {

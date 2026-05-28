@@ -224,14 +224,27 @@ export async function generateCoaching({ topic, content }) {
   }
 }
 
-export async function judgeDebate({ topic, content }) {
-  const summary = buildDebateSummary(content);
-  if (!summary) return makeDrawResult('토론 내용이 없어 무승부로 처리합니다.');
+export async function judgeDebate({ topic, content, mode = 'ai_debate' }) {
+  const isHumanMode = mode === 'human_debate';
+  const summary = buildDebateSummary(content, isHumanMode);
+  if (!summary) return makeDrawResult('토론 내용이 없어 무승부로 처리합니다.', isHumanMode);
+
+  const participantDesc = isHumanMode
+    ? `참가자 2명(찬성P, 반대P)`
+    : `참가자 4명(찬성P, 반대P, 찬성AI, 반대AI)`;
+
+  const scoresTemplate = isHumanMode
+    ? `{"name":"찬성P","vote":"pro","type":"player","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"},` +
+    `{"name":"반대P","vote":"con","type":"player","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"}`
+    : `{"name":"찬성P","vote":"pro","type":"player","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"},` +
+    `{"name":"반대P","vote":"con","type":"player","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"},` +
+    `{"name":"찬성AI","vote":"pro","type":"ai","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"},` +
+    `{"name":"반대AI","vote":"con","type":"ai","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"}`;
 
   const prompt =
     `토론 주제: "${topic}"\n\n` +
     `${summary}\n\n` +
-    `당신은 공정한 토론 심판입니다. 위 전체 발언을 바탕으로 참가자 4명(찬성P, 반대P, 찬성AI, 반대AI)을 동일한 기준으로 채점하세요.\n\n` +
+    `당신은 공정한 토론 심판입니다. 위 전체 발언을 바탕으로 ${participantDesc}을 동일한 기준으로 채점하세요.\n\n` +
     `채점 기준 (각 항목 0~25점, 합계 0~100점):\n` +
     `- 논리성(0~25): 주장의 논리적 일관성, 전제-결론 구조, 오류 없음\n` +
     `- 근거(0~25): 사실·데이터·사례에 기반한 구체적 근거의 충실도\n` +
@@ -239,7 +252,7 @@ export async function judgeDebate({ topic, content }) {
     `- 반론(0~25): 상대 주장의 핵심을 정확히 파악하고 효과적으로 반박한 정도\n\n` +
     `채점 규칙 (반드시 준수):\n` +
     `1. 1점 단위로 채점하고 절대 5의 배수로 반올림하지 말 것\n` +
-    `2. 참가자 간 점수 차이를 반드시 둘 것 (4명이 같은 점수이면 안 됨)\n` +
+    `2. 참가자 간 점수 차이를 반드시 둘 것\n` +
     `3. 내용이 부실하거나 짧으면 각 항목 0~10점, 평범하면 11~17점, 우수하면 18~25점\n` +
     `4. 총점 기준: 미흡 0~39점, 보통 40~59점, 양호 60~79점, 우수 80~100점\n` +
     `5. 실제 발언 내용을 근거로 엄격하게 차별화해서 채점할 것\n\n` +
@@ -251,15 +264,10 @@ export async function judgeDebate({ topic, content }) {
     `advice(개인 조언) 작성 규칙:\n` +
     `- 각 참가자마다 3~4문장\n` +
     `- 해당 참가자의 실제 발언에서 잘한 점 1가지와 개선할 점 1가지를 구체적으로 지적\n` +
-    `- "~했습니다" 형식의 추상적 칭찬 금지, 실제 논리나 표현을 인용해서 서술\n` +
+    `- 실제 논리나 표현을 인용해서 서술\n` +
     `- 다음 토론에서 바로 적용 가능한 실천적 조언 포함\n\n` +
     `반드시 아래 JSON 형식으로만 답하세요 (설명 없이 JSON만):\n` +
-    `{"winner":"pro또는con또는draw","summary":"총평 3-4문장","scores":[` +
-    `{"name":"찬성P","vote":"pro","type":"player","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"},` +
-    `{"name":"반대P","vote":"con","type":"player","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"},` +
-    `{"name":"찬성AI","vote":"pro","type":"ai","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"},` +
-    `{"name":"반대AI","vote":"con","type":"ai","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"}` +
-    `]}`;
+    `{"winner":"pro또는con또는draw","summary":"총평 3-4문장","scores":[${scoresTemplate}]}`;
 
   try {
     const raw = await ask(prompt);
@@ -267,35 +275,41 @@ export async function judgeDebate({ topic, content }) {
     if (!jsonMatch) throw new Error('JSON 파싱 실패');
     const parsed = JSON.parse(jsonMatch[0]);
     if (!parsed.scores || !Array.isArray(parsed.scores)) throw new Error('scores 없음');
-    // total 재계산, rank 정렬
     parsed.scores.forEach((s) => {
       s.total = (s.logic ?? 0) + (s.evidence ?? 0) + (s.persuasion ?? 0) + (s.rebuttal ?? 0);
     });
     const sorted = [...parsed.scores].sort((a, b) => b.total - a.total);
     sorted.forEach((s, i) => { s.rank = i + 1; });
+
+    // 총점 기반으로 winner 재계산
+    const proTotal = parsed.scores.filter(s => s.vote === 'pro').reduce((sum, s) => sum + s.total, 0);
+    const conTotal = parsed.scores.filter(s => s.vote === 'con').reduce((sum, s) => sum + s.total, 0);
+    if (proTotal > conTotal) parsed.winner = 'pro';
+    else if (conTotal > proTotal) parsed.winner = 'con';
+    else parsed.winner = 'draw';
+
     return parsed;
   } catch {
-    return makeDrawResult('AI 판정에 실패하여 무승부로 처리합니다.');
+    return makeDrawResult('AI 판정에 실패하여 무승부로 처리합니다.', isHumanMode);
   }
 }
 
-function makeDrawResult(reason) {
+function makeDrawResult(reason, isHumanMode = false) {
   const defaultScore = (name, vote, type) => ({
     name, vote, type, logic: 0, evidence: 0, persuasion: 0, rebuttal: 0, total: 0, rank: 0, advice: reason,
   });
-  return {
-    winner: 'draw',
-    summary: reason,
-    scores: [
-      defaultScore('찬성P', 'pro', 'player'),
-      defaultScore('반대P', 'con', 'player'),
-      defaultScore('찬성AI', 'pro', 'ai'),
-      defaultScore('반대AI', 'con', 'ai'),
-    ],
-  };
+  const scores = [
+    defaultScore('찬성P', 'pro', 'player'),
+    defaultScore('반대P', 'con', 'player'),
+  ];
+  if (!isHumanMode) {
+    scores.push(defaultScore('찬성AI', 'pro', 'ai'));
+    scores.push(defaultScore('반대AI', 'con', 'ai'));
+  }
+  return { winner: 'draw', summary: reason, scores };
 }
 
-function buildDebateSummary(content) {
+function buildDebateSummary(content, isHumanMode = false) {
   const c = content;
   const sections = [];
   const sec = (title, items) => {
@@ -310,12 +324,14 @@ function buildDebateSummary(content) {
     ['주장', c.con_argument], ['반론(vs찬성P)', c.con_p_rebuttal], ['재반론', c.con_p_counter],
     ['변론(vs찬성P반론)', c.pro_p_defense_player], ['변론(vs찬성AI)', c.pro_a_defense_player], ['최종', c.con_final],
   ]);
-  sec('찬성AI', [
-    ['주장', c.pro_ai_argument], ['반론(vs반대)', c.pro_a_rebuttal], ['재반론', c.pro_a_counter],
-  ]);
-  sec('반대AI', [
-    ['주장', c.con_ai_argument], ['반론(vs찬성)', c.con_a_rebuttal], ['재반론', c.con_a_counter],
-  ]);
+  if (!isHumanMode) {
+    sec('찬성AI', [
+      ['주장', c.pro_ai_argument], ['반론(vs반대)', c.pro_a_rebuttal], ['재반론', c.pro_a_counter],
+    ]);
+    sec('반대AI', [
+      ['주장', c.con_ai_argument], ['반론(vs찬성)', c.con_a_rebuttal], ['재반론', c.con_a_counter],
+    ]);
+  }
   return sections.join('\n\n') || null;
 }
 

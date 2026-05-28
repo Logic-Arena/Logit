@@ -71,141 +71,141 @@ const CONTENT_FLOW: Array<{
   align: AlignSide;
   variant: BubbleVariant;
 }> = [
-  {
-    key: "pro_argument",
-    author: "찬성 플레이어",
-    align: "pro",
-    variant: "player",
-  },
-  {
-    key: "con_argument",
-    author: "반대 플레이어",
-    align: "con",
-    variant: "player",
-  },
-  {
-    key: "pro_ai_argument",
-    author: "AI 보조·찬성",
-    align: "pro",
-    variant: "ai",
-  },
-  {
-    key: "con_ai_argument",
-    author: "AI 보조·반대",
-    align: "con",
-    variant: "ai",
-  },
-  {
-    key: "pro_p_rebuttal",
-    author: "찬성 플레이어",
-    align: "pro",
-    variant: "player",
-  },
-  {
-    key: "pro_p_defense_player",
-    author: "반대 플레이어",
-    align: "con",
-    variant: "player",
-  },
-  {
-    key: "pro_p_defense_ai",
-    author: "AI 보조·반대",
-    align: "con",
-    variant: "ai",
-  },
-  {
-    key: "pro_p_counter",
-    author: "찬성 플레이어",
-    align: "pro",
-    variant: "player",
-  },
-  {
-    key: "con_p_rebuttal",
-    author: "반대 플레이어",
-    align: "con",
-    variant: "player",
-  },
-  {
-    key: "con_p_defense_player",
-    author: "찬성 플레이어",
-    align: "pro",
-    variant: "player",
-  },
-  {
-    key: "con_p_defense_ai",
-    author: "AI 보조·찬성",
-    align: "pro",
-    variant: "ai",
-  },
-  {
-    key: "con_p_counter",
-    author: "반대 플레이어",
-    align: "con",
-    variant: "player",
-  },
-  {
-    key: "pro_a_rebuttal",
-    author: "AI 보조·찬성",
-    align: "pro",
-    variant: "ai",
-  },
-  {
-    key: "pro_a_defense_player",
-    author: "반대 플레이어",
-    align: "con",
-    variant: "player",
-  },
-  {
-    key: "pro_a_defense_ai",
-    author: "AI 보조·반대",
-    align: "con",
-    variant: "ai",
-  },
-  { key: "pro_a_counter", author: "AI 보조·찬성", align: "pro", variant: "ai" },
-  {
-    key: "con_a_rebuttal",
-    author: "AI 보조·반대",
-    align: "con",
-    variant: "ai",
-  },
-  {
-    key: "con_a_defense_player",
-    author: "찬성 플레이어",
-    align: "pro",
-    variant: "player",
-  },
-  {
-    key: "con_a_defense_ai",
-    author: "AI 보조·찬성",
-    align: "pro",
-    variant: "ai",
-  },
-  { key: "con_a_counter", author: "AI 보조·반대", align: "con", variant: "ai" },
-  {
-    key: "coaching_pro",
-    author: "훈수 AI (찬성P)",
-    align: "pro",
-    variant: "coach",
-  },
-  {
-    key: "coaching_con",
-    author: "훈수 AI (반대P)",
-    align: "con",
-    variant: "coach",
-  },
-  {
-    key: "pro_final",
-    author: "찬성 플레이어",
-    align: "pro",
-    variant: "player",
-  },
-  {
-    key: "con_final",
-    author: "반대 플레이어",
-    align: "con",
-    variant: "player",
-  },
-];
+    {
+      key: "pro_argument",
+      author: "찬성 플레이어",
+      align: "pro",
+      variant: "player",
+    },
+    {
+      key: "con_argument",
+      author: "반대 플레이어",
+      align: "con",
+      variant: "player",
+    },
+    {
+      key: "pro_ai_argument",
+      author: "AI 보조·찬성",
+      align: "pro",
+      variant: "ai",
+    },
+    {
+      key: "con_ai_argument",
+      author: "AI 보조·반대",
+      align: "con",
+      variant: "ai",
+    },
+    {
+      key: "pro_p_rebuttal",
+      author: "찬성 플레이어",
+      align: "pro",
+      variant: "player",
+    },
+    {
+      key: "pro_p_defense_player",
+      author: "반대 플레이어",
+      align: "con",
+      variant: "player",
+    },
+    {
+      key: "pro_p_defense_ai",
+      author: "AI 보조·반대",
+      align: "con",
+      variant: "ai",
+    },
+    {
+      key: "pro_p_counter",
+      author: "찬성 플레이어",
+      align: "pro",
+      variant: "player",
+    },
+    {
+      key: "con_p_rebuttal",
+      author: "반대 플레이어",
+      align: "con",
+      variant: "player",
+    },
+    {
+      key: "con_p_defense_player",
+      author: "찬성 플레이어",
+      align: "pro",
+      variant: "player",
+    },
+    {
+      key: "con_p_defense_ai",
+      author: "AI 보조·찬성",
+      align: "pro",
+      variant: "ai",
+    },
+    {
+      key: "con_p_counter",
+      author: "반대 플레이어",
+      align: "con",
+      variant: "player",
+    },
+    {
+      key: "pro_a_rebuttal",
+      author: "AI 보조·찬성",
+      align: "pro",
+      variant: "ai",
+    },
+    {
+      key: "pro_a_defense_player",
+      author: "반대 플레이어",
+      align: "con",
+      variant: "player",
+    },
+    {
+      key: "pro_a_defense_ai",
+      author: "AI 보조·반대",
+      align: "con",
+      variant: "ai",
+    },
+    { key: "pro_a_counter", author: "AI 보조·찬성", align: "pro", variant: "ai" },
+    {
+      key: "con_a_rebuttal",
+      author: "AI 보조·반대",
+      align: "con",
+      variant: "ai",
+    },
+    {
+      key: "con_a_defense_player",
+      author: "찬성 플레이어",
+      align: "pro",
+      variant: "player",
+    },
+    {
+      key: "con_a_defense_ai",
+      author: "AI 보조·찬성",
+      align: "pro",
+      variant: "ai",
+    },
+    { key: "con_a_counter", author: "AI 보조·반대", align: "con", variant: "ai" },
+    {
+      key: "coaching_pro",
+      author: "훈수 AI (찬성P)",
+      align: "pro",
+      variant: "coach",
+    },
+    {
+      key: "coaching_con",
+      author: "훈수 AI (반대P)",
+      align: "con",
+      variant: "coach",
+    },
+    {
+      key: "pro_final",
+      author: "찬성 플레이어",
+      align: "pro",
+      variant: "player",
+    },
+    {
+      key: "con_final",
+      author: "반대 플레이어",
+      align: "con",
+      variant: "player",
+    },
+  ];
 
 const CONTENT_LABELS: Partial<Record<keyof RoomContent, string>> = {
   pro_argument: "최초 주장",
@@ -491,9 +491,13 @@ function DebateChatView({
       chatRef.current.scrollTop = chatRef.current.scrollHeight;
   });
 
+  const isHumanMode = room.mode === "human_debate";
   const messages = CONTENT_FLOW.flatMap((item) => {
     const text = content[item.key];
     if (!text) return [];
+    if (isHumanMode && item.variant === "ai" && item.key !== "coaching_pro" && item.key !== "coaching_con") {
+      return [];
+    }
     if (phase === "arguing") {
       const both = !!(content.pro_argument && content.con_argument);
       if (!both) {
@@ -545,8 +549,8 @@ function DebateChatView({
               done={!!content.con_argument}
               isMe={myRole === "con_player"}
             />
-            <StatusChip label="찬성AI" done={!!content.pro_ai_argument} />
-            <StatusChip label="반대AI" done={!!content.con_ai_argument} />
+           {!isHumanMode && <StatusChip label="찬성AI" done={!!content.pro_ai_argument} />}
+            {!isHumanMode && <StatusChip label="반대AI" done={!!content.con_ai_argument} />}
           </div>
         )}
         {phase === "final_argument" && (
@@ -1110,11 +1114,11 @@ const SCORE_CRITERIA: {
   key: "logic" | "evidence" | "persuasion" | "rebuttal";
   label: string;
 }[] = [
-  { key: "logic", label: "논리성" },
-  { key: "evidence", label: "근거" },
-  { key: "persuasion", label: "설득력" },
-  { key: "rebuttal", label: "반론" },
-];
+    { key: "logic", label: "논리성" },
+    { key: "evidence", label: "근거" },
+    { key: "persuasion", label: "설득력" },
+    { key: "rebuttal", label: "반론" },
+  ];
 
 function ScoreBar({ value }: { value: number }) {
   return (
