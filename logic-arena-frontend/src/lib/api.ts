@@ -19,6 +19,22 @@ function authHeaders(): HeadersInit {
   };
 }
 
+export function handleSessionExpired() {
+  useUserStore.getState().logout();
+  window.location.href = '/login';
+}
+
+async function authedFetch(input: RequestInfo, init?: RequestInit): Promise<Response> {
+  const res = await fetch(input, init);
+  if (res.status === 401) {
+    const data = await res.clone().json().catch(() => ({}));
+    if (data?.error?.includes('다른 기기')) {
+      handleSessionExpired();
+    }
+  }
+  return res;
+}
+
 const TIER_LIST = [
   '브론즈 5','브론즈 4','브론즈 3','브론즈 2','브론즈 1',
   '실버 5','실버 4','실버 3','실버 2','실버 1',
@@ -27,19 +43,27 @@ const TIER_LIST = [
   '다이아몬드',
 ];
 
+const TIER_RP_MIN = [0,100,200,300,400,500,650,800,950,1100,1300,1500,1750,2000,2300,2600,3000,3500,4000,4600,5000];
+
 export function createHybridUser(authUser: AuthUser): User {
   const stats = authUser.stats;
-  const tierIdx = TIER_LIST.indexOf(stats?.tier ?? '브론즈 5');
+  const tierIdx = Math.max(0, TIER_LIST.indexOf(stats?.tier ?? '브론즈 5'));
+  const rankPoint = stats?.rank_point ?? 0;
+  const currentMin = TIER_RP_MIN[tierIdx] ?? 0;
+  const inTierRp = Math.max(0, rankPoint - currentMin);
+  // 1칸 = 20 RP (WIN_RP=20이므로 1승=1칸, 5승=다음티어)
+  const slots = Math.min(4, Math.floor(inTierRp / 20));
   return {
     id: authUser.id.toString(),
     name: authUser.name || authUser.username || '이름없음',
     email: authUser.email || '',
     tier: stats?.tier ?? '브론즈 5',
-    tierRank: tierIdx >= 0 ? tierIdx + 1 : 1,
-    nextTier: tierIdx >= 0 && tierIdx < TIER_LIST.length - 1 ? TIER_LIST[tierIdx + 1] : undefined,
+    tierRank: slots * 20,
+    nextTier: tierIdx < TIER_LIST.length - 1 ? TIER_LIST[tierIdx + 1] : undefined,
     scoreAverage: stats?.score_average ?? 0,
     debateCount: stats?.total_games ?? 0,
     winCount: stats?.win_count ?? 0,
+    avatarUrl: authUser.profile_image ?? undefined,
     badges: (stats?.badges as { icon: string; label: string }[] | undefined) ?? [],
   };
 }
@@ -58,10 +82,24 @@ export async function getMe(overrideToken?: string): Promise<User> {
   return createHybridUser(data);
 }
 
+export async function updateProfile({ name, profileImage }: { name?: string; profileImage?: string | null }): Promise<User> {
+  const res = await fetch(`${BASE}/auth/profile`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify({ name, profileImage }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error ?? '프로필 수정에 실패했습니다.');
+  }
+  const data = await res.json();
+  return createHybridUser(data);
+}
+
 // ─── Rooms ───────────────────────────────────────────────
 
 export async function getRooms(): Promise<Room[]> {
-  const res = await fetch(`${BASE}/rooms`, { headers: authHeaders() });
+  const res = await authedFetch(`${BASE}/rooms`, { headers: authHeaders() });
   if (!res.ok) throw new Error('방 목록을 불러오지 못했습니다.');
   return res.json();
 }
@@ -151,7 +189,7 @@ export interface CommunityTopic {
 
 export async function getCommunityTopics(): Promise<CommunityTopic[]> {
   try {
-    const res = await fetch(`${BASE}/community-topics`, { headers: authHeaders() });
+    const res = await authedFetch(`${BASE}/community-topics`, { headers: authHeaders() });
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({}));
       throw new Error(errorData.error || `주제 목록을 불러올 수 없습니다. (상태: ${res.status})`);
@@ -209,7 +247,7 @@ export interface TrainingRecommendation {
 }
 
 export async function getTrainingRecommendation(): Promise<TrainingRecommendation | null> {
-  const res = await fetch(`${BASE}/training-recommendation`, { headers: authHeaders() });
+  const res = await authedFetch(`${BASE}/training-recommendation`, { headers: authHeaders() });
   if (!res.ok) return null;
   return res.json();
 }

@@ -38,7 +38,7 @@ export const useAuthStore = create<AuthState>()(
       setUser: (user) => set({ user }),
     }),
     {
-      name: 'logic-arena-auth',
+      name: 'logic-arena-user',
       partialize: (state) => ({ token: state.token, user: state.user }),
     }
   )

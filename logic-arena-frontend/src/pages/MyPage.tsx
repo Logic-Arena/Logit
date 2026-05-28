@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useUserStore } from "../store/useUserStore";
-import { getDebateHistory, type DebateHistoryItem } from "../lib/api";
+import { getDebateHistory, updateProfile, type DebateHistoryItem } from "../lib/api";
 import {
   AnalyticsDashboardSection,
   AnalyticsHistorySection,
@@ -30,8 +30,13 @@ function PillarIcon({ className }: { className?: string }) {
 
 export function MyPage() {
   const user = useUserStore((s) => s.user);
+  const setUser = useUserStore((s) => s.setUser);
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
   const [history, setHistory] = useState<DebateHistoryItem[]>([]);
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState('');
+  const [savingName, setSavingName] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     getDebateHistory().then(setHistory).catch(() => {});
@@ -71,23 +76,82 @@ export function MyPage() {
   const avgScore = Math.round(user.scoreAverage ?? 0);
   const totalDebates = user.debateCount ?? 0;
 
+  async function handleSaveName() {
+    if (!user || !nameInput.trim() || nameInput.trim() === user.name) {
+      setEditingName(false);
+      return;
+    }
+    setSavingName(true);
+    try {
+      const updated = await updateProfile({ name: nameInput.trim() });
+      setUser(updated);
+      setEditingName(false);
+    } catch {
+      // ignore
+    } finally {
+      setSavingName(false);
+    }
+  }
+
+  async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = reader.result as string;
+      try {
+        const updated = await updateProfile({ profileImage: base64 });
+        setUser(updated);
+      } catch {
+        // ignore
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
   return (
     <div className={styles.myPage}>
       <div className={styles.container}>
         {/* ── 프로필 카드 ──────────────────────────────────── */}
         <div className={styles.profileCard}>
-          {user.avatarUrl ? (
-            <img
-              src={user.avatarUrl}
-              alt={user.name}
-              className={styles.avatarImg}
-            />
-          ) : (
-            <div className={styles.avatar}>{initial}</div>
-          )}
+          <div className={styles.avatarWrapper} onClick={() => fileInputRef.current?.click()} title="사진 변경">
+            {user.avatarUrl ? (
+              <img src={user.avatarUrl} alt={user.name} className={styles.avatarImg} />
+            ) : (
+              <div className={styles.avatar}>{initial}</div>
+            )}
+            <div className={styles.avatarOverlay}>변경</div>
+          </div>
+          <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageChange} />
 
           <div className={styles.profileInfo}>
-            <h1 className={styles.profileName}>{user.name}</h1>
+            {editingName ? (
+              <div className={styles.nameEditRow}>
+                <input
+                  className={styles.nameInput}
+                  value={nameInput}
+                  onChange={(e) => setNameInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSaveName()}
+                  autoFocus
+                  maxLength={20}
+                />
+                <button className={`btn btn--primary ${styles.nameSaveBtn}`} onClick={handleSaveName} disabled={savingName}>
+                  {savingName ? '저장 중...' : '저장'}
+                </button>
+                <button className="btn btn--ghost" onClick={() => setEditingName(false)}>취소</button>
+              </div>
+            ) : (
+              <h1 className={styles.profileName}>
+                {user.name}
+                <button
+                  className={styles.nameEditBtn}
+                  onClick={() => { setNameInput(user.name); setEditingName(true); }}
+                  title="이름 변경"
+                >
+                  ✏️
+                </button>
+              </h1>
+            )}
             {user.email && <p className={styles.profileHandle}>{user.email}</p>}
             {badges.length > 0 && (
               <div className={styles.profileBadges}>

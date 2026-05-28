@@ -198,60 +198,74 @@ function RecommendationSection() {
   );
 }
 
+const SCORE_CRITERIA_DETAIL = [
+  { label: '논리성', key: 'logic' as const },
+  { label: '근거', key: 'evidence' as const },
+  { label: '설득력', key: 'persuasion' as const },
+  { label: '반론', key: 'rebuttal' as const },
+];
+
 function DetailModal({ item, onClose }: { item: DebateHistoryItem; onClose: () => void }) {
-  const scoreFields = [
-    { label: '논리력', key: 'logic' as const },
-    { label: '근거 제시', key: 'evidence' as const },
-    { label: '설득력', key: 'persuasion' as const },
-    { label: '반박력', key: 'rebuttal' as const },
-  ];
   const resultLabel = item.result === 'win' ? '승리' : item.result === 'lose' ? '패배' : '무승부';
-  const resultColor = item.result === 'win' ? 'var(--color-pro)' : item.result === 'lose' ? 'var(--color-con)' : 'var(--color-text-muted)';
+  const resultColor = item.result === 'win' ? 'var(--color-primary)' : item.result === 'lose' ? 'var(--color-con-orange)' : 'var(--color-text-muted)';
   const positionLabel = item.position === 'pro' ? '찬성' : '반대';
-  const positionColor = item.position === 'pro' ? 'var(--color-pro)' : 'var(--color-con)';
-  const date = new Date(item.played_at).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' });
+  const positionColor = item.position === 'pro' ? 'var(--color-primary)' : 'var(--color-con-orange)';
+
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }} onClick={onClose}>
-      <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '16px', padding: '28px', maxWidth: '520px', width: '100%', maxHeight: '82vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
-          <div style={{ flex: 1, paddingRight: '12px' }}>
-            <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '6px' }}>{date}</div>
-            <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-text)', margin: 0, lineHeight: 1.4 }}>{item.topic}</h3>
+      <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '16px', padding: '28px', maxWidth: '520px', width: '100%', maxHeight: '86vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '24px' }} onClick={e => e.stopPropagation()}>
+
+        {/* 결과 헤더 */}
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '40px', marginBottom: '8px' }}>⚖️</div>
+          <div style={{ fontSize: '24px', fontWeight: 700, color: resultColor }}>{resultLabel}</div>
+          <div style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginTop: '6px' }}>{item.topic}</div>
+          <span style={{ display: 'inline-block', marginTop: '8px', padding: '3px 12px', borderRadius: '999px', fontSize: '12px', fontWeight: 600, background: item.position === 'pro' ? 'var(--color-pro-bg)' : 'var(--color-con-bg)', color: positionColor }}>{positionLabel}</span>
+        </div>
+
+        {/* 점수 테이블 */}
+        <div style={{ overflowX: 'auto' }}>
+          <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: '10px' }}>
+            내 점수 (100점 만점)
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)', fontSize: '20px', padding: '4px', flexShrink: 0 }}>✕</button>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
+                {['참가자', '논리성', '근거', '설득력', '반론', '합계'].map(h => (
+                  <th key={h} style={{ padding: '8px 12px', color: 'var(--color-text-muted)', fontWeight: 600, textAlign: h === '참가자' ? 'left' : 'center', whiteSpace: 'nowrap' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              <tr style={{ background: 'var(--color-surface-2)' }}>
+                <td style={{ padding: '10px 12px' }}>
+                  <span style={{ fontWeight: 600, color: positionColor }}>{positionLabel}P</span>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: positionColor, marginLeft: '5px' }}>(나)</span>
+                </td>
+                {SCORE_CRITERIA_DETAIL.map(({ key }) => (
+                  <td key={key} style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 600 }}>
+                    <span style={{ color: item[key] >= 20 ? 'var(--color-pro)' : item[key] >= 13 ? 'var(--color-host)' : 'var(--color-con)' }}>
+                      {item[key]}
+                    </span>
+                  </td>
+                ))}
+                <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 700, fontSize: '15px', color: positionColor }}>{item.score}</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
-          <span style={{ padding: '4px 12px', borderRadius: '999px', fontSize: '12px', fontWeight: 600, background: `${positionColor === 'var(--color-pro)' ? 'var(--color-pro-bg)' : 'var(--color-con-bg)'}`, color: positionColor }}>{positionLabel}</span>
-          <span style={{ padding: '4px 12px', borderRadius: '999px', fontSize: '12px', fontWeight: 600, background: `${resultColor === 'var(--color-pro)' ? 'var(--color-pro-bg)' : resultColor === 'var(--color-con)' ? 'var(--color-con-bg)' : 'var(--color-surface-2)'}`, color: resultColor }}>{resultLabel}</span>
-        </div>
-        <div style={{ background: 'var(--color-surface-2)', borderRadius: '10px', padding: '16px', marginBottom: '20px', textAlign: 'center' }}>
-          <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>종합 점수</div>
-          <div style={{ fontSize: '36px', fontWeight: 800, color: 'var(--color-primary)' }}>{item.score}<span style={{ fontSize: '16px', fontWeight: 500, color: 'var(--color-text-muted)' }}>점</span></div>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
-          {scoreFields.map(({ label, key }) => {
-            // 세부 항목은 0~25 척도로 저장 → 표시용으로 0~100으로 정규화 (×4)
-            const rawVal = item[key];
-            const displayVal = Math.min(100, rawVal * 4);
-            return (
-            <div key={key}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                <span style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>{label}</span>
-                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text)' }}>{displayVal}</span>
-              </div>
-              <div style={{ height: '6px', background: 'var(--color-border)', borderRadius: '999px', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${displayVal}%`, background: 'linear-gradient(90deg, var(--color-primary-hover), var(--color-primary))', borderRadius: '999px' }} />
-              </div>
-            </div>
-            );
-          })}
-        </div>
+
+        {/* AI 조언 */}
         {item.advice && (
-          <div style={{ background: 'var(--color-surface-2)', borderRadius: '10px', padding: '14px' }}>
-            <div style={{ fontSize: '11px', color: 'var(--color-primary)', fontWeight: 600, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>AI 조언</div>
-            <p style={{ fontSize: '13px', lineHeight: 1.75, color: 'var(--color-text)', margin: 0, whiteSpace: 'pre-wrap' }}>{item.advice}</p>
+          <div style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '16px 20px', fontSize: '14px', lineHeight: 1.8 }}>
+            <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: '8px' }}>AI 조언</div>
+            {item.advice}
           </div>
         )}
+
+        <button onClick={onClose} style={{ alignSelf: 'center', background: 'none', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '8px 24px', cursor: 'pointer', color: 'var(--color-text-muted)', fontSize: '13px' }}>
+          닫기
+        </button>
       </div>
     </div>
   );
@@ -261,7 +275,7 @@ function ReportCard({ item, onDetail }: { item: ReportItem; onDetail?: () => voi
   const grade = getGrade(item.score);
 
   return (
-    <div className={styles.reportCard}>
+    <div className={styles.reportCard} onClick={onDetail} style={{ cursor: 'pointer' }}>
       {/* 1. 날짜 + 등급 + 점수 */}
       <div className="flex flex-col gap-2 w-full">
         <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{item.dateLabel}</div>

@@ -1794,6 +1794,15 @@ textarea {
   box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.2);
 }
 
+.tier-widget__avatar-img {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.2);
+}
+
 .tier-widget__name {
   font-size: var(--text-subtitle);
   font-weight: 600;
@@ -1834,6 +1843,7 @@ textarea {
 
 /* 프로그레스 바 */
 .tier-widget__progress-wrap {
+  position: relative;
   height: 6px;
   border-radius: 999px;
   background: var(--color-border);
@@ -1849,6 +1859,20 @@ textarea {
     var(--color-primary-hover)
   );
   transition: width 0.4s ease;
+}
+
+.tier-widget__progress-wrap::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0%,
+    transparent calc(20% - 1px),
+    var(--color-surface) calc(20% - 1px),
+    var(--color-surface) 20%
+  );
+  pointer-events: none;
 }
 
 .tier-widget__progress-labels {
@@ -3145,7 +3169,6 @@ textarea {
   gap: 10px;
   color: var(--color-text-muted);
   font-style: italic;
-  animation: thinking-glow 2.4s ease-in-out infinite;
 }
 
 .typing-dots {
@@ -3160,7 +3183,6 @@ textarea {
   height: 5px;
   border-radius: 50%;
   background: var(--color-ai);
-  box-shadow: 0 0 10px rgba(8, 145, 178, 0.4);
   opacity: 0.45;
   transform-origin: center bottom;
   animation: typing-dot 1.35s cubic-bezier(0.45, 0, 0.2, 1) infinite;
@@ -4034,6 +4056,81 @@ textarea {
   color: var(--color-primary-hover);
 }
 
+.auth-recovery-links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.auth-recovery-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color var(--transition);
+}
+
+.auth-recovery-link:hover {
+  color: var(--color-primary);
+}
+
+.auth-recovery-divider {
+  font-size: 12px;
+  color: var(--color-border);
+}
+
+.auth-recovery-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.auth-recovery-modal {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 28px 32px;
+  width: min(420px, 90vw);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.auth-recovery-modal__title {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.auth-recovery-modal__form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.auth-recovery-modal__result {
+  font-size: 13px;
+  color: var(--color-primary);
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--color-surface-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+}
+
+.auth-recovery-modal__close {
+  align-self: flex-end;
+  font-size: 13px;
+}
+
 /* 헤더 유저 영역 */
 .header-user {
   margin-left: auto;
@@ -4042,16 +4139,41 @@ textarea {
   gap: 12px;
 }
 
-.header-user__name {
-  font-size: var(--text-body);
-  font-weight: 500;
-  color: var(--color-text-muted);
+.header-user__profile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   text-decoration: none;
+  color: var(--color-text-muted);
   transition: color var(--transition);
 }
 
-.header-user__name:hover {
+.header-user__profile:hover {
   color: var(--color-primary);
+}
+
+.header-user__avatar-img,
+.header-user__avatar-fallback {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.header-user__avatar-fallback {
+  background: var(--color-primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.header-user__name {
+  font-size: var(--text-body);
+  font-weight: 500;
 }
 
 .header-user__logout {

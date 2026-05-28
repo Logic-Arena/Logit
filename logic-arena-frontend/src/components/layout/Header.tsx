@@ -57,8 +57,14 @@ export function Header() {
         <div className="header-user">
           {user && (
             <>
-              <Link to="/mypage" className="header-user__name">
-                {user.name}
+              <Link to="/mypage" className="header-user__profile">
+                {user.avatarUrl ? (
+                  <img src={user.avatarUrl} alt={user.name} className="header-user__avatar-img" />
+                ) : (
+                  <span className="header-user__avatar-fallback">
+                    {user.name.charAt(0).toUpperCase()}
+                  </span>
+                )}
               </Link>
               <button
                 id="header-logout-btn"

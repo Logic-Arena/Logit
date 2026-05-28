@@ -246,6 +246,8 @@ async function handleAiAutoPhase(io, roomId, phase) {
     }
     case 'judging': {
       const result = await judgeDebate({ topic: room.topic, content: room.content, mode: room.mode });
+      const currentRoom = getRoom(roomId);
+      if (!currentRoom || currentRoom.phase === 'ended') return;
       setResult(roomId, result);
       const participants = [];
       if (room.proPlayer) participants.push({ userId: room.proPlayer.userId, vote: 'pro' });
