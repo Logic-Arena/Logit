@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { getCommunityTopics, voteOnTopic, createRoom, type CommunityTopic } from "../../lib/api";
 import { useUserStore } from "../../store/useUserStore";
 import { useToast } from "../../hooks/useToast";
-import { socket } from "../../lib/socket";
 
 // 슬롯별 카테고리 레이블
 const SLOT_LABEL: Record<string, string> = {
@@ -65,32 +64,6 @@ export function CommunityVoteWidget() {
 
   useEffect(() => {
     loadTopics();
-  }, []);
-
-  // 실시간 투표 업데이트 소켓 리스너
-  useEffect(() => {
-    socket.on('community_vote_update', ({ topicId, topic }) => {
-      setTopics(prev => prev.map(t => t.id === topicId ? { ...t, ...topic } : t));
-    });
-
-    // 슬롯 갱신 실시간 반영
-    socket.on('poll_slot_updated', ({ slot, poll }) => {
-      setTopics(prev => {
-        const filtered = prev.filter(t => t.slot !== slot);
-        return [...filtered, poll];
-      });
-    });
-
-    // HOT 배지 업데이트 실시간 반영
-    socket.on('hot_badges_updated', ({ topics: updatedTopics }) => {
-      setTopics(updatedTopics);
-    });
-
-    return () => {
-      socket.off('community_vote_update');
-      socket.off('poll_slot_updated');
-      socket.off('hot_badges_updated');
-    };
   }, []);
 
   async function loadTopics() {
@@ -221,7 +194,6 @@ export function CommunityVoteWidget() {
 
       {!loading && !error && (
         <div className="vote-widget__status">
-          <span className="vote-widget__live-dot" />
           <span className="vote-widget__live-label">투표 진행 중</span>
         </div>
       )}
