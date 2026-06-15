@@ -2,7 +2,7 @@
   background-color: var(--color-bg);
   color: var(--color-text);
   padding: 24px;
-  font-family: "Noto Sans KR", sans-serif;
+  font-family: "Inter", sans-serif;
   height: 100%;
   overflow-y: auto;
   width: 100%;
@@ -46,7 +46,7 @@
 .headerTitle {
   font-size: var(--text-title);
   line-height: 1.3;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--color-text);
   letter-spacing: 0.025em; /* tracking-wide */
   margin: 0;
@@ -79,7 +79,7 @@
 }
 
 .kpiCard:hover {
-  border-color: rgba(108, 99, 255, 0.5);
+  border-color: rgba(147, 130, 255, 0.5);
 }
 
 .kpiHeader {
@@ -102,7 +102,7 @@
 .kpiValue {
   font-size: var(--text-title);
   line-height: 1.2;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--color-text);
   margin-bottom: 8px;
 }
@@ -214,7 +214,7 @@
 
 .chartTitle {
   font-size: var(--text-subtitle);
-  font-weight: 700;
+  font-weight: 500;
   color: var(--color-text);
   margin: 0;
 }
@@ -267,7 +267,7 @@
 
 .recommendationCard {
   background: linear-gradient(to right, var(--color-primary-soft), var(--color-surface));
-  border: 1px solid rgba(108, 99, 255, 0.2);
+  border: 1px solid rgba(147, 130, 255, 0.2);
   border-radius: 12px;
   padding: 20px 24px; /* Slightly tighter vertical padding */
   display: flex;
@@ -302,13 +302,13 @@
 }
 
 .recommendationBadge {
-  font-weight: 700;
+  font-weight: 500;
   font-size: var(--text-caption);
   color: var(--color-primary);
   background-color: var(--color-primary-soft);
   padding: 4px 10px;
   border-radius: 6px;
-  border: 1px solid rgba(108, 99, 255, 0.4);
+  border: 1px solid rgba(147, 130, 255, 0.4);
   display: inline-block;
   margin-right: 4px;
   letter-spacing: -0.01em;
@@ -326,7 +326,7 @@
   padding: 8px 16px;
   border-radius: 8px;
   font-size: var(--text-subtitle);
-  font-weight: 600;
+  font-weight: 500;
   white-space: nowrap;
   transition: background-color 0.15s;
   border: none;
@@ -339,9 +339,9 @@
 
 .controlBar {
   background: linear-gradient(135deg,
-    rgba(108, 99, 255, 0.08) 0%,
+    rgba(147, 130, 255, 0.08) 0%,
     rgba(255, 255, 255, 0.15) 50%,
-    rgba(108, 99, 255, 0.08) 100%
+    rgba(147, 130, 255, 0.08) 100%
   );
   border: 0.5px solid rgba(255, 255, 255, 0.4);
   border-radius: 16px;
@@ -364,10 +364,10 @@
 }
 
 .controlBar:hover {
-  border-color: rgba(108, 99, 255, 0.6);
+  border-color: rgba(147, 130, 255, 0.6);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.7),
-    0 12px 40px rgba(108, 99, 255, 0.12),
+    0 12px 40px rgba(147, 130, 255, 0.12),
     0 4px 12px rgba(0, 0, 0, 0.06);
 }
 
@@ -433,7 +433,7 @@
 
 .searchContainer:focus-within {
   border-color: var(--color-primary);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 0 0 3px rgba(108, 99, 255, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 0 0 3px rgba(147, 130, 255, 0.1);
 }
 
 @media (min-width: 768px) {
@@ -483,7 +483,7 @@
 
 .selectWrapper:focus-within {
   border-color: var(--color-primary);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 0 0 3px rgba(108, 99, 255, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 0 0 3px rgba(147, 130, 255, 0.1);
 }
 
 @media (min-width: 768px) {
@@ -545,7 +545,7 @@
 }
 
 .reportCard:hover {
-  border-color: rgba(108, 99, 255, 0.5);
+  border-color: rgba(147, 130, 255, 0.5);
   background-color: var(--color-surface-2);
 }
 
@@ -558,7 +558,7 @@
 
 .reportCardTopic {
   font-size: var(--text-subtitle);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--color-text);
   margin-bottom: 4px;
   margin-top: 0;
@@ -575,7 +575,7 @@
 
 .reportCardScore {
   font-size: var(--text-title);
-  font-weight: 700;
+  font-weight: 500;
   display: flex;
   align-items: baseline;
   gap: 4px;
@@ -618,7 +618,7 @@
   padding: 0;
   cursor: pointer;
   transition: color 0.15s;
-  font-family: "Noto Sans KR", sans-serif;
+  font-family: "Inter", sans-serif;
 }
 
 .reportCardDetailBtn:hover {
@@ -628,7 +628,7 @@
 .categoryChip {
   display: inline-block;
   font-size: var(--text-caption);
-  font-weight: 600;
+  font-weight: 500;
   padding: 4px 12px;
   border-radius: 9999px;
 }
@@ -643,7 +643,7 @@
 
 .recentSummaryTitle {
   font-size: var(--text-caption);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -680,7 +680,7 @@
 }
 
 .recentBannerCard:hover {
-  border-color: rgba(108, 99, 255, 0.4);
+  border-color: rgba(147, 130, 255, 0.4);
 }
 
 /* 1. 날짜 + 상대 시간 */
@@ -700,7 +700,7 @@
 
 .recentBannerCategory {
   font-size: var(--text-caption);
-  font-weight: 600;
+  font-weight: 500;
   padding: 2px 8px;
   border-radius: 4px;
   flex-shrink: 0;
@@ -710,7 +710,7 @@
 
 .recentBannerTopicBtn {
   font-size: var(--text-subtitle);
-  font-weight: 700;
+  font-weight: 500;
   color: var(--color-text);
   background: transparent;
   border: none;
@@ -723,7 +723,7 @@
   white-space: nowrap;
   text-overflow: ellipsis;
   transition: color 0.15s;
-  font-family: "Noto Sans KR", sans-serif;
+  font-family: "Inter", sans-serif;
 }
 
 .recentBannerTopicBtn:hover {
@@ -732,7 +732,7 @@
 
 .recentBannerPosition {
   font-size: var(--text-caption);
-  font-weight: 600;
+  font-weight: 500;
   padding: 2px 8px;
   border-radius: 9999px;
   flex-shrink: 0;
@@ -754,7 +754,7 @@
 
 .recentBannerScore {
   font-size: var(--text-title);
-  font-weight: 700;
+  font-weight: 500;
   color: var(--color-text);
   line-height: 1;
 }
@@ -768,7 +768,7 @@
 
 .recentDeltaUp {
   font-size: var(--text-body);
-  font-weight: 700;
+  font-weight: 500;
   color: var(--color-pro);
   background: rgba(52, 211, 153, 0.12);
   padding: 3px 10px;
@@ -782,7 +782,7 @@
 
 .recentDeltaDown {
   font-size: var(--text-body);
-  font-weight: 700;
+  font-weight: 500;
   color: var(--color-con);
   background: rgba(220, 38, 38, 0.12);
   padding: 3px 10px;
@@ -802,7 +802,7 @@
   width: 32px;
   height: 32px;
   border-radius: 9999px;
-  font-weight: 700;
+  font-weight: 500;
   font-size: 14px;
   flex-shrink: 0;
   color: #fff;
@@ -833,7 +833,7 @@
   padding: 6px 12px;
   cursor: pointer;
   transition: background-color 0.15s, color 0.15s;
-  font-family: "Noto Sans KR", sans-serif;
+  font-family: "Inter", sans-serif;
 }
 
 .recentBannerDetailBtn:hover {
@@ -851,9 +851,9 @@
   min-height: 100%;
   grid-column: 1 / -1;
   background: linear-gradient(135deg,
-    rgba(108, 99, 255, 0.03) 0%,
+    rgba(147, 130, 255, 0.03) 0%,
     rgba(248, 250, 252, 0.6) 50%,
-    rgba(108, 99, 255, 0.03) 100%
+    rgba(147, 130, 255, 0.03) 100%
   );
   border: 2px dashed var(--color-border);
   border-radius: 16px;
@@ -862,11 +862,11 @@
 }
 
 .emptyState:hover {
-  border-color: rgba(108, 99, 255, 0.3);
+  border-color: rgba(147, 130, 255, 0.3);
   background: linear-gradient(135deg,
-    rgba(108, 99, 255, 0.05) 0%,
+    rgba(147, 130, 255, 0.05) 0%,
     rgba(248, 250, 252, 0.8) 50%,
-    rgba(108, 99, 255, 0.05) 100%
+    rgba(147, 130, 255, 0.05) 100%
   );
 }
 
@@ -882,7 +882,7 @@
     rgba(248, 250, 252, 0.4) 100%
   );
   border-radius: 50%;
-  border: 2px solid rgba(108, 99, 255, 0.15);
+  border: 2px solid rgba(147, 130, 255, 0.15);
   position: relative;
   animation: emptyIconFloat 3s ease-in-out infinite;
 }
@@ -893,7 +893,7 @@
   inset: -8px;
   border-radius: 50%;
   background: linear-gradient(135deg,
-    rgba(108, 99, 255, 0.1) 0%,
+    rgba(147, 130, 255, 0.1) 0%,
     transparent 100%
   );
   opacity: 0;
@@ -909,7 +909,7 @@
 
 .emptyTitle {
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--color-text);
   margin: 0 0 12px 0;
   letter-spacing: -0.02em;

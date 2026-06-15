@@ -1,22 +1,22 @@
-@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap");
 @import "tailwindcss";
 
 /* ── Design Tokens ─────────────────────────────────────── */
 :root {
   /* ── 배경 · 서피스 ── */
-  --color-bg: #eaecef; /* 전체 배경 — 쿨그레이 */
-  --color-surface: #f5f5f7; /* 카드 표면 — 웜오프화이트 */
-  --color-surface-2: #e0e2e7; /* 중첩 표면 — 한단계 어두운 웜톤 */
-  --color-border: #dddbd5; /* 테두리 — 웜그레이 */
+  --color-bg: #030014; /* Void Canvas — 다크 베이스 */
+  --color-surface: #060317; /* Midnight Surface — 카드 표면 */
+  --color-surface-2: #10093a; /* Deep Indigo — 중첩 표면 */
+  --color-border: #918ea0; /* Fog — 테두리 */
 
   /* ── 텍스트 ── */
-  --color-text: #1e1c2e; /* 기본 텍스트 — 딥 네이비 블랙 */
-  --color-text-muted: #8a8799; /* 보조 텍스트 — 뮤트 퍼플그레이 */
+  --color-text: #f4f0ff; /* Lilac White — 기본 텍스트 */
+  --color-text-muted: #a8a6b7; /* Ash — 보조 텍스트 */
 
   /* ── 브랜드 포인트 ── */
-  --color-primary: #6c63ff; /* 유지 */
-  --color-primary-hover: #5048cc; /* 유지 */
-  --color-primary-soft: #eceaff; /* 라벤더 소프트 */
+  --color-primary: #9382ff; /* Lavender Accent */
+  --color-primary-hover: #5046e4; /* Iris — 호버 */
+  --color-primary-soft: rgba(147, 130, 255, 0.12); /* 소프트 배경 */
 
   /* ── 찬성 ── */
   --color-pro: #52a068; /* 진한 뮤트 그린 */
@@ -43,9 +43,10 @@
   --color-observer: #6b7280; /* 유지 */
   --color-observer-bg: #f4f4f5; /* 쿨그레이 배경 */
 
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 20px;
+  --radius-sm: 5px; /* buttons/inputs */
+  --radius-md: 16px; /* cards */
+  --radius-lg: 32px; /* large containers */
+  --radius-pill: 9999px; /* badges/pills */
 
   --transition: 0.15s ease;
 
@@ -57,6 +58,14 @@
   --text-subtitle: 14px;
   --text-body: 13px;
   --text-caption: 11px;
+
+  /* Spacing (DESIGN.md 절반 스케일) */
+  --spacing-section: 48px; /* 섹션 간격 */
+  --spacing-card: 16px; /* 카드 패딩 */
+
+  /* Elevation (Inset Glow) */
+  --shadow-glow-lg: inset 0 0 24px rgba(255, 255, 255, 0.04); /* rim-light glass */
+  --shadow-glow-md: inset 0 -7px 11px rgba(164, 143, 255, 0.12); /* violet glow */
 }
 
 /* ── Reset ─────────────────────────────────────────────── */
@@ -78,7 +87,7 @@ body,
 #root {
   height: 100%;
   min-height: -webkit-fill-available;
-  font-family: "Noto Sans KR", sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background: var(--color-bg);
   color: var(--color-text);
   font-size: var(--text-body);
@@ -164,7 +173,7 @@ textarea {
   aspect-ratio: 602 / 252;
   display: block;
   content: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='602' height='252'></svg>");
-  background: linear-gradient(135deg, #6c63ff, #5048cc);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
   -webkit-mask: url("/logit-logo.png") no-repeat center / contain;
   mask: url("/logit-logo.png") no-repeat center / contain;
 }
@@ -253,11 +262,7 @@ textarea {
 }
 .form-input:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.15);
-}
-.form-input:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.15);
+  box-shadow: 0 0 0 3px rgba(147, 130, 255, 0.15);
 }
 .form-input::placeholder {
   color: var(--color-text-muted);
@@ -272,7 +277,7 @@ textarea {
 
 .page__title {
   font-size: var(--text-title);
-  font-weight: 700;
+  font-weight: 500;
   margin-bottom: 24px;
 }
 
@@ -281,7 +286,8 @@ textarea {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  padding: 16px 20px;
+  padding: var(--spacing-card);
+  box-shadow: var(--shadow-glow-lg);
 }
 
 /* ── Badge (Liquid Glass Pill) ────────────────────────── */
@@ -304,9 +310,9 @@ textarea {
   border: 0.5px solid rgba(217, 119, 6, 0.4);
 }
 .badge--participant {
-  background: rgba(108, 99, 255, 0.12);
+  background: rgba(147, 130, 255, 0.12);
   color: var(--color-primary);
-  border: 0.5px solid rgba(108, 99, 255, 0.4);
+  border: 0.5px solid rgba(147, 130, 255, 0.4);
 }
 .badge--observer {
   background: rgba(148, 163, 184, 0.12);
@@ -341,7 +347,7 @@ textarea {
   background: var(--color-surface-2);
   border: 1px solid var(--color-border);
   color: var(--color-text);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--shadow-glow-lg);
   animation: toast-in 0.2s ease;
   white-space: nowrap;
 }
@@ -491,7 +497,7 @@ textarea {
 
 .vote-widget__title {
   font-size: var(--text-subtitle);
-  font-weight: 700;
+  font-weight: 500;
   color: var(--color-text);
   line-height: 1.3;
 }
@@ -551,7 +557,7 @@ textarea {
   transition: border-color var(--transition);
 }
 .vote-card:hover {
-  border-color: rgba(108, 99, 255, 0.35);
+  border-color: rgba(147, 130, 255, 0.35);
 }
 
 .vote-card__tags {
@@ -563,9 +569,9 @@ textarea {
 
 .vote-card__badge {
   font-size: var(--text-caption);
-  font-weight: 700;
+  font-weight: 500;
   padding: 2px 7px;
-  border-radius: 9999px;
+  border-radius: var(--radius-pill);
   line-height: 1.5;
   backdrop-filter: blur(10px);
   box-shadow:
@@ -600,7 +606,7 @@ textarea {
   background: rgba(255, 255, 255, 0.08);
   border: 0.5px solid rgba(255, 255, 255, 0.3);
   padding: 2px 7px;
-  border-radius: 9999px;
+  border-radius: var(--radius-pill);
   line-height: 1.5;
   backdrop-filter: blur(10px);
   box-shadow:
@@ -610,7 +616,7 @@ textarea {
 
 .vote-card__question {
   font-size: var(--text-body);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--color-text);
   line-height: 1.45;
 }
@@ -623,7 +629,7 @@ textarea {
 
 .vote-card__stat {
   font-size: var(--text-caption);
-  font-weight: 600;
+  font-weight: 500;
 }
 .vote-card__stat--pro {
   color: var(--color-primary);
@@ -665,7 +671,7 @@ textarea {
   padding: 8px 0;
   border-radius: var(--radius-sm);
   font-size: var(--text-body);
-  font-weight: 600;
+  font-weight: 500;
   border: 1px solid var(--color-border);
   background: var(--color-surface-2);
   color: var(--color-text);
@@ -676,7 +682,7 @@ textarea {
 }
 .vote-card__btn--pro:hover,
 .vote-card__btn--pro.is-active {
-  background: rgba(108, 99, 255, 0.1);
+  background: rgba(147, 130, 255, 0.1);
   border-color: var(--color-primary);
   color: var(--color-primary);
 }
@@ -774,11 +780,11 @@ textarea {
   border-color: var(--color-primary);
   background: var(--color-surface-2);
   transform: translateY(-1px);
-  box-shadow: 0 4px 20px rgba(108, 99, 255, 0.15);
+  box-shadow: 0 4px 20px rgba(147, 130, 255, 0.15);
 }
 
 .room-card__title {
-  font-weight: 600;
+  font-weight: 500;
   font-size: var(--text-subtitle);
 }
 .room-card__meta {
@@ -843,12 +849,12 @@ textarea {
 
 .auth-hero {
   padding: 40px 36px;
-  border: 1px solid rgba(108, 99, 255, 0.24);
+  border: 1px solid rgba(147, 130, 255, 0.24);
   border-radius: 28px;
   background:
     radial-gradient(
       circle at top left,
-      rgba(108, 99, 255, 0.1),
+      rgba(147, 130, 255, 0.1),
       transparent 45%
     ),
     var(--color-surface);
@@ -856,7 +862,7 @@ textarea {
 
 .auth-hero__eyebrow {
   font-size: var(--text-caption);
-  font-weight: 700;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.18em;
   color: var(--color-primary);
@@ -949,7 +955,7 @@ textarea {
   accent-color: var(--color-primary);
 }
 .role-option__title {
-  font-weight: 600;
+  font-weight: 500;
   font-size: var(--text-subtitle);
 }
 .role-option__desc {
@@ -991,10 +997,10 @@ textarea {
 .topic-banner {
   background: linear-gradient(
     135deg,
-    rgba(108, 99, 255, 0.12),
-    rgba(108, 99, 255, 0.06)
+    rgba(147, 130, 255, 0.12),
+    rgba(147, 130, 255, 0.06)
   );
-  border-bottom: 1px solid rgba(108, 99, 255, 0.3);
+  border-bottom: 1px solid rgba(147, 130, 255, 0.3);
   border-left: 3px solid var(--color-primary);
   padding: 14px 20px;
   text-align: center;
@@ -1011,7 +1017,7 @@ textarea {
 
 .topic-banner__text {
   font-size: var(--text-subtitle);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--color-text);
 }
 
@@ -1095,7 +1101,7 @@ textarea {
 .vote-btn {
   padding: 8px 0;
   border-radius: var(--radius-sm);
-  font-weight: 600;
+  font-weight: 500;
   font-size: var(--text-body);
   transition:
     opacity var(--transition),
@@ -1171,7 +1177,7 @@ textarea {
   background: var(--color-primary);
   color: #fff;
   border-radius: var(--radius-sm);
-  font-weight: 600;
+  font-weight: 500;
   font-size: var(--text-subtitle);
   transition: background var(--transition);
 }
@@ -1356,7 +1362,7 @@ textarea {
   background: var(--color-primary);
   color: #fff;
   border-radius: var(--radius-sm);
-  font-weight: 600;
+  font-weight: 500;
   font-size: var(--text-body);
   flex-shrink: 0;
   transition: background var(--transition);
@@ -1467,7 +1473,7 @@ textarea {
 
 .popover__claim-label {
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.4px;
   text-transform: uppercase;
 }
@@ -1505,7 +1511,7 @@ textarea {
 }
 .exit-modal__title {
   font-size: 17px;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--color-text);
   margin: 0;
 }
@@ -1535,7 +1541,7 @@ textarea {
 /* ── Vote Modal ─────────────────────────────────────────── */
 .vote-modal__title {
   font-size: var(--text-title);
-  font-weight: 700;
+  font-weight: 500;
   color: var(--color-text);
 }
 
@@ -1565,7 +1571,7 @@ textarea {
 .voting-panel__done {
   text-align: center;
   font-size: var(--text-subtitle);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--color-pro);
   padding: 8px 0;
 }
@@ -1582,7 +1588,7 @@ textarea {
   background: var(--color-primary);
   color: #fff;
   border-radius: var(--radius-sm);
-  font-weight: 600;
+  font-weight: 500;
   font-size: var(--text-subtitle);
   transition: background var(--transition);
 }
@@ -1624,7 +1630,7 @@ textarea {
 }
 
 .mode-card__label {
-  font-weight: 600;
+  font-weight: 500;
   font-size: var(--text-subtitle);
 }
 .mode-card__desc {
@@ -1639,9 +1645,9 @@ textarea {
   font-weight: 500;
   padding: 1px 7px;
   border-radius: 9999px;
-  background: rgba(108, 99, 255, 0.12);
+  background: rgba(147, 130, 255, 0.12);
   color: var(--color-primary);
-  border: 0.5px solid rgba(108, 99, 255, 0.4);
+  border: 0.5px solid rgba(147, 130, 255, 0.4);
   backdrop-filter: blur(10px);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.6),
@@ -1720,8 +1726,8 @@ textarea {
     0 1px 4px rgba(0, 0, 0, 0.06);
 }
 .participant-chip--me {
-  border: 0.5px solid rgba(108, 99, 255, 0.5);
-  background: rgba(108, 99, 255, 0.12);
+  border: 0.5px solid rgba(147, 130, 255, 0.5);
+  background: rgba(147, 130, 255, 0.12);
   color: var(--color-text);
 }
 .participant-chip--pro {
@@ -1750,7 +1756,7 @@ textarea {
   background: var(--color-primary);
   color: #fff;
   border-radius: var(--radius-sm);
-  font-weight: 600;
+  font-weight: 500;
   font-size: var(--text-subtitle);
   transition: background var(--transition);
 }
@@ -1788,10 +1794,10 @@ textarea {
   align-items: center;
   justify-content: center;
   font-size: var(--text-title);
-  font-weight: 700;
+  font-weight: 500;
   color: #fff;
   flex-shrink: 0;
-  box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.2);
+  box-shadow: 0 0 0 3px rgba(147, 130, 255, 0.2);
 }
 
 .tier-widget__avatar-img {
@@ -1800,12 +1806,12 @@ textarea {
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
-  box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.2);
+  box-shadow: 0 0 0 3px rgba(147, 130, 255, 0.2);
 }
 
 .tier-widget__name {
   font-size: var(--text-subtitle);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--color-text);
   text-align: center;
 }
@@ -1816,7 +1822,7 @@ textarea {
   flex-direction: column;
   gap: 6px;
   background: var(--color-primary-soft);
-  border: 1px solid rgba(108, 99, 255, 0.18);
+  border: 1px solid rgba(147, 130, 255, 0.18);
   border-radius: var(--radius-md);
   padding: 10px 12px;
 }
@@ -1836,7 +1842,7 @@ textarea {
 
 .tier-widget__tier-name {
   font-size: var(--text-subtitle);
-  font-weight: 700;
+  font-weight: 500;
   color: var(--color-text);
   letter-spacing: 0.2px;
 }
@@ -1900,7 +1906,7 @@ textarea {
 
 .tier-widget__box-value {
   font-size: var(--text-title);
-  font-weight: 700;
+  font-weight: 500;
   color: var(--color-text);
   line-height: 1.2;
 }
@@ -1966,7 +1972,7 @@ textarea {
     transform var(--transition);
 }
 .tier-widget__badge:hover {
-  border-color: rgba(108, 99, 255, 0.6);
+  border-color: rgba(147, 130, 255, 0.6);
   transform: translateY(-2px);
 }
 
@@ -2158,12 +2164,12 @@ textarea {
   gap: 12px;
   min-height: 210px;
   padding: 28px 20px;
-  border: 1px solid rgba(108, 99, 255, 0.28);
+  border: 1px solid rgba(147, 130, 255, 0.28);
   border-radius: var(--radius-md);
   background:
     linear-gradient(
       135deg,
-      rgba(108, 99, 255, 0.11),
+      rgba(147, 130, 255, 0.11),
       rgba(240, 160, 112, 0.08)
     ),
     var(--color-surface-2);
@@ -2197,14 +2203,14 @@ textarea {
   justify-content: center;
   gap: 5px;
   min-height: 48px;
-  background: linear-gradient(135deg, #6c63ff, #5048cc);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   font-size: clamp(30px, 5vw, 46px);
-  font-weight: 900;
+  font-weight: 500;
   line-height: 1;
   letter-spacing: 0;
-  filter: drop-shadow(0 0 14px rgba(108, 99, 255, 0.36));
+  filter: drop-shadow(0 0 14px rgba(147, 130, 255, 0.36));
 }
 
 .topic-generating-card__letter {
@@ -2221,7 +2227,7 @@ textarea {
   min-height: 26px;
   color: var(--color-text);
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0;
 }
 
@@ -2299,8 +2305,8 @@ textarea {
 }
 
 .selection-waiting-card {
-  --selection-accent: #6c63ff;
-  --selection-accent-rgb: 108, 99, 255;
+  --selection-accent: #9382ff;
+  --selection-accent-rgb: 147, 130, 255;
 
   overflow: hidden;
   position: relative;
@@ -2791,7 +2797,7 @@ textarea {
   background: rgba(103, 232, 249, 0.12);
   color: var(--color-ai);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 500;
   backdrop-filter: blur(10px);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.6),
@@ -3053,14 +3059,14 @@ textarea {
   align-items: center;
   justify-content: center;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 500;
   flex-shrink: 0;
   margin-top: 18px;
 }
 .bubble-avatar--pro {
   background: var(--color-primary-soft);
   color: var(--color-primary);
-  border: 1px solid rgba(108, 99, 255, 0.4);
+  border: 1px solid rgba(147, 130, 255, 0.4);
 }
 .bubble-avatar--con {
   background: rgba(196, 122, 82, 0.1);
@@ -3090,7 +3096,7 @@ textarea {
   flex-wrap: wrap;
 }
 .bubble-meta__author {
-  font-weight: 600;
+  font-weight: 500;
 }
 .bubble-meta__type {
   opacity: 0.7;
@@ -3109,16 +3115,16 @@ textarea {
 /* 찬성 팀: 퍼플 계열 */
 .debate-bubble--pro-player {
   background: var(--color-primary);
-  border-color: rgba(108, 99, 255, 0.6);
+  border-color: rgba(147, 130, 255, 0.6);
   border-bottom-right-radius: 5px;
   color: #ffffff;
   box-shadow:
-    0 10px 28px rgba(108, 99, 255, 0.28),
+    0 10px 28px rgba(147, 130, 255, 0.28),
     inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 .debate-bubble--pro-ai {
   background: var(--color-primary-soft);
-  border-color: rgba(108, 99, 255, 0.25);
+  border-color: rgba(147, 130, 255, 0.25);
   border-bottom-right-radius: 5px;
   color: var(--color-primary-hover);
 }
@@ -3334,11 +3340,11 @@ textarea {
 .slim-phase-bar__chip {
   padding: 2px 9px;
   border-radius: 9999px;
-  background: rgba(108, 99, 255, 0.12);
-  border: 0.5px solid rgba(108, 99, 255, 0.4);
+  background: rgba(147, 130, 255, 0.12);
+  border: 0.5px solid rgba(147, 130, 255, 0.4);
   color: var(--color-primary);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 500;
   backdrop-filter: blur(10px);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.6),
@@ -3355,7 +3361,7 @@ textarea {
 }
 .sidebar-section__title {
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.6px;
@@ -3363,7 +3369,7 @@ textarea {
 }
 .sidebar-topic {
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 500;
   line-height: 1.5;
   margin: 0 0 10px;
   color: var(--color-text);
@@ -3379,16 +3385,16 @@ textarea {
   padding: 4px 10px;
   border-radius: 9999px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
   backdrop-filter: blur(10px);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.6),
     0 1px 4px rgba(0, 0, 0, 0.06);
 }
 .sidebar-badge--pro {
-  background: rgba(108, 99, 255, 0.12);
+  background: rgba(147, 130, 255, 0.12);
   color: var(--color-primary);
-  border: 0.5px solid rgba(108, 99, 255, 0.4);
+  border: 0.5px solid rgba(147, 130, 255, 0.4);
 }
 .sidebar-badge--con {
   background: rgba(212, 98, 46, 0.12);
@@ -3396,7 +3402,7 @@ textarea {
   border: 0.5px solid rgba(212, 98, 46, 0.4);
 }
 .sidebar-badge--me {
-  font-weight: 700;
+  font-weight: 500;
 }
 
 /* ── Stage Progress ─────────────────────────────────────── */
@@ -3410,7 +3416,7 @@ textarea {
 }
 .stage-item--active {
   color: var(--color-text);
-  font-weight: 600;
+  font-weight: 500;
 }
 .stage-item__dot {
   width: 8px;
@@ -3423,7 +3429,7 @@ textarea {
 }
 .stage-item--active .stage-item__dot {
   background: var(--color-primary);
-  box-shadow: 0 0 6px rgba(108, 99, 255, 0.5);
+  box-shadow: 0 0 6px rgba(147, 130, 255, 0.5);
 }
 .stage-item--upcoming .stage-item__dot {
   background: transparent;
@@ -3438,7 +3444,7 @@ textarea {
 }
 .stage-item__badge--active {
   color: var(--color-primary);
-  font-weight: 700;
+  font-weight: 500;
 }
 
 /* ── Claim Summaries ────────────────────────────────────── */
@@ -3448,7 +3454,7 @@ textarea {
 }
 .claim-summary__label {
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 500;
   margin-bottom: 4px;
 }
 .claim-summary__text {
@@ -3463,7 +3469,7 @@ textarea {
 }
 .claim-summary--pro {
   background: var(--color-primary-soft);
-  border: 1px solid rgba(108, 99, 255, 0.2);
+  border: 1px solid rgba(147, 130, 255, 0.2);
 }
 .claim-summary--pro .claim-summary__label {
   color: var(--color-primary);
@@ -3810,7 +3816,7 @@ textarea {
 
 .auth-split__form-header h1 {
   font-size: var(--text-title);
-  font-weight: 700;
+  font-weight: 500;
   color: var(--color-text);
   margin-bottom: 6px;
   letter-spacing: -0.3px;
@@ -3875,7 +3881,7 @@ textarea {
 
 .auth-brand__tagline-title {
   font-size: var(--text-title);
-  font-weight: 700;
+  font-weight: 500;
   color: #fff;
   line-height: 1.28;
   letter-spacing: -0.5px;
@@ -3916,8 +3922,8 @@ textarea {
   width: fit-content;
   margin: 0 auto 6px;
   font-size: var(--text-title);
-  font-weight: 700;
-  background: linear-gradient(135deg, #6c63ff, #5048cc);
+  font-weight: 500;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   letter-spacing: -1px;
@@ -4049,7 +4055,7 @@ textarea {
 
 .auth-footer__link {
   color: var(--color-primary);
-  font-weight: 600;
+  font-weight: 500;
   transition: color var(--transition);
 }
 .auth-footer__link:hover {
@@ -4106,7 +4112,7 @@ textarea {
 
 .auth-recovery-modal__title {
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 500;
   margin: 0;
 }
 
@@ -4168,7 +4174,7 @@ textarea {
   align-items: center;
   justify-content: center;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .header-user__name {
@@ -4235,17 +4241,17 @@ textarea {
 
 /* Primary 버튼 그라데이션 */
 .btn-gradient {
-  background: linear-gradient(135deg, #7b74ff 0%, #6c63ff 50%, #5b52e8 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
   box-shadow:
-    0 4px 16px rgba(108, 99, 255, 0.3),
-    0 1px 4px rgba(108, 99, 255, 0.2);
+    0 4px 16px rgba(147, 130, 255, 0.3),
+    0 1px 4px rgba(147, 130, 255, 0.2);
   transition: all 0.2s ease;
 }
 .btn-gradient:hover {
-  background: linear-gradient(135deg, #8b85ff 0%, #7b74ff 50%, #6c63ff 100%);
+  background: linear-gradient(135deg, var(--color-primary-hover) 0%, var(--color-primary) 100%);
   box-shadow:
-    0 6px 20px rgba(108, 99, 255, 0.38),
-    0 2px 6px rgba(108, 99, 255, 0.25);
+    0 6px 20px rgba(147, 130, 255, 0.38),
+    0 2px 6px rgba(147, 130, 255, 0.25);
   transform: translateY(-1px);
 }
 
@@ -4265,9 +4271,9 @@ textarea {
 .gradient-judge {
   background: linear-gradient(
     135deg,
-    rgba(108, 99, 255, 0.12) 0%,
+    rgba(147, 130, 255, 0.12) 0%,
     rgba(45, 127, 168, 0.08) 50%,
-    rgba(108, 99, 255, 0.06) 100%
+    rgba(147, 130, 255, 0.06) 100%
   );
 }
 
@@ -4325,10 +4331,10 @@ textarea {
 .btn-shimmer {
   background: linear-gradient(
     90deg,
-    #6c63ff 0%,
-    #9b95ff 40%,
-    #6c63ff 60%,
-    #5048cc 100%
+    var(--color-primary) 0%,
+    #b5acff 40%,
+    var(--color-primary) 60%,
+    var(--color-primary-hover) 100%
   );
   background-size: 200% auto;
   animation: shimmer 3s linear infinite;
