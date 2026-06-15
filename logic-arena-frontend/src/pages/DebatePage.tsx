@@ -831,7 +831,7 @@ function WaitingView({
   const isHost = room.host === mySocketId;
   const canStart = !!room.proPlayer && !!room.conPlayer;
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+    <div className="topic-selection-view" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
       <p style={{ color: "var(--color-text-muted)", fontSize: "13px" }}>
         찬성P, 반대P 두 명이 모이면 방장이 게임을 시작합니다.
       </p>
@@ -892,6 +892,7 @@ function WaitingView({
       ) : (
         <NotMyTurnBanner message="방장이 게임을 시작할 때까지 기다려 주세요" />
       )}
+      <div className="topic-selection-watermark-slot" aria-hidden="true" />
     </div>
   );
 }
@@ -1100,9 +1101,7 @@ function TopicSelectionView({
       {!isPlayer && (
         <NotMyTurnBanner message="플레이어들이 진영을 선택 중입니다..." />
       )}
-      {room.topic && (
-        <div className="topic-selection-watermark-slot" aria-hidden="true" />
-      )}
+      <div className="topic-selection-watermark-slot" aria-hidden="true" />
     </div>
   );
 }
