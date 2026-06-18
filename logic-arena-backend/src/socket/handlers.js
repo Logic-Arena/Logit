@@ -197,16 +197,20 @@ async function finalizePeerVoting(io, roomId) {
     return;
   }
 
-  // 관전자 투표 비율로 peerScore 정규화 (최대 30점)
-  // 실제 투표 합산 기준 비례 배분 — 관전자 0명이면 peerScore = 0
+  // 관전자 유무에 따라 점수 체계 분기
+  // - 관전자 있음: aiScore = total × 0.7 (70점) + peerScore 비율 30점 → 합계 100점
+  // - 관전자 없음: finalScore = total 그대로 (AI 채점 100점 만점)
   const pv = room.peerVotes;
   const totalVotesCast = pv.pro + pv.con;
   result.scores = result.scores.map((s) => {
+    if (totalVotesCast === 0) {
+      return { ...s, peerVotes: 0, peerScore: 0, aiScore: s.total, finalScore: s.total };
+    }
     const votes = pv[s.vote] ?? 0;
-    const peerScore = s.type === 'player' && totalVotesCast > 0
+    const peerScore = s.type === 'player'
       ? Math.round((votes / totalVotesCast) * 30)
       : 0;
-    const aiScore = s.aiScore ?? Math.round(s.total * 0.7);
+    const aiScore = Math.round(s.total * 0.7);
     return { ...s, peerVotes: votes, peerScore, aiScore, finalScore: aiScore + peerScore };
   });
 
