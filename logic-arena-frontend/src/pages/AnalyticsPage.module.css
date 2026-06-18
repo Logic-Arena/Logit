@@ -268,7 +268,7 @@
 .recommendationCard {
   background: linear-gradient(to right, var(--color-primary-soft), var(--color-surface));
   border: 1px solid rgba(108, 99, 255, 0.2);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   padding: 20px 24px; /* Slightly tighter vertical padding */
   display: flex;
   flex-direction: column;
@@ -307,7 +307,7 @@
   color: var(--color-primary);
   background-color: var(--color-primary-soft);
   padding: 4px 10px;
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
   border: 1px solid rgba(108, 99, 255, 0.4);
   display: inline-block;
   margin-right: 4px;
@@ -324,7 +324,7 @@
   background-color: var(--color-primary);
   color: #fff;
   padding: 8px 16px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   font-size: var(--text-subtitle);
   font-weight: 600;
   white-space: nowrap;
@@ -344,7 +344,7 @@
     rgba(108, 99, 255, 0.08) 100%
   );
   border: 0.5px solid rgba(255, 255, 255, 0.4);
-  border-radius: 16px;
+  border-radius: var(--radius-md);
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -385,7 +385,7 @@
 
 .filterBtn {
   padding: 6px 16px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   font-size: var(--text-subtitle);
   font-weight: 500;
   transition: all 0.15s ease-in-out;
@@ -630,7 +630,7 @@
   font-size: var(--text-caption);
   font-weight: 600;
   padding: 4px 12px;
-  border-radius: 9999px;
+  border-radius: var(--radius-full);
 }
 
 /* ── Recent Growth Summary ────────────────────────────────── */
@@ -671,7 +671,7 @@
 .recentBannerCard {
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 14px;
+  border-radius: var(--radius-md);
   padding: 18px 20px;
   display: flex;
   flex-direction: column;
@@ -702,7 +702,7 @@
   font-size: var(--text-caption);
   font-weight: 600;
   padding: 2px 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   flex-shrink: 0;
   background: var(--color-surface-2);
   color: var(--color-text-muted);
@@ -734,7 +734,7 @@
   font-size: var(--text-caption);
   font-weight: 600;
   padding: 2px 8px;
-  border-radius: 9999px;
+  border-radius: var(--radius-full);
   flex-shrink: 0;
   background: rgba(255, 255, 255, 0.08);
   border: 0.5px solid rgba(255, 255, 255, 0.3);
@@ -770,10 +770,10 @@
   font-size: var(--text-body);
   font-weight: 700;
   color: var(--color-pro);
-  background: rgba(52, 211, 153, 0.12);
+  background: var(--color-pro-bg);
   padding: 3px 10px;
-  border-radius: 9999px;
-  border: 0.5px solid rgba(52, 211, 153, 0.4);
+  border-radius: var(--radius-full);
+  border: 0.5px solid var(--color-pro);
   backdrop-filter: blur(10px);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.6),
@@ -786,7 +786,7 @@
   color: var(--color-con);
   background: rgba(220, 38, 38, 0.12);
   padding: 3px 10px;
-  border-radius: 9999px;
+  border-radius: var(--radius-full);
   border: 0.5px solid rgba(220, 38, 38, 0.4);
   backdrop-filter: blur(10px);
   box-shadow:
@@ -801,7 +801,7 @@
   justify-content: center;
   width: 32px;
   height: 32px;
-  border-radius: 9999px;
+  border-radius: var(--radius-full);
   font-weight: 700;
   font-size: 14px;
   flex-shrink: 0;
@@ -829,7 +829,7 @@
   color: var(--color-text-muted);
   background: transparent;
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 6px 12px;
   cursor: pointer;
   transition: background-color 0.15s, color 0.15s;
@@ -856,7 +856,7 @@
     rgba(108, 99, 255, 0.03) 100%
   );
   border: 2px dashed var(--color-border);
-  border-radius: 16px;
+  border-radius: var(--radius-md);
   text-align: center;
   transition: all 0.3s ease;
 }
@@ -881,7 +881,7 @@
     var(--color-primary-soft) 0%,
     rgba(248, 250, 252, 0.4) 100%
   );
-  border-radius: 50%;
+  border-radius: var(--radius-circle);
   border: 2px solid rgba(108, 99, 255, 0.15);
   position: relative;
   animation: emptyIconFloat 3s ease-in-out infinite;
@@ -891,7 +891,7 @@
   content: '';
   position: absolute;
   inset: -8px;
-  border-radius: 50%;
+  border-radius: var(--radius-circle);
   background: linear-gradient(135deg,
     rgba(108, 99, 255, 0.1) 0%,
     transparent 100%
