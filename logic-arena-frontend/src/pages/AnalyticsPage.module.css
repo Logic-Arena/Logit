@@ -326,7 +326,7 @@
   padding: 8px 16px;
   border-radius: var(--radius-sm);
   font-size: var(--text-subtitle);
-  font-weight: 600;
+  font-weight: 400;
   white-space: nowrap;
   transition: background-color 0.15s;
   border: none;

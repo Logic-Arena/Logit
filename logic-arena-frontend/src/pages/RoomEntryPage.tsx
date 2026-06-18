@@ -28,48 +28,49 @@ export function RoomEntryPage() {
 
   return (
     <div className="page form-page">
-      <h1 className="page__title">토론방 입장</h1>
+      <div className="form-page__overlay" onClick={() => navigate('/')} />
       <div className="form-card">
-      <form className="form-card__body" onSubmit={handleEnter}>
-        <div className="form-field">
-          <label className="form-label" htmlFor="nickname">닉네임</label>
-          <input
-            id="nickname"
-            className="form-input"
-            placeholder="사용할 닉네임을 입력하세요"
-            value={username}
-            onChange={(e) => setLocalUsername(e.target.value)}
-            autoFocus
-          />
-          {error && (
-            <span style={{ fontSize: '12px', color: 'var(--color-danger)' }}>{error}</span>
-          )}
-        </div>
-
-        {hasPassword && (
+        <form className="form-card__body" onSubmit={handleEnter}>
+          <h1 className="page__title form-card__title">토론방 입장</h1>
           <div className="form-field">
-            <label className="form-label" htmlFor="room-password">비밀번호</label>
+            <label className="form-label" htmlFor="nickname">닉네임</label>
             <input
-              id="room-password"
+              id="nickname"
               className="form-input"
-              type="password"
-              placeholder="방 비밀번호를 입력하세요"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoFocus={false}
+              placeholder="사용할 닉네임을 입력하세요"
+              value={username}
+              onChange={(e) => setLocalUsername(e.target.value)}
+              autoFocus
             />
+            {error && (
+              <span style={{ fontSize: '12px', color: 'var(--color-danger)' }}>{error}</span>
+            )}
           </div>
-        )}
 
-        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-          <button type="button" className="btn btn--ghost" onClick={() => navigate('/')}>
-            취소
-          </button>
-          <button type="submit" className="btn btn--primary">
-            입장하기
-          </button>
-        </div>
-      </form>
+          {hasPassword && (
+            <div className="form-field">
+              <label className="form-label" htmlFor="room-password">비밀번호</label>
+              <input
+                id="room-password"
+                className="form-input"
+                type="password"
+                placeholder="방 비밀번호를 입력하세요"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoFocus={false}
+              />
+            </div>
+          )}
+
+          <div className="form-card__footer">
+            <button type="button" className="btn btn--ghost" onClick={() => navigate('/')}>
+              취소
+            </button>
+            <button type="submit" className="btn btn--primary">
+              입장하기
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

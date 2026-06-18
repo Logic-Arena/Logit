@@ -8,6 +8,7 @@ import { useUserStore } from "../store/useUserStore";
 import { PhaseTimer } from "../components/debate/PhaseTimer";
 import { SubmitPanel } from "../components/debate/SubmitPanel";
 import { Popover } from "../components/common/Popover";
+import DotSphereLoader from "../components/common/DotSphereLoader";
 import type { Room, Phase, PlayerRole, RoomContent } from "../types/room";
 
 // ─── 상수 ──────────────────────────────────────────────────────
@@ -768,10 +769,8 @@ function JudgingWaitView({
         <div className="judging-wait__side-chip judging-wait__side-chip--pro">
           찬성
         </div>
-        <div className="judging-wait__scale-stage" aria-hidden="true">
-          <div className="judging-wait__ring" />
-          <div className="judging-wait__scale">⚖️</div>
-          <div className="judging-wait__beam" />
+        <div className="judging-wait__scale-stage">
+          <DotSphereLoader size={240} hue={243} speed={0.008} wobbleAmount={0.08} />
         </div>
         <div className="judging-wait__side-chip judging-wait__side-chip--con">
           반대
@@ -1766,18 +1765,20 @@ export function DebatePage() {
   return (
     <div className="debate-page">
       <div className="debate-main">
-        {/* 모바일 헤더 */}
-        <div className="debate-mobile-header">
-          <button
-            className="sidebar-toggle-btn"
-            onClick={() => setSidebarOpen((v) => !v)}
-          >
-            정보 ▸
-          </button>
-          {room.topic && (
-            <span className="debate-mobile-header__topic">{room.topic}</span>
-          )}
-        </div>
+        {/* 모바일 헤더 (대기/주제선택 phase에서는 숨김) */}
+        {phase !== "waiting" && phase !== "topic_selection" && (
+          <div className="debate-mobile-header">
+            <button
+              className="sidebar-toggle-btn"
+              onClick={() => setSidebarOpen((v) => !v)}
+            >
+              정보 ▸
+            </button>
+            {room.topic && (
+              <span className="debate-mobile-header__topic">{room.topic}</span>
+            )}
+          </div>
+        )}
 
         {/* 통합 페이즈 헤더 */}
         <div
