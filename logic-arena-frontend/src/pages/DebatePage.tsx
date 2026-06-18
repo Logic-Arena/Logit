@@ -549,7 +549,7 @@ function DebateChatView({
               done={!!content.con_argument}
               isMe={myRole === "con_player"}
             />
-           {!isHumanMode && <StatusChip label="찬성AI" done={!!content.pro_ai_argument} />}
+            {!isHumanMode && <StatusChip label="찬성AI" done={!!content.pro_ai_argument} />}
             {!isHumanMode && <StatusChip label="반대AI" done={!!content.con_ai_argument} />}
           </div>
         )}
@@ -1749,7 +1749,7 @@ export function DebatePage() {
         </p>
         <button
           className="btn btn--ghost"
-          onClick={() => navigate(`/rooms/${roomId}`)}
+          onClick={() => navigate(`/rooms/${roomId}`, { state: { hasPassword: true } })}
         >
           다시 입장하기
         </button>

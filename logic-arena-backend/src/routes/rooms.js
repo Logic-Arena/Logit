@@ -15,16 +15,13 @@ router.post('/', (req, res) => {
   if (!title || typeof title !== 'string' || !title.trim()) {
     return res.status(400).json({ error: 'title은 필수입니다' });
   }
-
   const resolvedMode = VALID_MODES.includes(mode) ? mode : 'free_debate';
   const resolvedTopicMode = VALID_TOPIC_MODES.includes(topicMode) ? topicMode : 'ai_auto';
-
   if (resolvedTopicMode === 'manual') {
     if (!topic || typeof topic !== 'string' || !topic.trim()) {
       return res.status(400).json({ error: '직접 입력 시 주제는 필수입니다' });
     }
   }
-
   const room = createRoom({
     title: title.trim(),
     mode: resolvedMode,

@@ -90,13 +90,12 @@ export function createRoom({ title, mode = 'ai_debate', topicMode = 'ai_auto', t
     phase: 'waiting',
     phaseEndAt: null,
     createdAt: new Date(),
+    status: 'pending', // 방장이 아직 입장하지 않은 상태. 방장 입장 시 'active'로 전환
 
     host: null,        // socketId
     proPlayer: null,   // { socketId, userId, username }
     conPlayer: null,   // { socketId, userId, username }
     observers: new Map(), // socketId -> { userId, username }
-
-    // 진영 선택
     sideSelectionAttempts: 0,
     pendingSelections: new Map(), // socketId -> 'pro' | 'con'
 
@@ -137,7 +136,9 @@ export function createRoom({ title, mode = 'ai_debate', topicMode = 'ai_auto', t
 }
 
 export function getAllRooms() {
-  return Array.from(rooms.values()).map(serializeRoom);
+  return Array.from(rooms.values())
+    .filter((room) => room.status !== 'pending')
+    .map(serializeRoom);
 }
 
 export function getRoom(id) {
@@ -171,6 +172,10 @@ export function addPlayerToRoom(roomId, socketId, { userId, username, password }
     room.proPlayer = { socketId, userId, username };
     room.host = socketId;
     role = 'pro_player';
+    // 방장이 처음 입장하는 순간 방을 활성화 (방 목록에 노출)
+    if (room.status === 'pending') {
+      room.status = 'active';
+    }
   } else if (!room.conPlayer) {
     room.conPlayer = { socketId, userId, username };
     role = 'con_player';
@@ -191,14 +196,28 @@ export function removePlayerFromRoom(roomId, socketId) {
   if (room.proPlayer?.socketId === socketId) {
     removedRole = 'pro_player';
     room.proPlayer = null;
-    // 게임 대기 중이면 첫 번째 관전자를 proPlayer로 승격
+    // 게임 대기 중이면 conPlayer를 먼저 proPlayer(방장)로 승격, 없으면 관전자 승격
     if (room.phase === 'waiting') {
-      const first = room.observers.entries().next();
-      if (!first.done) {
-        const [sid, data] = first.value;
-        room.observers.delete(sid);
-        room.proPlayer = { socketId: sid, ...data };
-        room.host = sid;
+      if (room.conPlayer) {
+        room.proPlayer = room.conPlayer;
+        room.conPlayer = null;
+        room.host = room.proPlayer.socketId;
+
+        // conPlayer 자리가 비었으니 관전자 중 한 명을 conPlayer로 승격
+        const first = room.observers.entries().next();
+        if (!first.done) {
+          const [sid, data] = first.value;
+          room.observers.delete(sid);
+          room.conPlayer = { socketId: sid, ...data };
+        }
+      } else {
+        const first = room.observers.entries().next();
+        if (!first.done) {
+          const [sid, data] = first.value;
+          room.observers.delete(sid);
+          room.proPlayer = { socketId: sid, ...data };
+          room.host = sid;
+        }
       }
     }
   } else if (room.conPlayer?.socketId === socketId) {
@@ -383,6 +402,7 @@ function serializeRoom(room) {
     result: room.result,
     createdAt: room.createdAt,
     sideSelectionAttempts: room.sideSelectionAttempts,
+    status: room.status,
   };
 }
 
