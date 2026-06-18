@@ -57,6 +57,11 @@ export function Header() {
         <div className="header-user">
           {user && (
             <>
+              {user.role === 'teacher' && (
+                <Link to="/teacher" className="btn btn--ghost header-user__teacher-btn">
+                  대시보드
+                </Link>
+              )}
               <Link to="/mypage" className="header-user__profile">
                 {user.avatarUrl ? (
                   <img src={user.avatarUrl} alt={user.name} className="header-user__avatar-img" />

@@ -10,6 +10,14 @@ export interface AuthUserStats {
   badges: unknown[];
 }
 
+export interface TeacherSettings {
+  enabled: boolean;
+  vocab: boolean;
+  evidenceLimit: boolean;
+  rebuttalLimit: boolean;
+  shortGameMode?: boolean;
+}
+
 export interface AuthUser {
   id: number;
   provider: string;
@@ -17,7 +25,9 @@ export interface AuthUser {
   email: string | null;
   name: string | null;
   profile_image?: string | null;
+  role?: 'student' | 'teacher';
   stats?: AuthUserStats | null;
+  teacher_settings?: TeacherSettings | null;
 }
 
 interface AuthState {

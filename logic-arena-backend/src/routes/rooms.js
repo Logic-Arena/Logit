@@ -11,7 +11,7 @@ const VALID_MODES = ['free_debate', 'ai_debate', 'human_debate'];
 const VALID_TOPIC_MODES = ['manual', 'ai_auto'];
 
 router.post('/', (req, res) => {
-  const { title, mode, topicMode, topic, password } = req.body;
+  const { title, mode, topicMode, topic, password, handicap } = req.body;
   if (!title || typeof title !== 'string' || !title.trim()) {
     return res.status(400).json({ error: 'title은 필수입니다' });
   }
@@ -28,6 +28,7 @@ router.post('/', (req, res) => {
     topicMode: resolvedTopicMode,
     topic: resolvedTopicMode === 'manual' ? topic.trim() : null,
     password: password && typeof password === 'string' ? password.trim() || null : null,
+    handicap: handicap && typeof handicap === 'object' ? handicap : null,
   });
   const io = req.app.locals.io;
   io.emit('room_list', getAllRooms());

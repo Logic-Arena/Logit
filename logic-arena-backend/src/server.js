@@ -11,6 +11,7 @@ import historyRouter from './routes/history.js';
 import communityRouter from './routes/community.js';
 import trainingRouter from './routes/training.js';
 import adminRouter from './routes/admin.js';
+import teacherRouter from './routes/teacher.js';
 import { registerHandlers } from './socket/handlers.js';
 import { initializeSlots, startPollScheduler } from './scheduler/pollScheduler.js';
 
@@ -51,12 +52,14 @@ app.use('/debate-history', historyRouter);
 app.use('/community-topics', communityRouter);
 app.use('/training-recommendation', trainingRouter);
 app.use('/admin', adminRouter);
+app.use('/teacher', teacherRouter);
 app.use('/api/rooms', roomsRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/debate-history', historyRouter);
 app.use('/api/community-topics', communityRouter);
 app.use('/api/training-recommendation', trainingRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/teacher', teacherRouter);
 
 io.use((socket, next) => {
   socket.data.roomId = null;

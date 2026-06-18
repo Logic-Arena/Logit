@@ -403,6 +403,61 @@
   padding-bottom: 32px;
 }
 
+/* ── Class join ───────────────────────────────────────────── */
+
+.classJoinCard {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  margin-bottom: 20px;
+}
+
+.classJoinTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 10px;
+}
+
+.classJoinRow {
+  display: flex;
+  gap: 10px;
+}
+
+.classJoinInput {
+  flex: 1;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-size: 16px;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+  color: var(--color-text);
+  outline: none;
+  text-transform: uppercase;
+  font-family: monospace;
+}
+
+.classJoinInput:focus {
+  border-color: var(--color-primary);
+}
+
+.classJoinSuccess {
+  font-size: 13px;
+  color: #4ade80;
+  margin-top: 8px;
+}
+
+.classJoinError {
+  font-size: 13px;
+  color: #f87171;
+  margin-top: 8px;
+}
+
 /* ── Skeleton ─────────────────────────────────────────────── */
 
 .skeleton {

@@ -14,6 +14,7 @@ import { DebatePage } from "./pages/DebatePage";
 import { AnalyticsPage } from "./pages/AnalyticsPage";
 import { MyPage } from "./pages/MyPage";
 import { AuthCallbackPage } from "./pages/AuthCallbackPage";
+import { TeacherPage } from "./pages/TeacherPage";
 
 export default function App() {
   return (
@@ -37,6 +38,7 @@ export default function App() {
               <Route path="rooms/:roomId/debate" element={<DebatePage />} />
               <Route path="analytics" element={<AnalyticsPage />} />
               <Route path="mypage" element={<MyPage />} />
+              <Route path="teacher" element={<TeacherPage />} />
             </Route>
           </Route>
         </Routes>

@@ -57,6 +57,8 @@ export function createHybridUser(authUser: AuthUser): User {
     id: authUser.id.toString(),
     name: authUser.name || authUser.username || '이름없음',
     email: authUser.email || '',
+    role: authUser.role ?? 'student',
+    teacher_settings: authUser.teacher_settings ?? null,
     tier: stats?.tier ?? '브론즈 5',
     tierRank: slots * 20,
     nextTier: tierIdx < TIER_LIST.length - 1 ? TIER_LIST[tierIdx + 1] : undefined,
@@ -110,6 +112,7 @@ export async function createRoom(
   topicMode: TopicMode = 'ai_auto',
   topic?: string,
   password?: string,
+  handicap?: Record<string, boolean> | null,
 ): Promise<Room> {
   const res = await fetch(`${BASE}/rooms`, {
     method: 'POST',
@@ -118,6 +121,7 @@ export async function createRoom(
       title, mode, topicMode,
       ...(topic !== undefined && { topic }),
       ...(password !== undefined && { password }),
+      ...(handicap !== undefined && handicap !== null && { handicap }),
     }),
   });
 
@@ -134,6 +138,7 @@ export async function signupLocal(payload: {
   password: string;
   name?: string;
   email?: string;
+  teacherCode?: string;
 }): Promise<AuthResponse> {
   const res = await fetch(`${BASE}/auth/signup`, {
     method: 'POST',
@@ -158,6 +163,7 @@ export interface DebateHistoryItem {
   evidence: number;
   persuasion: number;
   rebuttal: number;
+  consistency: number;
   advice: string | null;
   result: 'win' | 'lose' | 'draw';
   played_at: string;
@@ -249,6 +255,101 @@ export interface TrainingRecommendation {
 export async function getTrainingRecommendation(): Promise<TrainingRecommendation | null> {
   const res = await authedFetch(`${BASE}/training-recommendation`, { headers: authHeaders() });
   if (!res.ok) return null;
+  return res.json();
+}
+
+// ─── Teacher API ─────────────────────────────────────────────
+
+export interface ClassInfo {
+  id: number;
+  name: string;
+  classCode: string;
+  memberCount: number;
+  createdAt: string;
+}
+
+export interface StudentStat {
+  userId: number;
+  name: string;
+  joinedAt: string;
+  tier: string;
+  rankPoint: number;
+  totalGames: number;
+  winCount: number;
+  avgScore: number;
+  avgLogic: number;
+  avgEvidence: number;
+  avgPersuasion: number;
+  avgRebuttal: number;
+  avgConsistency: number;
+  growthRate: number;
+  recentDebates: { id: number; topic: string; result: string; score: number; playedAt: string }[];
+}
+
+export interface ClassSummary {
+  totalDebates: number;
+  avgScore: number;
+  topStudents: { userId: number; name: string; avgScore: number; debateCount: number }[];
+  avgByCategory: { logic: number; evidence: number; persuasion: number; rebuttal: number; consistency: number };
+  weakestCategory: { key: string; avg: number } | null;
+  recentDebates: { topic: string; result: string; score: number; studentName: string; playedAt: string }[];
+}
+
+export async function getTeacherClasses(token: string): Promise<ClassInfo[]> {
+  const res = await fetch(`${BASE}/teacher/classes`, {
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+  });
+  if (!res.ok) throw new Error('학급 목록 로드 실패');
+  return res.json();
+}
+
+export async function createClass(token: string, name: string): Promise<ClassInfo> {
+  const res = await fetch(`${BASE}/teacher/classes`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error ?? '학급 생성 실패');
+  }
+  return res.json();
+}
+
+export async function deleteClass(token: string, classId: number): Promise<void> {
+  const res = await fetch(`${BASE}/teacher/classes/${classId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error('학급 삭제 실패');
+}
+
+export async function getClassStudents(token: string, classId: number): Promise<StudentStat[]> {
+  const res = await fetch(`${BASE}/teacher/classes/${classId}/students`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error('학생 목록 로드 실패');
+  return res.json();
+}
+
+export async function getClassSummary(token: string, classId: number): Promise<ClassSummary> {
+  const res = await fetch(`${BASE}/teacher/classes/${classId}/summary`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error('통계 로드 실패');
+  return res.json();
+}
+
+export async function joinClass(token: string, classCode: string): Promise<{ ok: boolean; alreadyJoined: boolean; className: string }> {
+  const res = await fetch(`${BASE}/teacher/join`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ classCode }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error ?? '학급 참가 실패');
+  }
   return res.json();
 }
 
