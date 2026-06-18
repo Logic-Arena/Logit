@@ -185,9 +185,9 @@ async function handleTopicSelectionEnd(io, roomId) {
 
 async function finalizePeerVoting(io, roomId) {
   const room = getRoom(roomId);
-  if (!room || room.phase !== 'peer_voting') return;
+  // 이미 종료됐으면 재진입 차단 (타임아웃과 조기 완료 중복 방지, 관전자 0명 직접 호출도 허용)
+  if (!room || room.phase === 'ended') return;
 
-  // 이중 실행 방지: 페이즈를 즉시 변경해 재진입 차단
   setPhase(roomId, 'ended');
   clearPhaseTimer(roomId);
 
@@ -197,12 +197,17 @@ async function finalizePeerVoting(io, roomId) {
     return;
   }
 
-  // 동료 평가 점수 병합
+  // 관전자 투표 비율로 peerScore 정규화 (최대 30점)
+  // 실제 투표 합산 기준 비례 배분 — 관전자 0명이면 peerScore = 0
   const pv = room.peerVotes;
+  const totalVotesCast = pv.pro + pv.con;
   result.scores = result.scores.map((s) => {
-    const peerScore = s.type === 'player' ? (pv[s.vote] ?? 0) * 10 : 0;
+    const votes = pv[s.vote] ?? 0;
+    const peerScore = s.type === 'player' && totalVotesCast > 0
+      ? Math.round((votes / totalVotesCast) * 30)
+      : 0;
     const aiScore = s.aiScore ?? Math.round(s.total * 0.7);
-    return { ...s, peerVotes: pv[s.vote] ?? 0, peerScore, aiScore, finalScore: aiScore + peerScore };
+    return { ...s, peerVotes: votes, peerScore, aiScore, finalScore: aiScore + peerScore };
   });
 
   // winner는 인간 플레이어의 finalScore 기준으로 재계산
@@ -305,8 +310,12 @@ async function handleAiAutoPhase(io, roomId, phase) {
       const currentRoom = getRoom(roomId);
       if (!currentRoom || currentRoom.phase === 'ended') return;
       setResult(roomId, result);
-      // peer_voting 페이즈로 진행 (debate_ended는 투표 완료 후 emit)
-      await startPhase(io, roomId, 'peer_voting');
+      // 관전자가 있을 때만 peer_voting, 없으면 즉시 종료
+      if (currentRoom.observers.size > 0) {
+        await startPhase(io, roomId, 'peer_voting');
+      } else {
+        await finalizePeerVoting(io, roomId);
+      }
       return;
     }
     default:
@@ -654,7 +663,7 @@ export function registerHandlers(io, socket) {
     }
   });
 
-  // ── peer_vote (동료 평가 투표) ─────────────────────────────
+  // ── peer_vote (관전자 전용 동료 평가 투표) ───────────────────
   socket.on('peer_vote', ({ votedFor }) => {
     const roomId = socket.data.roomId;
     if (!roomId) return;
@@ -662,12 +671,14 @@ export function registerHandlers(io, socket) {
     if (!room || room.phase !== 'peer_voting') return;
     if (!['pro', 'con'].includes(votedFor)) return;
 
+    // 관전자만 투표 가능
+    if (!room.observers.has(socket.id)) return;
     if (room.peerVotes.voters.has(socket.id)) return; // 중복 투표 방지
 
     room.peerVotes[votedFor]++;
     room.peerVotes.voters.add(socket.id);
 
-    const totalVoters = (room.proPlayer ? 1 : 0) + (room.conPlayer ? 1 : 0) + room.observers.size;
+    const totalVoters = room.observers.size;
     io.to(roomId).emit('peer_vote_progress', {
       voted: room.peerVotes.voters.size,
       total: totalVoters,

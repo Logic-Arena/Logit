@@ -1118,6 +1118,8 @@ function PeerVoteView({
 }) {
   const [voted, setVoted] = useState(false);
   const [voteProgress, setVoteProgress] = useState({ voted: 0, total: 0, proVotes: 0, conVotes: 0 });
+  const isObserver = myRole === "observer";
+  const observerCount = room.observers?.length ?? 0;
 
   useEffect(() => {
     const handleProgress = (data: { voted: number; total: number; proVotes: number; conVotes: number }) => {
@@ -1130,7 +1132,7 @@ function PeerVoteView({
   }, []);
 
   const handleVote = (votedFor: "pro" | "con") => {
-    if (voted) return;
+    if (voted || !isObserver) return;
     socket.emit("peer_vote", { votedFor });
     setVoted(true);
   };
@@ -1149,7 +1151,7 @@ function PeerVoteView({
       }}
     >
       <div style={{ fontSize: "40px" }}>🗳️</div>
-      <div style={{ fontSize: "20px", fontWeight: 700 }}>동료 평가 투표</div>
+      <div style={{ fontSize: "20px", fontWeight: 700 }}>관전자 투표</div>
       <p
         style={{
           fontSize: "14px",
@@ -1159,81 +1161,91 @@ function PeerVoteView({
           margin: 0,
         }}
       >
-        어느 팀의 토론이 더 설득력 있었나요?
+        {isObserver
+          ? "어느 팀의 토론이 더 설득력 있었나요?"
+          : `관전자 ${observerCount}명이 투표하는 중입니다...`}
       </p>
 
-      {/* 줄다리기 바 */}
-      <div style={{ width: "100%", maxWidth: "440px" }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            marginBottom: "6px",
-            fontSize: "12px",
-            fontWeight: 600,
-          }}
-        >
-          <span style={{ color: "var(--color-primary)" }}>찬성팀</span>
-          <span style={{ color: "var(--color-con-orange)" }}>반대팀</span>
-        </div>
-        <div
-          style={{
-            height: "18px",
-            borderRadius: "9px",
-            overflow: "hidden",
-            background: "var(--color-con-orange)",
-            display: "flex",
-          }}
-        >
+      {/* 줄다리기 바 — 관전자에게만 실시간 투표 현황 표시 */}
+      {isObserver && (
+        <div style={{ width: "100%", maxWidth: "440px" }}>
           <div
             style={{
-              width: `${proRatio}%`,
-              background: "var(--color-primary)",
-              transition: "width 0.4s ease",
-              height: "100%",
-            }}
-          />
-        </div>
-      </div>
-
-      {!voted ? (
-        <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", justifyContent: "center" }}>
-          <button
-            className="btn btn--primary"
-            onClick={() => handleVote("pro")}
-            style={{ minWidth: "180px" }}
-          >
-            찬성팀이 더 설득력 있었다
-          </button>
-          <button
-            className="btn"
-            onClick={() => handleVote("con")}
-            style={{
-              minWidth: "180px",
-              background: "rgba(212,98,46,0.12)",
-              border: "1px solid var(--color-con-orange)",
-              color: "var(--color-con-orange)",
-              cursor: "pointer",
-              borderRadius: "var(--radius-sm)",
-              padding: "8px 16px",
+              display: "flex",
+              justifyContent: "space-between",
+              marginBottom: "6px",
+              fontSize: "12px",
               fontWeight: 600,
             }}
           >
-            반대팀이 더 설득력 있었다
-          </button>
-        </div>
-      ) : (
-        <div style={{ textAlign: "center" }}>
-          <p style={{ fontWeight: 700, color: "var(--color-success, #4caf50)", margin: "0 0 4px" }}>
-            투표 완료 ✓
-          </p>
-          <p style={{ fontSize: "13px", color: "var(--color-text-muted)", margin: 0 }}>
-            결과를 기다리는 중...
-          </p>
+            <span style={{ color: "var(--color-primary)" }}>찬성팀</span>
+            <span style={{ color: "var(--color-con-orange)" }}>반대팀</span>
+          </div>
+          <div
+            style={{
+              height: "18px",
+              borderRadius: "9px",
+              overflow: "hidden",
+              background: "var(--color-con-orange)",
+              display: "flex",
+            }}
+          >
+            <div
+              style={{
+                width: `${proRatio}%`,
+                background: "var(--color-primary)",
+                transition: "width 0.4s ease",
+                height: "100%",
+              }}
+            />
+          </div>
         </div>
       )}
 
-      {voteProgress.total > 0 && (
+      {isObserver ? (
+        !voted ? (
+          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", justifyContent: "center" }}>
+            <button
+              className="btn btn--primary"
+              onClick={() => handleVote("pro")}
+              style={{ minWidth: "180px" }}
+            >
+              찬성팀이 더 설득력 있었다
+            </button>
+            <button
+              className="btn"
+              onClick={() => handleVote("con")}
+              style={{
+                minWidth: "180px",
+                background: "rgba(212,98,46,0.12)",
+                border: "1px solid var(--color-con-orange)",
+                color: "var(--color-con-orange)",
+                cursor: "pointer",
+                borderRadius: "var(--radius-sm)",
+                padding: "8px 16px",
+                fontWeight: 600,
+              }}
+            >
+              반대팀이 더 설득력 있었다
+            </button>
+          </div>
+        ) : (
+          <div style={{ textAlign: "center" }}>
+            <p style={{ fontWeight: 700, color: "var(--color-success, #4caf50)", margin: "0 0 4px" }}>
+              투표 완료 ✓
+            </p>
+            <p style={{ fontSize: "13px", color: "var(--color-text-muted)", margin: 0 }}>
+              결과를 기다리는 중...
+            </p>
+          </div>
+        )
+      ) : (
+        <p style={{ fontSize: "13px", color: "var(--color-text-muted)", margin: 0 }}>
+          AI 채점 결과를 집계하는 중입니다...
+        </p>
+      )}
+
+      {isObserver && voteProgress.total > 0 && (
         <p style={{ fontSize: "13px", color: "var(--color-text-muted)", margin: 0 }}>
           {voteProgress.voted} / {voteProgress.total}명 투표 완료
         </p>
