@@ -24,6 +24,7 @@ export const PHASE_DURATION_MS = {
   final_argument: 60_000,  // 1분
   judging: 30_000,         // 30초
   peer_voting: 30_000,     // 동료 평가 투표 (30초)
+  ended: 0,                // 종료 페이즈 — 타이머 없음 (phaseEndAt = null)
 };
 
 const AI_PHASE_SEQUENCE = [
@@ -78,16 +79,32 @@ export function getNextPhase(currentPhase, mode = 'ai_debate') {
 
 // ── Room CRUD ────────────────────────────────────────────────
 
-export function getPhaseDuration(phase, shortGameMode = false) {
+const PHASE_TO_CATEGORY = {
+  arguing: 'arguing',
+  pro_p_rebuttal: 'rebuttal',
+  con_p_rebuttal: 'rebuttal',
+  pro_p_defense: 'defense',
+  con_p_defense: 'defense',
+  pro_p_counter: 'counter',
+  con_p_counter: 'counter',
+  final_argument: 'finalArgument',
+  peer_voting: 'peerVoting',
+};
+
+export function getPhaseDuration(phase, phaseDurations = null) {
   const base = PHASE_DURATION_MS[phase] ?? 30_000;
-  if (!shortGameMode) return base;
-  // AI-auto phases (< 30s) are not shortened — they resolve immediately
-  if (base <= 15_000) return base;
-  return Math.round(base * 0.5);
+  if (!phaseDurations) return base;
+  const cat = PHASE_TO_CATEGORY[phase];
+  if (!cat) return base;
+  const customSec = phaseDurations[cat];
+  if (customSec == null) return base;
+  // pro_p_rebuttal은 주제 읽기 시간 30초 보너스 유지
+  const bonus = phase === 'pro_p_rebuttal' ? 30_000 : 0;
+  return customSec * 1_000 + bonus;
 }
 
 export function createRoom({ title, mode = 'ai_debate', topicMode = 'ai_auto', topic = null, password = null, handicap = null }) {
-  const defaultHandicap = { enabled: true, vocab: true, evidenceLimit: true, rebuttalLimit: true, shortGameMode: false };
+  const defaultHandicap = { enabled: true, vocab: true, evidenceLimit: true, rebuttalLimit: true, phaseDurations: null };
   const resolvedHandicap = (handicap && typeof handicap === 'object') ? handicap : defaultHandicap;
   const id = uuidv4();
   const room = {
@@ -325,8 +342,8 @@ export function selectSide(roomId, socketId, side) {
 export function setPhase(roomId, phase) {
   const room = rooms.get(roomId);
   if (!room) return null;
-  const shortGameMode = room.handicap?.shortGameMode ?? false;
-  const dur = getPhaseDuration(phase, shortGameMode);
+  const phaseDurations = room.handicap?.phaseDurations ?? null;
+  const dur = getPhaseDuration(phase, phaseDurations);
   room.phase = phase;
   room.phaseEndAt = dur ? Date.now() + dur : null;
   return serializeRoom(room);
@@ -361,11 +378,6 @@ export function setContent(roomId, key, value) {
   if (!room) return false;
   room.content[key] = value;
   return true;
-}
-
-export function getContent(roomId) {
-  const room = rooms.get(roomId);
-  return room ? { ...room.content } : null;
 }
 
 export function setResult(roomId, result) {

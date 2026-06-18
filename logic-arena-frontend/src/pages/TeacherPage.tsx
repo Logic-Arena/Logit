@@ -21,26 +21,53 @@ type Tab = "classes" | "stats" | "settings";
 
 // ─── AI 설정 타입 ──────────────────────────────────────────────────
 
+interface PhaseDurations {
+  arguing: number;
+  rebuttal: number;
+  defense: number;
+  counter: number;
+  finalArgument: number;
+  peerVoting: number;
+}
+
 interface Handicap {
   enabled: boolean;
   vocab: boolean;
   evidenceLimit: boolean;
   rebuttalLimit: boolean;
-  shortGameMode: boolean;
+  phaseDurations: PhaseDurations | null;
 }
+
+const DEFAULT_PHASE_DURATIONS: PhaseDurations = {
+  arguing: 120,
+  rebuttal: 90,
+  defense: 90,
+  counter: 60,
+  finalArgument: 60,
+  peerVoting: 30,
+};
 
 const DEFAULT_HANDICAP: Handicap = {
   enabled: true,
   vocab: true,
   evidenceLimit: true,
   rebuttalLimit: true,
-  shortGameMode: false,
+  phaseDurations: null,
 };
 
 const PRESETS = [
-  { label: "쉬움", desc: "모든 제약 ON", value: { enabled: true, vocab: true, evidenceLimit: true, rebuttalLimit: true, shortGameMode: false } },
-  { label: "보통", desc: "어휘만 제한", value: { enabled: true, vocab: true, evidenceLimit: false, rebuttalLimit: false, shortGameMode: false } },
-  { label: "어려움", desc: "제약 없음", value: { enabled: false, vocab: false, evidenceLimit: false, rebuttalLimit: false, shortGameMode: false } },
+  { label: "쉬움", desc: "모든 제약 ON", value: { enabled: true, vocab: true, evidenceLimit: true, rebuttalLimit: true } },
+  { label: "보통", desc: "어휘만 제한", value: { enabled: true, vocab: true, evidenceLimit: false, rebuttalLimit: false } },
+  { label: "어려움", desc: "제약 없음", value: { enabled: false, vocab: false, evidenceLimit: false, rebuttalLimit: false } },
+];
+
+const PHASE_CONFIG: { key: keyof PhaseDurations; label: string; min: number; max: number; step: number }[] = [
+  { key: "arguing",       label: "입론",       min: 30,  max: 300, step: 15 },
+  { key: "rebuttal",      label: "반론",       min: 15,  max: 180, step: 15 },
+  { key: "defense",       label: "방어",       min: 15,  max: 180, step: 15 },
+  { key: "counter",       label: "재반론",     min: 15,  max: 120, step: 15 },
+  { key: "finalArgument", label: "마무리 발언", min: 15, max: 120, step: 15 },
+  { key: "peerVoting",    label: "동료 투표",  min: 15,  max: 60,  step: 15 },
 ];
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -437,25 +464,80 @@ function StudentDetailView({ student, onBack }: { student: StudentStat; onBack: 
   );
 }
 
+// ─── 단계별 시간 편집 컴포넌트 ───────────────────────────────────────
+
+function PhaseDurationEditor({
+  durations,
+  onChange,
+}: {
+  durations: PhaseDurations;
+  onChange: (d: PhaseDurations) => void;
+}) {
+  const setVal = (key: keyof PhaseDurations, val: number) =>
+    onChange({ ...durations, [key]: val });
+
+  return (
+    <div className={styles.phaseDurationTable}>
+      {PHASE_CONFIG.map(cfg => {
+        const val = durations[cfg.key];
+        const isDefault = val === DEFAULT_PHASE_DURATIONS[cfg.key];
+        const fmt = (s: number) => s >= 60 ? `${Math.floor(s / 60)}분 ${s % 60 > 0 ? `${s % 60}초` : ""}`.trim() : `${s}초`;
+        return (
+          <div key={cfg.key} className={styles.phaseRow}>
+            <div className={styles.phaseLabel}>
+              {cfg.label}
+              {isDefault && <span className={styles.phaseDefault}>기본</span>}
+            </div>
+            <div className={styles.phaseStepper}>
+              <button
+                className={styles.stepBtn}
+                disabled={val <= cfg.min}
+                onClick={() => setVal(cfg.key, Math.max(cfg.min, val - cfg.step))}
+              >−</button>
+              <span className={styles.stepVal}>{fmt(val)}</span>
+              <button
+                className={styles.stepBtn}
+                disabled={val >= cfg.max}
+                onClick={() => setVal(cfg.key, Math.min(cfg.max, val + cfg.step))}
+              >+</button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── Tab 3: AI 설정 ───────────────────────────────────────────────
 
-function SettingsTab({ token }: { token: string }) {
+function SettingsTab({ token, classes }: { token: string; classes: { id: number; name: string }[] }) {
+  const [selectedClassId, setSelectedClassId] = useState<number | "global">("global");
   const [handicap, setHandicap] = useState<Handicap>(DEFAULT_HANDICAP);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
-  useEffect(() => {
-    fetch(`${BASE}/teacher/settings`, {
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    })
+  const loadSettings = (classId: number | "global") => {
+    setLoading(true);
+    const url = classId === "global"
+      ? `${BASE}/teacher/settings`
+      : `${BASE}/teacher/classes/${classId}/settings`;
+    fetch(url, { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } })
       .then(r => r.json())
-      .then(d => setHandicap({ ...DEFAULT_HANDICAP, ...d }))
-      .catch(() => {})
+      .then(d => {
+        const raw = classId === "global" ? d : (d.settings ?? null);
+        setHandicap(raw ? { ...DEFAULT_HANDICAP, ...raw } : DEFAULT_HANDICAP);
+      })
+      .catch(() => setHandicap(DEFAULT_HANDICAP))
       .finally(() => setLoading(false));
-  }, [token]);
+  };
+
+  useEffect(() => { loadSettings(selectedClassId); }, [selectedClassId]);
 
   const update = (patch: Partial<Handicap>) => setHandicap(prev => ({ ...prev, ...patch }));
+
+  const durations = handicap.phaseDurations ?? DEFAULT_PHASE_DURATIONS;
+  const hasCustomDurations = handicap.phaseDurations !== null;
 
   const activePreset = PRESETS.findIndex(p =>
     p.value.enabled === handicap.enabled &&
@@ -467,14 +549,25 @@ function SettingsTab({ token }: { token: string }) {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const res = await fetch(`${BASE}/teacher/settings`, {
-        method: "PUT",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify(handicap),
-      });
-      if (!res.ok) throw new Error();
-      const saved = await res.json();
-      setHandicap({ ...DEFAULT_HANDICAP, ...saved });
+      if (selectedClassId === "global") {
+        const res = await fetch(`${BASE}/teacher/settings`, {
+          method: "PUT",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify(handicap),
+        });
+        if (!res.ok) throw new Error();
+        const saved = await res.json();
+        setHandicap({ ...DEFAULT_HANDICAP, ...saved });
+      } else {
+        const res = await fetch(`${BASE}/teacher/classes/${selectedClassId}/settings`, {
+          method: "PUT",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ settings: handicap }),
+        });
+        if (!res.ok) throw new Error();
+        const saved = await res.json();
+        setHandicap(saved.settings ? { ...DEFAULT_HANDICAP, ...saved.settings } : DEFAULT_HANDICAP);
+      }
       setShowToast(true);
       setTimeout(() => setShowToast(false), 2000);
     } catch {
@@ -488,8 +581,24 @@ function SettingsTab({ token }: { token: string }) {
 
   return (
     <div>
+      {/* 설정 대상 선택 */}
+      <div className={styles.classSelector}>
+        <button
+          className={`${styles.classSelectorBtn} ${selectedClassId === "global" ? styles["classSelectorBtn--active"] : ""}`}
+          onClick={() => setSelectedClassId("global")}
+        >전체 기본값</button>
+        {classes.map(c => (
+          <button
+            key={c.id}
+            className={`${styles.classSelectorBtn} ${selectedClassId === c.id ? styles["classSelectorBtn--active"] : ""}`}
+            onClick={() => setSelectedClassId(c.id)}
+          >{c.name}</button>
+        ))}
+      </div>
       <div className={styles.settingsDesc}>
-        여기서 설정한 AI 핸디캡은 내가 만드는 방에 자동으로 적용됩니다. 학생 화면에는 표시되지 않습니다.
+        {selectedClassId === "global"
+          ? "모든 반에 적용되는 기본값입니다. 반별 설정이 없을 때 이 값이 사용됩니다."
+          : "이 반에만 적용되는 설정입니다. 저장하면 전체 기본값보다 우선 적용됩니다."}
       </div>
 
       {/* AI 핸디캡 */}
@@ -522,21 +631,26 @@ function SettingsTab({ token }: { token: string }) {
         )}
       </div>
 
-      {/* 수업 시간 설정 */}
+      {/* 단계별 시간 설정 */}
       <div className={styles.card}>
         <div className={styles.masterRow}>
           <div>
-            <div className={styles.masterLabel}>수업 시간 단축 모드</div>
-            <div className={styles.masterDesc}>모든 발언·단계 시간이 50% 단축됩니다 (수업 45분 활용 최적화)</div>
+            <div className={styles.masterLabel}>단계별 시간 설정</div>
+            <div className={styles.masterDesc}>각 단계의 발언 시간을 직접 조정합니다</div>
           </div>
-          <ToggleSwitch checked={handicap.shortGameMode} onChange={v => update({ shortGameMode: v })} />
+          <ToggleSwitch
+            checked={hasCustomDurations}
+            onChange={v => update({ phaseDurations: v ? { ...DEFAULT_PHASE_DURATIONS } : null })}
+          />
         </div>
-        {handicap.shortGameMode && (
-          <div className={styles.shortGameInfo}>
-            <div className={styles.shortGameInfoItem}>준비 단계 30초 → 15초</div>
-            <div className={styles.shortGameInfoItem}>발언 시간 90초 → 45초</div>
-            <div className={styles.shortGameInfoItem}>동료 투표 30초 → 15초</div>
-          </div>
+        {hasCustomDurations && (
+          <>
+            <hr className={styles.divider} />
+            <PhaseDurationEditor
+              durations={durations}
+              onChange={d => update({ phaseDurations: d })}
+            />
+          </>
         )}
       </div>
 
@@ -548,7 +662,7 @@ function SettingsTab({ token }: { token: string }) {
             <button
               key={p.label}
               className={`${styles.presetBtn} ${activePreset === i ? styles["presetBtn--active"] : ""}`}
-              onClick={() => setHandicap({ ...p.value, shortGameMode: handicap.shortGameMode })}
+              onClick={() => setHandicap({ ...handicap, ...p.value })}
             >
               {p.label}
               <div className={styles.presetDesc}>{p.desc}</div>
@@ -577,10 +691,21 @@ export function TeacherPage() {
   const token = useUserStore(s => s.token);
   const user = useUserStore(s => s.user);
   const [tab, setTab] = useState<Tab>("classes");
+  const [classList, setClassList] = useState<{ id: number; name: string }[]>([]);
 
   useEffect(() => {
     if (user && user.role !== "teacher") navigate("/");
   }, [user, navigate]);
+
+  useEffect(() => {
+    if (!token) return;
+    fetch(`${BASE}/teacher/classes`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.json())
+      .then((data: { id: number; name: string }[]) => setClassList(data.map(c => ({ id: c.id, name: c.name }))))
+      .catch(() => {});
+  }, [token]);
 
   if (!token || !user) return null;
 
@@ -612,7 +737,7 @@ export function TeacherPage() {
       <div className={styles.tabContent}>
         {tab === "classes" && <ClassesTab token={token} />}
         {tab === "stats" && <StatsTab token={token} />}
-        {tab === "settings" && <SettingsTab token={token} />}
+        {tab === "settings" && <SettingsTab token={token} classes={classList} />}
       </div>
     </div>
   );

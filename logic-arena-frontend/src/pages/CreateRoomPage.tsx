@@ -39,6 +39,7 @@ export function CreateRoomPage() {
             vocab: authUser.teacher_settings.vocab,
             evidenceLimit: authUser.teacher_settings.evidenceLimit,
             rebuttalLimit: authUser.teacher_settings.rebuttalLimit,
+            phaseDurations: authUser.teacher_settings.phaseDurations ?? null,
           }
         : null;
       const room = await createRoom(

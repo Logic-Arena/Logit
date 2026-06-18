@@ -30,17 +30,36 @@ router.get('/settings', requireAuth, requireTeacher, async (req, res) => {
       vocab: settings.vocab,
       evidenceLimit: settings.evidence_limit,
       rebuttalLimit: settings.rebuttal_limit,
-      shortGameMode: settings.short_game_mode,
+      phaseDurations: settings.phase_durations ?? null,
     });
   } catch {
     return res.status(500).json({ error: '설정을 불러오지 못했습니다.' });
   }
 });
 
+const VALID_PHASE_DURATION_KEYS = ['arguing', 'rebuttal', 'defense', 'counter', 'finalArgument', 'peerVoting'];
+const PHASE_DURATION_MIN_SEC = 10;
+const PHASE_DURATION_MAX_SEC = 600;
+
+function validatePhaseDurations(pd) {
+  if (pd === null || pd === undefined) return null;
+  if (typeof pd !== 'object' || Array.isArray(pd)) return undefined; // invalid
+  const validated = {};
+  for (const key of VALID_PHASE_DURATION_KEYS) {
+    if (pd[key] === undefined) continue;
+    const val = Number(pd[key]);
+    if (!Number.isFinite(val) || val < PHASE_DURATION_MIN_SEC || val > PHASE_DURATION_MAX_SEC) return undefined;
+    validated[key] = Math.round(val);
+  }
+  return validated;
+}
+
 router.put('/settings', requireAuth, requireTeacher, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { enabled, vocab, evidenceLimit, rebuttalLimit, shortGameMode } = req.body;
+    const { enabled, vocab, evidenceLimit, rebuttalLimit, phaseDurations: rawPhaseDurations } = req.body;
+    const phaseDurations = validatePhaseDurations(rawPhaseDurations);
+    if (phaseDurations === undefined) return res.status(400).json({ error: '단계별 시간 설정 값이 올바르지 않습니다.' });
     const settings = await prisma.teacherSettings.upsert({
       where: { user_id: userId },
       update: {
@@ -48,7 +67,7 @@ router.put('/settings', requireAuth, requireTeacher, async (req, res) => {
         vocab: Boolean(vocab),
         evidence_limit: Boolean(evidenceLimit),
         rebuttal_limit: Boolean(rebuttalLimit),
-        short_game_mode: Boolean(shortGameMode),
+        phase_durations: phaseDurations ?? null,
       },
       create: {
         user_id: userId,
@@ -56,7 +75,7 @@ router.put('/settings', requireAuth, requireTeacher, async (req, res) => {
         vocab: Boolean(vocab),
         evidence_limit: Boolean(evidenceLimit),
         rebuttal_limit: Boolean(rebuttalLimit),
-        short_game_mode: Boolean(shortGameMode),
+        phase_durations: phaseDurations ?? null,
       },
     });
     return res.json({
@@ -64,8 +83,47 @@ router.put('/settings', requireAuth, requireTeacher, async (req, res) => {
       vocab: settings.vocab,
       evidenceLimit: settings.evidence_limit,
       rebuttalLimit: settings.rebuttal_limit,
-      shortGameMode: settings.short_game_mode,
+      phaseDurations: settings.phase_durations ?? null,
     });
+  } catch {
+    return res.status(500).json({ error: '설정 저장에 실패했습니다.' });
+  }
+});
+
+// ─── 반별 설정 ────────────────────────────────────────────────────
+
+router.get('/classes/:classId/settings', requireAuth, requireTeacher, async (req, res) => {
+  try {
+    const classId = parseInt(req.params.classId, 10);
+    const cls = await prisma.debateClass.findUnique({ where: { id: classId } });
+    if (!cls || cls.teacher_id !== req.user.id) return res.status(404).json({ error: '학급을 찾을 수 없습니다.' });
+    return res.json({ settings: cls.settings ?? null });
+  } catch {
+    return res.status(500).json({ error: '설정을 불러오지 못했습니다.' });
+  }
+});
+
+router.put('/classes/:classId/settings', requireAuth, requireTeacher, async (req, res) => {
+  try {
+    const classId = parseInt(req.params.classId, 10);
+    const cls = await prisma.debateClass.findUnique({ where: { id: classId } });
+    if (!cls || cls.teacher_id !== req.user.id) return res.status(404).json({ error: '학급을 찾을 수 없습니다.' });
+    const { settings: rawSettings } = req.body;
+    let settings = rawSettings ?? null;
+    if (settings !== null) {
+      if (typeof settings !== 'object' || Array.isArray(settings)) {
+        return res.status(400).json({ error: '설정 값이 올바르지 않습니다.' });
+      }
+      const { phaseDurations: rawPd, ...rest } = settings;
+      const validatedPd = validatePhaseDurations(rawPd);
+      if (validatedPd === undefined) return res.status(400).json({ error: '단계별 시간 설정 값이 올바르지 않습니다.' });
+      settings = { ...rest, phaseDurations: validatedPd };
+    }
+    const updated = await prisma.debateClass.update({
+      where: { id: classId },
+      data: { settings: settings ?? null },
+    });
+    return res.json({ settings: updated.settings ?? null });
   } catch {
     return res.status(500).json({ error: '설정 저장에 실패했습니다.' });
   }
@@ -97,14 +155,13 @@ router.post('/classes', requireAuth, requireTeacher, async (req, res) => {
     const { name } = req.body;
     if (!name?.trim()) return res.status(400).json({ error: '학급 이름을 입력해주세요.' });
 
-    let classCode;
-    let attempts = 0;
-    do {
-      classCode = generateClassCode();
-      const existing = await prisma.debateClass.findUnique({ where: { class_code: classCode } });
-      if (!existing) break;
-      attempts++;
-    } while (attempts < 10);
+    let classCode = null;
+    for (let attempts = 0; attempts < 10; attempts++) {
+      const candidate = generateClassCode();
+      const existing = await prisma.debateClass.findUnique({ where: { class_code: candidate } });
+      if (!existing) { classCode = candidate; break; }
+    }
+    if (!classCode) return res.status(503).json({ error: '학급 코드 생성에 실패했습니다. 잠시 후 다시 시도해주세요.' });
 
     const cls = await prisma.debateClass.create({
       data: { name: name.trim(), class_code: classCode, teacher_id: req.user.id },

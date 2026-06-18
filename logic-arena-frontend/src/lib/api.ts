@@ -1,7 +1,6 @@
 import type { Room, RoomMode, TopicMode } from '../types/room';
-import type { User } from '../types/user';
+import type { User, AuthUser } from '../types/user';
 import { useUserStore } from '../store/useUserStore';
-import type { AuthUser } from '../store/useAuthStore';
 
 const BASE = import.meta.env.VITE_API_URL ?? '/api';
 
@@ -112,7 +111,7 @@ export async function createRoom(
   topicMode: TopicMode = 'ai_auto',
   topic?: string,
   password?: string,
-  handicap?: Record<string, boolean> | null,
+  handicap?: Record<string, unknown> | null,
 ): Promise<Room> {
   const res = await fetch(`${BASE}/rooms`, {
     method: 'POST',

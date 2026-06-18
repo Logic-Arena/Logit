@@ -367,23 +367,21 @@ export function AnalyticsDashboardSection({ hideKpi = false }: { hideKpi?: boole
   }, [history]);
 
   const radarData = useMemo(() => {
-    if (history.length === 0) return [
-      { axis: "근거 제시", userValue: 0, avgValue: 65 },
-      { axis: "반박 능력", userValue: 0, avgValue: 55 },
-      { axis: "논리력",   userValue: 0, avgValue: 60 },
-      { axis: "일관성",   userValue: 0, avgValue: 62 },
-      { axis: "설득력",   userValue: 0, avgValue: 58 },
-    ];
-    // 세부 항목(logic, evidence 등)은 0~25점 척도로 저장됨.
-    // 레이더 차트 도메인(0~100)에 맞게 4를 곱해 정규화.
+    // 항목당 0~20점 척도, domain [0, 20]으로 직접 표시
     const avg = (vals: number[]) => Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
-    const toScale = (val: number) => Math.min(100, val * 4);
+    if (history.length === 0) return [
+      { axis: "근거 제시", userValue: 0, avgValue: 13 },
+      { axis: "반박 능력", userValue: 0, avgValue: 11 },
+      { axis: "논리력",   userValue: 0, avgValue: 12 },
+      { axis: "일관성",   userValue: 0, avgValue: 12 },
+      { axis: "설득력",   userValue: 0, avgValue: 12 },
+    ];
     return [
-      { axis: "근거 제시", userValue: avg(history.map((h) => toScale(h.evidence))),     avgValue: 65 },
-      { axis: "반박 능력", userValue: avg(history.map((h) => toScale(h.rebuttal))),     avgValue: 55 },
-      { axis: "논리력",   userValue: avg(history.map((h) => toScale(h.logic))),         avgValue: 60 },
-      { axis: "일관성",   userValue: avg(history.map((h) => toScale(h.consistency))),   avgValue: 62 },
-      { axis: "설득력",   userValue: avg(history.map((h) => toScale(h.persuasion))),    avgValue: 58 },
+      { axis: "근거 제시", userValue: avg(history.map((h) => h.evidence ?? 0)),   avgValue: 13 },
+      { axis: "반박 능력", userValue: avg(history.map((h) => h.rebuttal ?? 0)),   avgValue: 11 },
+      { axis: "논리력",   userValue: avg(history.map((h) => h.logic ?? 0)),       avgValue: 12 },
+      { axis: "일관성",   userValue: avg(history.map((h) => h.consistency ?? 0)), avgValue: 12 },
+      { axis: "설득력",   userValue: avg(history.map((h) => h.persuasion ?? 0)),  avgValue: 12 },
     ];
   }, [history]);
 
@@ -557,7 +555,7 @@ export function AnalyticsDashboardSection({ hideKpi = false }: { hideKpi?: boole
                   <PolarAngleAxis dataKey="axis" tick={<RadarCustomTick />} />
                   <PolarRadiusAxis
                     angle={90}
-                    domain={[0, 100]}
+                    domain={[0, 20]}
                     tick={{ fill: "var(--color-text-muted)", fontSize: 10 }}
                     tickCount={5}
                     stroke="var(--color-border)"

@@ -12,7 +12,6 @@ import {
   setResult,
   selectSide,
   getNextPhase,
-  PHASE_DURATION_MS,
   getPhaseDuration,
   AI_AUTO_PHASES,
   AI_DEFENSE_PHASES,
@@ -49,8 +48,8 @@ function pausePhaseTimer(roomId) {
 
 function startPhaseTimer(io, roomId, phase) {
   const room = getRoom(roomId);
-  const shortGameMode = room?.handicap?.shortGameMode ?? false;
-  const duration = getPhaseDuration(phase, shortGameMode);
+  const phaseDurations = room?.handicap?.phaseDurations ?? null;
+  const duration = getPhaseDuration(phase, phaseDurations);
   if (!duration) return false;
 
   clearPhaseTimer(roomId);
@@ -101,6 +100,11 @@ async function startPhase(io, roomId, phase) {
     pausePhaseTimer(roomId);
   } else {
     startPhaseTimer(io, roomId, phase);
+  }
+
+  // peer_voting 시작 시 현재 관전자 수를 스냅샷 — finalizePeerVoting에서 "관전자 있었음" 여부 판별에 사용
+  if (phase === 'peer_voting') {
+    room.peerVotes.initialObserverCount = room.observers.size;
   }
 
   const serialized = getRoomSerialized(roomId);
@@ -197,19 +201,19 @@ async function finalizePeerVoting(io, roomId) {
     return;
   }
 
-  // 관전자 유무에 따라 점수 체계 분기 (5항목×25점 = 125점 만점 기준 정규화)
-  // - 관전자 있음: aiScore = round(total/125*70) + peerScore(비율 30점) → 합계 최대 100점
-  // - 관전자 없음: AI 채점 100점 만점 = round(total/125*100)
+  // 관전자 유무에 따라 점수 체계 분기 (5항목×20점 = 100점 만점)
+  // - 관전자 있음(또는 있었으나 기권): aiScore = round(total*0.7) + peerScore(비율 30점) → 합계 최대 100점
+  // - 관전자 없음(처음부터): AI 채점 100점 만점 = total 그대로 사용
   const pv = room.peerVotes;
+  const hadObservers = (pv.initialObserverCount ?? room.observers.size) > 0;
   const totalVotesCast = pv.pro + pv.con;
   result.scores = result.scores.map((s) => {
-    const normalizedAi = s.aiScore ?? Math.round((s.total / 125) * 70);
-    if (totalVotesCast === 0) {
-      const fullAi = Math.round((s.total / 125) * 100);
-      return { ...s, peerVotes: 0, peerScore: 0, aiScore: fullAi, finalScore: fullAi };
+    const normalizedAi = s.aiScore ?? Math.round(s.total * 0.7);
+    if (!hadObservers) {
+      return { ...s, peerVotes: 0, peerScore: 0, aiScore: s.total, finalScore: s.total };
     }
     const votes = pv[s.vote] ?? 0;
-    const peerScore = s.type === 'player'
+    const peerScore = s.type === 'player' && totalVotesCast > 0
       ? Math.round((votes / totalVotesCast) * 30)
       : 0;
     return { ...s, peerVotes: votes, peerScore, aiScore: normalizedAi, finalScore: normalizedAi + peerScore };

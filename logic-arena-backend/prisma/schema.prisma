@@ -31,7 +31,7 @@ model TeacherSettings {
   vocab           Boolean @default(true)
   evidence_limit  Boolean @default(true)
   rebuttal_limit  Boolean @default(true)
-  short_game_mode Boolean @default(false) // 수업용 시간 단축 (50%)
+  phase_durations Json?   // { arguing, rebuttal, defense, counter, finalArgument, peerVoting } (초 단위)
   user            User    @relation(fields: [user_id], references: [user_id])
 }
 
@@ -41,6 +41,7 @@ model DebateClass {
   class_code  String             @unique
   teacher_id  Int
   created_at  DateTime           @default(now())
+  settings    Json?              // 반별 핸디캡 오버라이드 (null = 교사 글로벌 설정 사용)
   teacher     User               @relation("TeacherClasses", fields: [teacher_id], references: [user_id])
   members     DebateClassMember[]
 }

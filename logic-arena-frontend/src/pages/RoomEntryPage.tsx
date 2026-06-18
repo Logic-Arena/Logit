@@ -1,17 +1,15 @@
 import { useState } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useUserStore } from '../store/useUserStore';
-import { useAuthStore } from '../store/useAuthStore';
 
 export function RoomEntryPage() {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
   const { user, setUser } = useUserStore();
-  const authUser = useAuthStore((s) => s.user);
   const hasPassword = (location.state as { hasPassword?: boolean } | null)?.hasPassword ?? false;
 
-  const [username, setLocalUsername] = useState(authUser?.name ?? authUser?.username ?? user?.name ?? '');
+  const [username, setLocalUsername] = useState(user?.name ?? user?.username ?? '');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
