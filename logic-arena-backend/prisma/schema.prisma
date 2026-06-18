@@ -16,9 +16,42 @@ model User {
   email            String?         @unique
   name             String
   profile_image    String?
+  role             String          @default("student") // student | teacher
   created_at       DateTime        @default(now())
   stats            UserStats?
   debate_histories DebateHistory[]
+  teacher_settings TeacherSettings?
+  teacher_classes   DebateClass[]          @relation("TeacherClasses")
+  class_memberships DebateClassMember[]
+}
+
+model TeacherSettings {
+  user_id         Int     @id
+  enabled         Boolean @default(true)
+  vocab           Boolean @default(true)
+  evidence_limit  Boolean @default(true)
+  rebuttal_limit  Boolean @default(true)
+  short_game_mode Boolean @default(false) // 수업용 시간 단축 (50%)
+  user            User    @relation(fields: [user_id], references: [user_id])
+}
+
+model DebateClass {
+  id          Int                @id @default(autoincrement())
+  name        String
+  class_code  String             @unique
+  teacher_id  Int
+  created_at  DateTime           @default(now())
+  teacher     User               @relation("TeacherClasses", fields: [teacher_id], references: [user_id])
+  members     DebateClassMember[]
+}
+
+model DebateClassMember {
+  class_id  Int
+  user_id   Int
+  joined_at DateTime    @default(now())
+  class     DebateClass @relation(fields: [class_id], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [user_id], references: [user_id])
+  @@id([class_id, user_id])
 }
 
 model UserStats {
@@ -34,20 +67,21 @@ model UserStats {
 }
 
 model DebateHistory {
-  id         Int      @id @default(autoincrement())
-  user_id    Int
-  topic      String
-  position   String
-  score      Int      @default(0)
-  logic      Int      @default(0)
-  evidence   Int      @default(0)
-  persuasion Int      @default(0)
-  rebuttal   Int      @default(0)
-  advice     String?
-  result     String   @default("draw")
-  played_at  DateTime @default(now())
+  id          Int      @id @default(autoincrement())
+  user_id     Int
+  topic       String
+  position    String
+  score       Int      @default(0)
+  logic       Int      @default(0)
+  evidence    Int      @default(0)
+  persuasion  Int      @default(0)
+  rebuttal    Int      @default(0)
+  consistency Int      @default(0)
+  advice      String?
+  result      String   @default("draw")
+  played_at   DateTime @default(now())
 
-  user       User     @relation(fields: [user_id], references: [user_id])
+  user        User     @relation(fields: [user_id], references: [user_id])
 }
 
 model CommunityTopic {

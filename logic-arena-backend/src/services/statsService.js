@@ -66,6 +66,7 @@ export async function saveDebateHistory(participants, result, topic) {
           evidence: scoreData?.evidence ?? 0,
           persuasion: scoreData?.persuasion ?? 0,
           rebuttal: scoreData?.rebuttal ?? 0,
+          consistency: scoreData?.consistency ?? 0,
           advice: scoreData?.advice ?? null,
           result: resultLabel,
         },

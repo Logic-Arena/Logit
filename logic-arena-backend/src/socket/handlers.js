@@ -13,6 +13,7 @@ import {
   selectSide,
   getNextPhase,
   PHASE_DURATION_MS,
+  getPhaseDuration,
   AI_AUTO_PHASES,
   AI_DEFENSE_PHASES,
   PHASE_SUBMIT_KEY,
@@ -47,7 +48,9 @@ function pausePhaseTimer(roomId) {
 }
 
 function startPhaseTimer(io, roomId, phase) {
-  const duration = PHASE_DURATION_MS[phase];
+  const room = getRoom(roomId);
+  const shortGameMode = room?.handicap?.shortGameMode ?? false;
+  const duration = getPhaseDuration(phase, shortGameMode);
   if (!duration) return false;
 
   clearPhaseTimer(roomId);
@@ -151,6 +154,11 @@ async function advancePhase(io, roomId) {
     return;
   }
 
+  if (room.phase === 'peer_voting') {
+    await finalizePeerVoting(io, roomId);
+    return;
+  }
+
   const next = getNextPhase(room.phase, room.mode);
   await startPhase(io, roomId, next);
 }
@@ -173,6 +181,50 @@ async function handleTopicSelectionEnd(io, roomId) {
   await startPhase(io, roomId, 'arguing');
 }
 
+// ── Peer voting finalize ─────────────────────────────────────
+
+async function finalizePeerVoting(io, roomId) {
+  const room = getRoom(roomId);
+  if (!room || room.phase !== 'peer_voting') return;
+
+  // 이중 실행 방지: 페이즈를 즉시 변경해 재진입 차단
+  setPhase(roomId, 'ended');
+  clearPhaseTimer(roomId);
+
+  const result = room.result;
+  if (!result) {
+    await startPhase(io, roomId, 'ended');
+    return;
+  }
+
+  // 동료 평가 점수 병합
+  const pv = room.peerVotes;
+  result.scores = result.scores.map((s) => {
+    const peerScore = s.type === 'player' ? (pv[s.vote] ?? 0) * 10 : 0;
+    const aiScore = s.aiScore ?? Math.round(s.total * 0.7);
+    return { ...s, peerVotes: pv[s.vote] ?? 0, peerScore, aiScore, finalScore: aiScore + peerScore };
+  });
+
+  // winner는 인간 플레이어의 finalScore 기준으로 재계산
+  const playerScores = result.scores.filter((s) => s.type === 'player');
+  if (playerScores.length >= 2) {
+    const proFinal = playerScores.filter(s => s.vote === 'pro').reduce((sum, s) => sum + s.finalScore, 0);
+    const conFinal = playerScores.filter(s => s.vote === 'con').reduce((sum, s) => sum + s.finalScore, 0);
+    if (proFinal > conFinal) result.winner = 'pro';
+    else if (conFinal > proFinal) result.winner = 'con';
+    else result.winner = 'draw';
+  }
+
+  const participants = [];
+  if (room.proPlayer) participants.push({ userId: room.proPlayer.userId, vote: 'pro' });
+  if (room.conPlayer) participants.push({ userId: room.conPlayer.userId, vote: 'con' });
+  await updateStats(participants, result.winner).catch((e) => console.error('[peer_voting] updateStats 실패:', e.message));
+  await saveDebateHistory(participants, result, room.topic).catch((e) => console.error('[peer_voting] saveDebateHistory 실패:', e.message));
+
+  io.to(roomId).emit('debate_ended', { result, room: getRoomSerialized(roomId) });
+  await startPhase(io, roomId, 'ended');
+}
+
 // ── AI 자동 생성 ─────────────────────────────────────────────
 
 async function handleAiArguing(io, roomId) {
@@ -180,8 +232,8 @@ async function handleAiArguing(io, roomId) {
   if (!room) return;
 
   const [proContent, conContent] = await Promise.all([
-    generateArgument({ topic: room.topic, vote: 'pro' }),
-    generateArgument({ topic: room.topic, vote: 'con' }),
+    generateArgument({ topic: room.topic, vote: 'pro', handicap: room.handicap }),
+    generateArgument({ topic: room.topic, vote: 'con', handicap: room.handicap }),
   ]);
 
   if (getRoom(roomId)?.phase !== 'arguing') return;
@@ -205,6 +257,7 @@ async function handleAiAutoPhase(io, roomId, phase) {
       content = await generateRebuttal({
         topic: room.topic, vote: 'pro',
         opponentArguments: [c.con_argument, c.con_ai_argument],
+        handicap: room.handicap,
       });
       contentKey = 'pro_a_rebuttal';
       break;
@@ -212,6 +265,7 @@ async function handleAiAutoPhase(io, roomId, phase) {
       content = await generateCounter({
         topic: room.topic, vote: 'pro',
         defenseContent: [c.pro_a_defense_player, c.pro_a_defense_ai].filter(Boolean).join('\n'),
+        handicap: room.handicap,
       });
       contentKey = 'pro_a_counter';
       break;
@@ -219,6 +273,7 @@ async function handleAiAutoPhase(io, roomId, phase) {
       content = await generateRebuttal({
         topic: room.topic, vote: 'con',
         opponentArguments: [c.pro_argument, c.pro_ai_argument],
+        handicap: room.handicap,
       });
       contentKey = 'con_a_rebuttal';
       break;
@@ -226,6 +281,7 @@ async function handleAiAutoPhase(io, roomId, phase) {
       content = await generateCounter({
         topic: room.topic, vote: 'con',
         defenseContent: [c.con_a_defense_player, c.con_a_defense_ai].filter(Boolean).join('\n'),
+        handicap: room.handicap,
       });
       contentKey = 'con_a_counter';
       break;
@@ -249,13 +305,8 @@ async function handleAiAutoPhase(io, roomId, phase) {
       const currentRoom = getRoom(roomId);
       if (!currentRoom || currentRoom.phase === 'ended') return;
       setResult(roomId, result);
-      const participants = [];
-      if (room.proPlayer) participants.push({ userId: room.proPlayer.userId, vote: 'pro' });
-      if (room.conPlayer) participants.push({ userId: room.conPlayer.userId, vote: 'con' });
-      await updateStats(participants, result.winner).catch((e) => console.error('[judging] updateStats 실패:', e.message));
-      await saveDebateHistory(participants, result, room.topic).catch((e) => console.error('[judging] saveDebateHistory 실패:', e.message));
-      io.to(roomId).emit('debate_ended', { result, room: getRoomSerialized(roomId) });
-      await startPhase(io, roomId, 'ended');
+      // peer_voting 페이즈로 진행 (debate_ended는 투표 완료 후 emit)
+      await startPhase(io, roomId, 'peer_voting');
       return;
     }
     default:
@@ -288,19 +339,19 @@ async function handleAiDefense(io, roomId, phase) {
 
   switch (phase) {
     case 'pro_p_defense':
-      content = await generateDefense({ topic: room.topic, vote: 'con', rebuttalContent: c.pro_p_rebuttal });
+      content = await generateDefense({ topic: room.topic, vote: 'con', rebuttalContent: c.pro_p_rebuttal, handicap: room.handicap });
       contentKey = 'pro_p_defense_ai';
       break;
     case 'con_p_defense':
-      content = await generateDefense({ topic: room.topic, vote: 'pro', rebuttalContent: c.con_p_rebuttal });
+      content = await generateDefense({ topic: room.topic, vote: 'pro', rebuttalContent: c.con_p_rebuttal, handicap: room.handicap });
       contentKey = 'con_p_defense_ai';
       break;
     case 'pro_a_defense':
-      content = await generateDefense({ topic: room.topic, vote: 'con', rebuttalContent: c.pro_a_rebuttal });
+      content = await generateDefense({ topic: room.topic, vote: 'con', rebuttalContent: c.pro_a_rebuttal, handicap: room.handicap });
       contentKey = 'pro_a_defense_ai';
       break;
     case 'con_a_defense':
-      content = await generateDefense({ topic: room.topic, vote: 'pro', rebuttalContent: c.con_a_rebuttal });
+      content = await generateDefense({ topic: room.topic, vote: 'pro', rebuttalContent: c.con_a_rebuttal, handicap: room.handicap });
       contentKey = 'con_a_defense_ai';
       break;
     default:
@@ -600,6 +651,32 @@ export function registerHandlers(io, socket) {
         }
         checkSinglePlayerDone(io, roomId, phase);
       }
+    }
+  });
+
+  // ── peer_vote (동료 평가 투표) ─────────────────────────────
+  socket.on('peer_vote', ({ votedFor }) => {
+    const roomId = socket.data.roomId;
+    if (!roomId) return;
+    const room = getRoom(roomId);
+    if (!room || room.phase !== 'peer_voting') return;
+    if (!['pro', 'con'].includes(votedFor)) return;
+
+    if (room.peerVotes.voters.has(socket.id)) return; // 중복 투표 방지
+
+    room.peerVotes[votedFor]++;
+    room.peerVotes.voters.add(socket.id);
+
+    const totalVoters = (room.proPlayer ? 1 : 0) + (room.conPlayer ? 1 : 0) + room.observers.size;
+    io.to(roomId).emit('peer_vote_progress', {
+      voted: room.peerVotes.voters.size,
+      total: totalVoters,
+      proVotes: room.peerVotes.pro,
+      conVotes: room.peerVotes.con,
+    });
+
+    if (room.peerVotes.voters.size >= totalVoters) {
+      finalizePeerVoting(io, roomId).catch((e) => console.error('[peer_vote] finalize 실패:', e.message));
     }
   });
 

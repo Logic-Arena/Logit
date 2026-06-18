@@ -23,6 +23,7 @@ export const PHASE_DURATION_MS = {
   coaching: 10_000,        // 훈수 AI (fallback 10초)
   final_argument: 60_000,  // 1분
   judging: 30_000,         // 30초
+  peer_voting: 30_000,     // 동료 평가 투표 (30초)
 };
 
 const AI_PHASE_SEQUENCE = [
@@ -31,14 +32,14 @@ const AI_PHASE_SEQUENCE = [
   'con_p_rebuttal', 'con_p_defense', 'con_p_counter',
   'pro_a_rebuttal', 'pro_a_defense', 'pro_a_counter',
   'con_a_rebuttal', 'con_a_defense', 'con_a_counter',
-  'coaching', 'final_argument', 'judging', 'ended',
+  'coaching', 'final_argument', 'judging', 'peer_voting', 'ended',
 ];
 
 const HUMAN_PHASE_SEQUENCE = [
   'waiting', 'topic_selection', 'arguing',
   'pro_p_rebuttal', 'pro_p_defense', 'pro_p_counter',
   'con_p_rebuttal', 'con_p_defense', 'con_p_counter',
-  'coaching', 'final_argument', 'judging', 'ended',
+  'coaching', 'final_argument', 'judging', 'peer_voting', 'ended',
 ];
 
 // 각 페이즈에서 AI가 자동으로 콘텐츠를 생성하는지
@@ -77,7 +78,17 @@ export function getNextPhase(currentPhase, mode = 'ai_debate') {
 
 // ── Room CRUD ────────────────────────────────────────────────
 
-export function createRoom({ title, mode = 'ai_debate', topicMode = 'ai_auto', topic = null, password = null }) {
+export function getPhaseDuration(phase, shortGameMode = false) {
+  const base = PHASE_DURATION_MS[phase] ?? 30_000;
+  if (!shortGameMode) return base;
+  // AI-auto phases (< 30s) are not shortened — they resolve immediately
+  if (base <= 15_000) return base;
+  return Math.round(base * 0.5);
+}
+
+export function createRoom({ title, mode = 'ai_debate', topicMode = 'ai_auto', topic = null, password = null, handicap = null }) {
+  const defaultHandicap = { enabled: true, vocab: true, evidenceLimit: true, rebuttalLimit: true, shortGameMode: false };
+  const resolvedHandicap = (handicap && typeof handicap === 'object') ? handicap : defaultHandicap;
   const id = uuidv4();
   const room = {
     id,
@@ -130,6 +141,9 @@ export function createRoom({ title, mode = 'ai_debate', topicMode = 'ai_auto', t
     result: null,
     pastTopics: [],
     topicGenerationSeq: 0,
+
+    handicap: resolvedHandicap,
+    peerVotes: { pro: 0, con: 0, voters: new Set() },
   };
   rooms.set(id, room);
   return serializeRoom(room);
@@ -311,7 +325,8 @@ export function selectSide(roomId, socketId, side) {
 export function setPhase(roomId, phase) {
   const room = rooms.get(roomId);
   if (!room) return null;
-  const dur = PHASE_DURATION_MS[phase];
+  const shortGameMode = room.handicap?.shortGameMode ?? false;
+  const dur = getPhaseDuration(phase, shortGameMode);
   room.phase = phase;
   room.phaseEndAt = dur ? Date.now() + dur : null;
   return serializeRoom(room);

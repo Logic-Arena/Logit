@@ -109,6 +109,15 @@ function makeFallbackTopic(previousTopics) {
   return { topic, source: 'fallback' };
 }
 
+function buildHandicapPrompt(handicap) {
+  if (!handicap?.enabled) return '';
+  const lines = [];
+  if (handicap.vocab) lines.push('초등학교 교과서에서 사용하는 어휘 수준으로만 발언하세요.');
+  if (handicap.evidenceLimit) lines.push('발언당 근거(통계, 사례, 인용)는 1가지만 제시하세요.');
+  if (handicap.rebuttalLimit) lines.push('상대 주장 전체를 반박하지 말고 한 가지 논점만 반박하세요.');
+  return lines.length ? '\n\n[AI 제약 사항]\n' + lines.join('\n') : '';
+}
+
 async function ask(prompt) {
   const res = await client.chat.completions.create({
     model: MODEL,
@@ -131,12 +140,13 @@ export async function generateTopic(previousTopics = []) {
   return makeFallbackTopic(previousTopics);
 }
 
-export async function generateArgument({ topic, vote }) {
+export async function generateArgument({ topic, vote, handicap = null }) {
   const stance = vote === 'pro' ? '찬성' : '반대';
   const prompt =
     `토론 주제: "${topic}"\n` +
     `당신은 이 주제에 대해 ${stance} 입장입니다.\n` +
-    `${stance} 입장의 핵심 주장을 논리적으로 3-5문장으로 작성해주세요.`;
+    `${stance} 입장의 핵심 주장을 논리적으로 3-5문장으로 작성해주세요.` +
+    buildHandicapPrompt(handicap);
   try {
     return await ask(prompt);
   } catch {
@@ -144,7 +154,7 @@ export async function generateArgument({ topic, vote }) {
   }
 }
 
-export async function generateRebuttal({ topic, vote, opponentArguments }) {
+export async function generateRebuttal({ topic, vote, opponentArguments, handicap = null }) {
   const stance = vote === 'pro' ? '찬성' : '반대';
   const opponentStance = vote === 'pro' ? '반대' : '찬성';
   const opponentText = opponentArguments.filter(Boolean).join('\n\n');
@@ -152,7 +162,8 @@ export async function generateRebuttal({ topic, vote, opponentArguments }) {
     `토론 주제: "${topic}"\n` +
     `당신은 ${stance} 입장입니다.\n\n` +
     `상대방(${opponentStance}) 주장:\n${opponentText}\n\n` +
-    `위 주장들에 대해 논리적으로 반론을 2-4문장으로 작성해주세요.`;
+    `위 주장들에 대해 논리적으로 반론을 2-4문장으로 작성해주세요.` +
+    buildHandicapPrompt(handicap);
   try {
     return await ask(prompt);
   } catch {
@@ -160,14 +171,15 @@ export async function generateRebuttal({ topic, vote, opponentArguments }) {
   }
 }
 
-export async function generateDefense({ topic, vote, rebuttalContent }) {
+export async function generateDefense({ topic, vote, rebuttalContent, handicap = null }) {
   const stance = vote === 'pro' ? '찬성' : '반대';
   const opponentStance = vote === 'pro' ? '반대' : '찬성';
   const prompt =
     `토론 주제: "${topic}"\n` +
     `당신은 ${stance} 입장입니다.\n\n` +
     `상대방(${opponentStance})의 반론:\n${rebuttalContent}\n\n` +
-    `이 반론에 대해 당신의 입장을 변론해주세요. 2-4문장으로 작성해주세요.`;
+    `이 반론에 대해 당신의 입장을 변론해주세요. 2-4문장으로 작성해주세요.` +
+    buildHandicapPrompt(handicap);
   try {
     return await ask(prompt);
   } catch {
@@ -175,14 +187,15 @@ export async function generateDefense({ topic, vote, rebuttalContent }) {
   }
 }
 
-export async function generateCounter({ topic, vote, defenseContent }) {
+export async function generateCounter({ topic, vote, defenseContent, handicap = null }) {
   const stance = vote === 'pro' ? '찬성' : '반대';
   const opponentStance = vote === 'pro' ? '반대' : '찬성';
   const prompt =
     `토론 주제: "${topic}"\n` +
     `당신은 ${stance} 입장입니다.\n\n` +
     `상대방(${opponentStance})의 변론:\n${defenseContent}\n\n` +
-    `이 변론에 대해 재반론을 2-3문장으로 작성해주세요.`;
+    `이 변론에 대해 재반론을 2-3문장으로 작성해주세요.` +
+    buildHandicapPrompt(handicap);
   try {
     return await ask(prompt);
   } catch {
@@ -234,27 +247,53 @@ export async function judgeDebate({ topic, content, mode = 'ai_debate' }) {
     : `참가자 4명(찬성P, 반대P, 찬성AI, 반대AI)`;
 
   const scoresTemplate = isHumanMode
-    ? `{"name":"찬성P","vote":"pro","type":"player","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"},` +
-    `{"name":"반대P","vote":"con","type":"player","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"}`
-    : `{"name":"찬성P","vote":"pro","type":"player","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"},` +
-    `{"name":"반대P","vote":"con","type":"player","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"},` +
-    `{"name":"찬성AI","vote":"pro","type":"ai","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"},` +
-    `{"name":"반대AI","vote":"con","type":"ai","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"}`;
+    ? `{"name":"찬성P","vote":"pro","type":"player","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"consistency":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"},` +
+    `{"name":"반대P","vote":"con","type":"player","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"consistency":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"}`
+    : `{"name":"찬성P","vote":"pro","type":"player","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"consistency":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"},` +
+    `{"name":"반대P","vote":"con","type":"player","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"consistency":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"},` +
+    `{"name":"찬성AI","vote":"pro","type":"ai","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"consistency":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"},` +
+    `{"name":"반대AI","vote":"con","type":"ai","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"consistency":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"}`;
 
   const prompt =
     `토론 주제: "${topic}"\n\n` +
     `${summary}\n\n` +
     `당신은 공정한 토론 심판입니다. 위 전체 발언을 바탕으로 ${participantDesc}을 동일한 기준으로 채점하세요.\n\n` +
     `채점 기준 (각 항목 0~25점, 합계 0~100점):\n` +
-    `- 논리성(0~25): 주장의 논리적 일관성, 전제-결론 구조, 오류 없음\n` +
-    `- 근거(0~25): 사실·데이터·사례에 기반한 구체적 근거의 충실도\n` +
-    `- 설득력(0~25): 표현의 명확성, 감정 호소 없이 이성적으로 청중을 설득하는 힘\n` +
-    `- 반론(0~25): 상대 주장의 핵심을 정확히 파악하고 효과적으로 반박한 정도\n\n` +
+    `【논리성 0~25점】\n` +
+    `21~25: 주장과 이유가 자연스럽게 이어지고 앞뒤가 맞음\n` +
+    `16~20: 대체로 이어지나 한두 군데 연결이 어색함\n` +
+    `11~15: 이유가 있긴 하나 주장이랑 자주 어긋남\n` +
+    `6~10: 주장과 이유가 따로 노는 경우가 많음\n` +
+    `0~5: 그냥 생각을 나열한 수준\n\n` +
+    `【근거 0~25점】\n` +
+    `21~25: 책, 뉴스, 실제 사례 등 믿을 수 있는 근거를 구체적으로 제시함\n` +
+    `16~20: 근거가 있지만 어디서 나온 건지 불분명함\n` +
+    `11~15: "~라고 들었다" 수준의 막연한 근거만 있음\n` +
+    `6~10: 근거가 추측이거나 본인 경험에만 의존함\n` +
+    `0~5: 근거가 거의 없음\n\n` +
+    `【설득력 0~25점】\n` +
+    `21~25: 말이 명확하고 듣는 사람이 이해하기 쉬움. 감정에 호소하지 않음\n` +
+    `16~20: 대체로 잘 전달되나 일부 표현이 애매함\n` +
+    `11~15: 전하려는 말은 있는데 구성이 산만함\n` +
+    `6~10: 같은 말을 반복하거나 무슨 말인지 파악하기 어려움\n` +
+    `0~5: 무슨 말을 하려는지 거의 알 수 없음\n\n` +
+    `【반론 0~25점】\n` +
+    `21~25: 상대 주장의 핵심을 정확히 짚고 구체적인 이유로 반박함\n` +
+    `16~20: 핵심은 짚었으나 반박이 다소 약함\n` +
+    `11~15: 상대 말 일부만 다루거나 "그건 틀렸다"는 수준에 머묾\n` +
+    `6~10: 상대 말을 잘못 이해했거나 엉뚱한 반박을 함\n` +
+    `0~5: 반론이 거의 없음\n\n` +
+    `【일관성 0~25점】\n` +
+    `21~25: 처음부터 끝까지 같은 입장을 유지하고 앞뒤 발언이 서로 모순되지 않음\n` +
+    `16~20: 대체로 일관적이나 한 군데 정도 앞뒤가 맞지 않는 부분 있음\n` +
+    `11~15: 중간에 입장이 흔들리거나 자기 주장을 스스로 부정하는 경우 있음\n` +
+    `6~10: 발언마다 입장이 달라지거나 같은 주제에 대해 다른 말을 함\n` +
+    `0~5: 처음과 끝의 주장이 완전히 다르거나 자기 주장이 없음\n\n` +
     `채점 규칙 (반드시 준수):\n` +
     `1. 1점 단위로 채점하고 절대 5의 배수로 반올림하지 말 것\n` +
     `2. 참가자 간 점수 차이를 반드시 둘 것\n` +
     `3. 내용이 부실하거나 짧으면 각 항목 0~10점, 평범하면 11~17점, 우수하면 18~25점\n` +
-    `4. 총점 기준: 미흡 0~39점, 보통 40~59점, 양호 60~79점, 우수 80~100점\n` +
+    `4. 총점(5개 항목 합계) 기준: 미흡 0~49점, 보통 50~74점, 양호 75~99점, 우수 100~125점\n` +
     `5. 실제 발언 내용을 근거로 엄격하게 차별화해서 채점할 것\n\n` +
     `summary(총평) 작성 규칙:\n` +
     `- 3~4문장으로 작성\n` +
@@ -276,7 +315,12 @@ export async function judgeDebate({ topic, content, mode = 'ai_debate' }) {
     const parsed = JSON.parse(jsonMatch[0]);
     if (!parsed.scores || !Array.isArray(parsed.scores)) throw new Error('scores 없음');
     parsed.scores.forEach((s) => {
-      s.total = (s.logic ?? 0) + (s.evidence ?? 0) + (s.persuasion ?? 0) + (s.rebuttal ?? 0);
+      s.total = (s.logic ?? 0) + (s.evidence ?? 0) + (s.persuasion ?? 0) + (s.rebuttal ?? 0) + (s.consistency ?? 0);
+      // 5개 항목 × 25점 = 125점 만점 → 70점으로 정규화
+      s.aiScore = Math.round((s.total / 125) * 70);
+      s.peerVotes = 0;
+      s.peerScore = 0;
+      s.finalScore = s.aiScore;
     });
     const sorted = [...parsed.scores].sort((a, b) => b.total - a.total);
     sorted.forEach((s, i) => { s.rank = i + 1; });
@@ -296,7 +340,8 @@ export async function judgeDebate({ topic, content, mode = 'ai_debate' }) {
 
 function makeDrawResult(reason, isHumanMode = false) {
   const defaultScore = (name, vote, type) => ({
-    name, vote, type, logic: 0, evidence: 0, persuasion: 0, rebuttal: 0, total: 0, rank: 0, advice: reason,
+    name, vote, type, logic: 0, evidence: 0, persuasion: 0, rebuttal: 0, consistency: 0, total: 0, rank: 0,
+    aiScore: 0, peerVotes: 0, peerScore: 0, finalScore: 0, advice: reason,
   });
   const scores = [
     defaultScore('찬성P', 'pro', 'player'),

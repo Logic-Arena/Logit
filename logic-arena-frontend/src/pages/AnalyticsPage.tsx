@@ -203,6 +203,7 @@ const SCORE_CRITERIA_DETAIL = [
   { label: '근거', key: 'evidence' as const },
   { label: '설득력', key: 'persuasion' as const },
   { label: '반론', key: 'rebuttal' as const },
+  { label: '일관성', key: 'consistency' as const },
 ];
 
 function DetailModal({ item, onClose }: { item: DebateHistoryItem; onClose: () => void }) {
@@ -231,7 +232,7 @@ function DetailModal({ item, onClose }: { item: DebateHistoryItem; onClose: () =
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
-                {['참가자', '논리성', '근거', '설득력', '반론', '합계'].map(h => (
+                {['참가자', '논리성', '근거', '설득력', '반론', '일관성', '합계'].map(h => (
                   <th key={h} style={{ padding: '8px 12px', color: 'var(--color-text-muted)', fontWeight: 600, textAlign: h === '참가자' ? 'left' : 'center', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
@@ -378,11 +379,11 @@ export function AnalyticsDashboardSection({ hideKpi = false }: { hideKpi?: boole
     const avg = (vals: number[]) => Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
     const toScale = (val: number) => Math.min(100, val * 4);
     return [
-      { axis: "근거 제시", userValue: avg(history.map((h) => toScale(h.evidence))), avgValue: 65 },
-      { axis: "반박 능력", userValue: avg(history.map((h) => toScale(h.rebuttal))), avgValue: 55 },
-      { axis: "논리력",   userValue: avg(history.map((h) => toScale(h.logic))),    avgValue: 60 },
-      { axis: "일관성",   userValue: avg(history.map((h) => h.score)),              avgValue: 62 },
-      { axis: "설득력",   userValue: avg(history.map((h) => toScale(h.persuasion))), avgValue: 58 },
+      { axis: "근거 제시", userValue: avg(history.map((h) => toScale(h.evidence))),     avgValue: 65 },
+      { axis: "반박 능력", userValue: avg(history.map((h) => toScale(h.rebuttal))),     avgValue: 55 },
+      { axis: "논리력",   userValue: avg(history.map((h) => toScale(h.logic))),         avgValue: 60 },
+      { axis: "일관성",   userValue: avg(history.map((h) => toScale(h.consistency))),   avgValue: 62 },
+      { axis: "설득력",   userValue: avg(history.map((h) => toScale(h.persuasion))),    avgValue: 58 },
     ];
   }, [history]);
 
