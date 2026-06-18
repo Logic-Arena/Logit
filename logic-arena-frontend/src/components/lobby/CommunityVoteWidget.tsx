@@ -192,11 +192,6 @@ export function CommunityVoteWidget() {
         <p className="vote-widget__subtitle">투표하고 Logit에서 토론하세요</p>
       </div>
 
-      {!loading && !error && (
-        <div className="vote-widget__status">
-          <span className="vote-widget__live-label">투표 진행 중</span>
-        </div>
-      )}
 
       {loading ? (
         <div style={{ padding: "16px", color: "var(--color-text-muted)", fontSize: "13px", textAlign: "center" }}>

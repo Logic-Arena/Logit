@@ -5,6 +5,7 @@ import { socket } from "../lib/socket";
 import { RoomList } from "../components/lobby/RoomList";
 import { UserTierWidget } from "../components/lobby/UserTierWidget";
 import { CommunityVoteWidget } from "../components/lobby/CommunityVoteWidget";
+import { CreateRoomModal } from "../pages/CreateRoomPage";
 import { useSidebar } from "../hooks/useSidebar";
 import { useUserStore } from "../store/useUserStore";
 import type { Room } from "../types/room";
@@ -12,6 +13,7 @@ import type { Room } from "../types/room";
 export function LobbyPage() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const { sidebarOpen, closeSidebar } = useSidebar();
   const navigate = useNavigate();
   const { isLoggedIn } = useUserStore();
@@ -56,7 +58,7 @@ export function LobbyPage() {
 
           <button
             className="btn btn--primary"
-            onClick={() => isLoggedIn ? navigate("/rooms/new") : navigate("/login")}
+            onClick={() => isLoggedIn ? setIsCreateModalOpen(true) : navigate("/login")}
           >
             + 새 방 만들기
           </button>
@@ -74,6 +76,11 @@ export function LobbyPage() {
       <div className="lobby-report">
         <CommunityVoteWidget />
       </div>
+
+      <CreateRoomModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+      />
     </div>
   );
 }
