@@ -197,21 +197,22 @@ async function finalizePeerVoting(io, roomId) {
     return;
   }
 
-  // 관전자 유무에 따라 점수 체계 분기
-  // - 관전자 있음: aiScore = total × 0.7 (70점) + peerScore 비율 30점 → 합계 100점
-  // - 관전자 없음: finalScore = total 그대로 (AI 채점 100점 만점)
+  // 관전자 유무에 따라 점수 체계 분기 (5항목×25점 = 125점 만점 기준 정규화)
+  // - 관전자 있음: aiScore = round(total/125*70) + peerScore(비율 30점) → 합계 최대 100점
+  // - 관전자 없음: AI 채점 100점 만점 = round(total/125*100)
   const pv = room.peerVotes;
   const totalVotesCast = pv.pro + pv.con;
   result.scores = result.scores.map((s) => {
+    const normalizedAi = s.aiScore ?? Math.round((s.total / 125) * 70);
     if (totalVotesCast === 0) {
-      return { ...s, peerVotes: 0, peerScore: 0, aiScore: s.total, finalScore: s.total };
+      const fullAi = Math.round((s.total / 125) * 100);
+      return { ...s, peerVotes: 0, peerScore: 0, aiScore: fullAi, finalScore: fullAi };
     }
     const votes = pv[s.vote] ?? 0;
     const peerScore = s.type === 'player'
       ? Math.round((votes / totalVotesCast) * 30)
       : 0;
-    const aiScore = Math.round(s.total * 0.7);
-    return { ...s, peerVotes: votes, peerScore, aiScore, finalScore: aiScore + peerScore };
+    return { ...s, peerVotes: votes, peerScore, aiScore: normalizedAi, finalScore: normalizedAi + peerScore };
   });
 
   // winner는 인간 플레이어의 finalScore 기준으로 재계산

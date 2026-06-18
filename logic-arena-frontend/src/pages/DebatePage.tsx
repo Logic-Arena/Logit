@@ -1393,8 +1393,9 @@ function DecisiveEdgeBadge({ scores }: { scores: ParticipantScore[] }) {
       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
         {SCORE_CRITERIA.map(({ key, label }) => {
           const diff = (pro[key] ?? 0) - (con[key] ?? 0);
+          if (diff === 0) return null;
           const isDecisive = key === bestKey;
-          const chipColor = diff > 0 ? 'var(--color-primary)' : diff < 0 ? 'var(--color-con-orange)' : 'var(--color-text-muted)';
+          const chipColor = diff > 0 ? 'var(--color-primary)' : 'var(--color-con-orange)';
           return (
             <span key={key} style={{
               fontSize: '11px', fontWeight: isDecisive ? 700 : 400,
