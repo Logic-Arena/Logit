@@ -189,15 +189,6 @@ function TypewriterText({ text }: { text: string }) {
 
 function DebateChatView() {
   const chatRef = useRef<HTMLDivElement>(null);
-  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
-
-  const toggleExpand = (key: string) =>
-    setExpandedKeys((prev) => {
-      const next = new Set(prev);
-      next.has(key) ? next.delete(key) : next.add(key);
-      return next;
-    });
-
   useEffect(() => {
     if (chatRef.current)
       chatRef.current.scrollTop = chatRef.current.scrollHeight;
@@ -208,8 +199,6 @@ function DebateChatView() {
       <div ref={chatRef} className="debate-chat-scroll">
         {MOCK_MESSAGES.map((item) => {
           const isOnMySide = item.align === "pro"; // 가정: 나는 찬성
-          const isMyPlayerMsg = isOnMySide && item.variant === "player";
-          const isCollapsed = isMyPlayerMsg && !expandedKeys.has(item.id);
           const avatarChar =
             item.variant === "ai"
               ? "AI"
@@ -249,36 +238,13 @@ function DebateChatView() {
                   <span className="bubble-meta__type">{item.label}</span>
                 </div>
                 <article className={`debate-bubble debate-bubble--${item.align}-${item.variant}`}>
-                  {isCollapsed ? (
-                    <div className="debate-bubble__collapsed">
-                      <span className="debate-bubble__preview">
-                        {item.text.slice(0, 55)}
-                        {item.text.length > 55 ? "..." : ""}
-                      </span>
-                      <button
-                        className="debate-bubble__expand-btn"
-                        onClick={() => toggleExpand(item.id)}
-                      >
-                        펼치기 ↓
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="debate-bubble__body">
-                      {item.variant === "ai" ? (
-                        <TypewriterText text={item.text} />
-                      ) : (
-                        item.text
-                      )}
-                      {isMyPlayerMsg && (
-                        <button
-                          className="debate-bubble__collapse-btn"
-                          onClick={() => toggleExpand(item.id)}
-                        >
-                          접기 ↑
-                        </button>
-                      )}
-                    </div>
-                  )}
+                  <div className="debate-bubble__body">
+                    {item.variant === "ai" ? (
+                      <TypewriterText text={item.text} />
+                    ) : (
+                      item.text
+                    )}
+                  </div>
                 </article>
               </div>
             </div>
