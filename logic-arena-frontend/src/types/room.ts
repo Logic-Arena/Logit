@@ -25,6 +25,7 @@ export type Phase =
   | 'coaching'
   | 'final_argument'
   | 'judging'
+  | 'peer_voting'
   | 'ended';
 
 export interface Player {
@@ -84,9 +85,14 @@ export interface ParticipantScore {
   evidence: number;
   persuasion: number;
   rebuttal: number;
+  consistency: number;
   total: number;
   rank: number;
   advice: string;
+  aiScore: number;
+  peerVotes: number;
+  peerScore: number;
+  finalScore: number;
 }
 
 export interface DebateResult {

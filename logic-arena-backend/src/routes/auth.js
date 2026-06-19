@@ -10,6 +10,7 @@ import {
   KAKAO_REST_API_KEY,
   KAKAO_CLIENT_SECRET,
   KAKAO_CALLBACK_URL,
+  TEACHER_CODE,
 } from '../config.js';
 import {
   findOrCreateGoogleUser,
@@ -101,7 +102,7 @@ router.get('/me', requireAuth, async (req, res) => {
 
 router.post('/signup', async (req, res) => {
   try {
-    const { username, password, name, email } = req.body;
+    const { username, password, name, email, teacherCode } = req.body;
 
     if (!username || !password) {
       return res.status(400).json({
@@ -115,7 +116,11 @@ router.post('/signup', async (req, res) => {
       });
     }
 
-    const user = await signupLocalUser({ username, password, name, email });
+    if (teacherCode && teacherCode !== TEACHER_CODE) {
+      return res.status(400).json({ error: '선생님 코드가 올바르지 않습니다.' });
+    }
+    const isTeacher = Boolean(teacherCode);
+    const user = await signupLocalUser({ username, password, name, email, isTeacher });
     const nonce = createSession(user.user_id);
     const token = createAccessToken(user, nonce);
 

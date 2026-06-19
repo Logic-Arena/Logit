@@ -109,6 +109,15 @@ function makeFallbackTopic(previousTopics) {
   return { topic, source: 'fallback' };
 }
 
+function buildHandicapPrompt(handicap) {
+  if (!handicap?.enabled) return '';
+  const lines = [];
+  if (handicap.vocab) lines.push('초등학교 교과서에서 사용하는 어휘 수준으로만 발언하세요.');
+  if (handicap.evidenceLimit) lines.push('발언당 근거(통계, 사례, 인용)는 1가지만 제시하세요.');
+  if (handicap.rebuttalLimit) lines.push('상대 주장 전체를 반박하지 말고 한 가지 논점만 반박하세요.');
+  return lines.length ? '\n\n[AI 제약 사항]\n' + lines.join('\n') : '';
+}
+
 async function ask(prompt) {
   const res = await client.chat.completions.create({
     model: MODEL,
@@ -131,12 +140,13 @@ export async function generateTopic(previousTopics = []) {
   return makeFallbackTopic(previousTopics);
 }
 
-export async function generateArgument({ topic, vote }) {
+export async function generateArgument({ topic, vote, handicap = null }) {
   const stance = vote === 'pro' ? '찬성' : '반대';
   const prompt =
     `토론 주제: "${topic}"\n` +
     `당신은 이 주제에 대해 ${stance} 입장입니다.\n` +
-    `${stance} 입장의 핵심 주장을 논리적으로 3-5문장으로 작성해주세요.`;
+    `${stance} 입장의 핵심 주장을 논리적으로 3-5문장으로 작성해주세요.` +
+    buildHandicapPrompt(handicap);
   try {
     return await ask(prompt);
   } catch {
@@ -144,7 +154,7 @@ export async function generateArgument({ topic, vote }) {
   }
 }
 
-export async function generateRebuttal({ topic, vote, opponentArguments }) {
+export async function generateRebuttal({ topic, vote, opponentArguments, handicap = null }) {
   const stance = vote === 'pro' ? '찬성' : '반대';
   const opponentStance = vote === 'pro' ? '반대' : '찬성';
   const opponentText = opponentArguments.filter(Boolean).join('\n\n');
@@ -152,7 +162,8 @@ export async function generateRebuttal({ topic, vote, opponentArguments }) {
     `토론 주제: "${topic}"\n` +
     `당신은 ${stance} 입장입니다.\n\n` +
     `상대방(${opponentStance}) 주장:\n${opponentText}\n\n` +
-    `위 주장들에 대해 논리적으로 반론을 2-4문장으로 작성해주세요.`;
+    `위 주장들에 대해 논리적으로 반론을 2-4문장으로 작성해주세요.` +
+    buildHandicapPrompt(handicap);
   try {
     return await ask(prompt);
   } catch {
@@ -160,14 +171,15 @@ export async function generateRebuttal({ topic, vote, opponentArguments }) {
   }
 }
 
-export async function generateDefense({ topic, vote, rebuttalContent }) {
+export async function generateDefense({ topic, vote, rebuttalContent, handicap = null }) {
   const stance = vote === 'pro' ? '찬성' : '반대';
   const opponentStance = vote === 'pro' ? '반대' : '찬성';
   const prompt =
     `토론 주제: "${topic}"\n` +
     `당신은 ${stance} 입장입니다.\n\n` +
     `상대방(${opponentStance})의 반론:\n${rebuttalContent}\n\n` +
-    `이 반론에 대해 당신의 입장을 변론해주세요. 2-4문장으로 작성해주세요.`;
+    `이 반론에 대해 당신의 입장을 변론해주세요. 2-4문장으로 작성해주세요.` +
+    buildHandicapPrompt(handicap);
   try {
     return await ask(prompt);
   } catch {
@@ -175,14 +187,15 @@ export async function generateDefense({ topic, vote, rebuttalContent }) {
   }
 }
 
-export async function generateCounter({ topic, vote, defenseContent }) {
+export async function generateCounter({ topic, vote, defenseContent, handicap = null }) {
   const stance = vote === 'pro' ? '찬성' : '반대';
   const opponentStance = vote === 'pro' ? '반대' : '찬성';
   const prompt =
     `토론 주제: "${topic}"\n` +
     `당신은 ${stance} 입장입니다.\n\n` +
     `상대방(${opponentStance})의 변론:\n${defenseContent}\n\n` +
-    `이 변론에 대해 재반론을 2-3문장으로 작성해주세요.`;
+    `이 변론에 대해 재반론을 2-3문장으로 작성해주세요.` +
+    buildHandicapPrompt(handicap);
   try {
     return await ask(prompt);
   } catch {
@@ -234,27 +247,53 @@ export async function judgeDebate({ topic, content, mode = 'ai_debate' }) {
     : `참가자 4명(찬성P, 반대P, 찬성AI, 반대AI)`;
 
   const scoresTemplate = isHumanMode
-    ? `{"name":"찬성P","vote":"pro","type":"player","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"},` +
-    `{"name":"반대P","vote":"con","type":"player","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"}`
-    : `{"name":"찬성P","vote":"pro","type":"player","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"},` +
-    `{"name":"반대P","vote":"con","type":"player","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"},` +
-    `{"name":"찬성AI","vote":"pro","type":"ai","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"},` +
-    `{"name":"반대AI","vote":"con","type":"ai","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"}`;
+    ? `{"name":"찬성P","vote":"pro","type":"player","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"consistency":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"},` +
+    `{"name":"반대P","vote":"con","type":"player","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"consistency":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"}`
+    : `{"name":"찬성P","vote":"pro","type":"player","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"consistency":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"},` +
+    `{"name":"반대P","vote":"con","type":"player","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"consistency":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"},` +
+    `{"name":"찬성AI","vote":"pro","type":"ai","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"consistency":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"},` +
+    `{"name":"반대AI","vote":"con","type":"ai","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"consistency":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"}`;
 
   const prompt =
     `토론 주제: "${topic}"\n\n` +
     `${summary}\n\n` +
     `당신은 공정한 토론 심판입니다. 위 전체 발언을 바탕으로 ${participantDesc}을 동일한 기준으로 채점하세요.\n\n` +
-    `채점 기준 (각 항목 0~25점, 합계 0~100점):\n` +
-    `- 논리성(0~25): 주장의 논리적 일관성, 전제-결론 구조, 오류 없음\n` +
-    `- 근거(0~25): 사실·데이터·사례에 기반한 구체적 근거의 충실도\n` +
-    `- 설득력(0~25): 표현의 명확성, 감정 호소 없이 이성적으로 청중을 설득하는 힘\n` +
-    `- 반론(0~25): 상대 주장의 핵심을 정확히 파악하고 효과적으로 반박한 정도\n\n` +
+    `채점 기준 (각 항목 0~20점, 합계 0~100점):\n` +
+    `【논리성 0~20점】\n` +
+    `17~20: 전제와 결론의 구조가 명확하고 논리적 비약이 없으며 인과관계를 정확히 설명함\n` +
+    `13~16: 대체로 논리적이나 일부 연결이 어색하거나 약함\n` +
+    `8~12: 논리 구조는 있으나 인과관계가 자주 불명확함\n` +
+    `4~7: 주장과 근거가 자주 분리되어 있고 논리적 연결이 약함\n` +
+    `0~3: 논리적 구조가 거의 없고 단순 주장 나열에 불과함\n\n` +
+    `【근거 0~20점】\n` +
+    `17~20: 신뢰할 수 있는 출처(통계, 뉴스, 연구 사례 등)를 구체적으로 제시함\n` +
+    `13~16: 근거를 제시하나 출처가 불명확하거나 구체성이 부족함\n` +
+    `8~12: "~라고 들었다" 수준의 막연한 근거만 있음\n` +
+    `4~7: 근거가 추측이거나 개인 경험에만 의존함\n` +
+    `0~3: 근거 제시가 거의 없음\n\n` +
+    `【설득력 0~20점】\n` +
+    `17~20: 표현이 명확하고 구조적이며 감정 호소 없이 이성적으로 청중을 설득함\n` +
+    `13~16: 대체로 명확하나 일부 표현이 모호하거나 전달력이 약함\n` +
+    `8~12: 전달하려는 내용은 있으나 구성이 산만하거나 핵심이 흐림\n` +
+    `4~7: 표현이 불명확하거나 같은 말을 반복함\n` +
+    `0~3: 무슨 말을 하려는지 거의 파악하기 어려움\n\n` +
+    `【반론 0~20점】\n` +
+    `17~20: 상대 주장의 핵심을 정확히 짚고 구체적인 근거로 반박함\n` +
+    `13~16: 핵심은 짚었으나 반박의 논거가 다소 약함\n` +
+    `8~12: 상대 말 일부만 다루거나 "그건 틀렸다"는 수준에 머묾\n` +
+    `4~7: 상대 말을 잘못 이해했거나 논점과 무관한 반박을 함\n` +
+    `0~3: 반론이 거의 없음\n\n` +
+    `【일관성 0~20점】\n` +
+    `17~20: 처음부터 끝까지 같은 입장을 유지, 앞뒤 발언이 모순 없음\n` +
+    `13~16: 대체로 일관적이나 한 군데 정도 앞뒤가 맞지 않는 부분 있음\n` +
+    `8~12: 중간에 입장이 흔들리거나 자기 주장을 스스로 부정하는 경우 있음\n` +
+    `4~7: 발언마다 입장이 달라지거나 같은 주제에 대해 다른 말을 함\n` +
+    `0~3: 처음과 끝의 주장이 완전히 다르거나 자기 주장이 없음\n\n` +
     `채점 규칙 (반드시 준수):\n` +
     `1. 1점 단위로 채점하고 절대 5의 배수로 반올림하지 말 것\n` +
     `2. 참가자 간 점수 차이를 반드시 둘 것\n` +
-    `3. 내용이 부실하거나 짧으면 각 항목 0~10점, 평범하면 11~17점, 우수하면 18~25점\n` +
-    `4. 총점 기준: 미흡 0~39점, 보통 40~59점, 양호 60~79점, 우수 80~100점\n` +
+    `3. 내용이 부실하거나 짧으면 각 항목 0~7점, 평범하면 8~13점, 우수하면 14~20점\n` +
+    `4. 총점(5개 항목 합계) 기준: 미흡 0~39점, 보통 40~59점, 양호 60~79점, 우수 80~100점\n` +
     `5. 실제 발언 내용을 근거로 엄격하게 차별화해서 채점할 것\n\n` +
     `summary(총평) 작성 규칙:\n` +
     `- 3~4문장으로 작성\n` +
@@ -276,7 +315,18 @@ export async function judgeDebate({ topic, content, mode = 'ai_debate' }) {
     const parsed = JSON.parse(jsonMatch[0]);
     if (!parsed.scores || !Array.isArray(parsed.scores)) throw new Error('scores 없음');
     parsed.scores.forEach((s) => {
-      s.total = (s.logic ?? 0) + (s.evidence ?? 0) + (s.persuasion ?? 0) + (s.rebuttal ?? 0);
+      // 각 항목을 [0, 20]으로 제한 (AI가 범위를 벗어난 값을 반환할 경우 방어)
+      s.logic = Math.min(Math.max(Math.round(s.logic ?? 0), 0), 20);
+      s.evidence = Math.min(Math.max(Math.round(s.evidence ?? 0), 0), 20);
+      s.persuasion = Math.min(Math.max(Math.round(s.persuasion ?? 0), 0), 20);
+      s.rebuttal = Math.min(Math.max(Math.round(s.rebuttal ?? 0), 0), 20);
+      s.consistency = Math.min(Math.max(Math.round(s.consistency ?? 0), 0), 20);
+      s.total = s.logic + s.evidence + s.persuasion + s.rebuttal + s.consistency;
+      // 5개 항목 × 20점 = 100점 만점 → 관전자 있을 때 70점으로 정규화
+      s.aiScore = Math.round(s.total * 0.7);
+      s.peerVotes = 0;
+      s.peerScore = 0;
+      s.finalScore = s.aiScore;
     });
     const sorted = [...parsed.scores].sort((a, b) => b.total - a.total);
     sorted.forEach((s, i) => { s.rank = i + 1; });
@@ -296,7 +346,8 @@ export async function judgeDebate({ topic, content, mode = 'ai_debate' }) {
 
 function makeDrawResult(reason, isHumanMode = false) {
   const defaultScore = (name, vote, type) => ({
-    name, vote, type, logic: 0, evidence: 0, persuasion: 0, rebuttal: 0, total: 0, rank: 0, advice: reason,
+    name, vote, type, logic: 0, evidence: 0, persuasion: 0, rebuttal: 0, consistency: 0, total: 0, rank: 0,
+    aiScore: 0, peerVotes: 0, peerScore: 0, finalScore: 0, advice: reason,
   });
   const scores = [
     defaultScore('찬성P', 'pro', 'player'),
@@ -439,6 +490,39 @@ export async function generateCommunityTopicForSlot(slot) {
       C: { question: '학교 급식, 채식 메뉴를 늘려야 할까요?', category: '문화·환경' },
     };
     return fallbackTopics[slot] || fallbackTopics.A;
+  }
+}
+
+export async function generateTeacherDebateSummary({ studentName, topic, position, result, score, logic, evidence, persuasion, rebuttal, consistency, advice }) {
+  const resultLabel = result === 'win' ? '승리' : result === 'lose' ? '패배' : '무승부';
+  const positionLabel = position === 'pro' ? '찬성' : '반대';
+
+  const prompt =
+    `당신은 중고등학교 토론 수업을 담당하는 교사의 학생 평가 보조 도구입니다.\n\n` +
+    `아래는 학생 "${studentName}"의 토론 기록입니다:\n` +
+    `- 주제: ${topic}\n` +
+    `- 포지션: ${positionLabel}\n` +
+    `- 결과: ${resultLabel} (최종 ${score}점 / 100점 만점)\n` +
+    `- 항목별 점수 (20점 만점): 논리성 ${logic}, 근거 ${evidence}, 설득력 ${persuasion}, 반론 ${rebuttal}, 일관성 ${consistency}\n` +
+    `- AI 채점관 상세 총평: ${advice || '없음'}\n\n` +
+    `교사 관점에서 학생의 토론 수행을 전문적으로 분석하여, 아래 JSON 형식으로만 답하세요 (설명 없이 JSON만):\n` +
+    `{"summary":"해당 학생의 전반적인 토론 수행을 4~5문장으로 평가. 논리 구조, 근거의 질, 설득력, 반론 대응 방식, 일관성을 종합적으로 서술. 교사 전문 어투.","strengths":["구체적인 발언 내용을 인용하거나 근거로 들어 서술 (3~4가지)"],"improvements":["구체적인 발언 내용을 근거로 들고 개선 방향도 함께 제시 (3~4가지)"],"coaching":"교사가 학생에게 직접 건네는 따뜻하고 구체적인 코칭 멘트 1~2문장"}`;
+
+  try {
+    const raw = await ask(prompt);
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('JSON 파싱 실패');
+    const parsed = JSON.parse(jsonMatch[0]);
+    if (!parsed.summary || !Array.isArray(parsed.strengths) || !Array.isArray(parsed.improvements)) throw new Error('응답 구조 오류');
+    if (!parsed.coaching) parsed.coaching = '꾸준한 연습을 통해 더욱 발전할 수 있을 것입니다.';
+    return parsed;
+  } catch {
+    return {
+      summary: `${studentName} 학생은 ${topic} 주제로 ${positionLabel} 측에서 토론을 수행하여 ${score}점을 획득했습니다.`,
+      strengths: ['토론에 적극적으로 참여하였습니다.'],
+      improvements: ['근거 자료의 다양성을 높이고 논리적 일관성을 강화할 필요가 있습니다.'],
+      coaching: '꾸준한 연습을 통해 더욱 발전할 수 있을 것입니다.',
+    };
   }
 }
 

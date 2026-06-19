@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { createRoom } from '../lib/api';
 import { ROOM_MODES } from '../constants/roomModes';
 import { TOPIC_MODES } from '../constants/topicModes';
+import { useUserStore } from '../store/useUserStore';
 import type { RoomMode, TopicMode } from '../types/room';
 
 interface Props {
@@ -20,6 +21,7 @@ export function CreateRoomModal({ isOpen, onClose }: Props) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const authUser = useUserStore((s) => s.user);
 
   // ESC 키로 닫기
   useEffect(() => {
@@ -60,12 +62,23 @@ export function CreateRoomModal({ isOpen, onClose }: Props) {
     setLoading(true);
     setError('');
     try {
+      // teacher 계정이면 서버 저장 설정 사용, 아니면 null
+      const handicap = authUser?.role === 'teacher' && authUser?.teacher_settings
+        ? {
+            enabled: authUser.teacher_settings.enabled,
+            vocab: authUser.teacher_settings.vocab,
+            evidenceLimit: authUser.teacher_settings.evidenceLimit,
+            rebuttalLimit: authUser.teacher_settings.rebuttalLimit,
+            phaseDurations: authUser.teacher_settings.phaseDurations ?? null,
+          }
+        : null;
       const room = await createRoom(
         trimmed,
         mode,
         topicMode,
         topicMode === 'manual' ? topic.trim() : undefined,
         password.trim() || undefined,
+        handicap,
         coachingEnabled,
       );
       navigate(`/rooms/${room.id}/debate`, { state: { password: password.trim() || undefined } });

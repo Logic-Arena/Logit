@@ -1,4 +1,5 @@
 import { prisma } from '../db/prisma.js';
+import { generateTeacherDebateSummary } from './ai.js';
 
 const TIERS = [
   { name: '브론즈 5', min: 0 },
@@ -56,7 +57,7 @@ export async function saveDebateHistory(participants, result, topic) {
       const scoreData = result.scores?.find((s) => s.vote === p.vote && s.type === 'player');
       const score = scoreData?.total ?? 0;
 
-      await prisma.debateHistory.create({
+      const created = await prisma.debateHistory.create({
         data: {
           user_id: userId,
           topic: safeTopic,
@@ -66,10 +67,37 @@ export async function saveDebateHistory(participants, result, topic) {
           evidence: scoreData?.evidence ?? 0,
           persuasion: scoreData?.persuasion ?? 0,
           rebuttal: scoreData?.rebuttal ?? 0,
+          consistency: scoreData?.consistency ?? 0,
           advice: scoreData?.advice ?? null,
           result: resultLabel,
         },
       });
+
+      // 교사 요약 비동기 생성 (토론 흐름 차단 안 함)
+      ;(async () => {
+        try {
+          const user = await prisma.user.findUnique({ where: { user_id: userId }, select: { name: true } });
+          const summary = await generateTeacherDebateSummary({
+            studentName: user?.name ?? '학생',
+            topic: safeTopic,
+            position: p.vote,
+            result: resultLabel,
+            score,
+            logic: scoreData?.logic ?? 0,
+            evidence: scoreData?.evidence ?? 0,
+            persuasion: scoreData?.persuasion ?? 0,
+            rebuttal: scoreData?.rebuttal ?? 0,
+            consistency: scoreData?.consistency ?? 0,
+            advice: scoreData?.advice ?? null,
+          });
+          await prisma.debateHistory.update({
+            where: { id: created.id },
+            data: { teacher_summary: summary },
+          });
+        } catch (e) {
+          console.error('[teacher_summary] 생성 실패:', e.message);
+        }
+      })();
 
       // score_average 갱신 (실패해도 이력 생성은 유지)
       try {

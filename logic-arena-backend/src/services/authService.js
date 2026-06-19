@@ -74,7 +74,7 @@ export async function findOrCreateKakaoUser(kakaoUser) {
   return sanitizeUser(insertedUser);
 }
 
-export async function signupLocalUser({ username, password, name, email }) {
+export async function signupLocalUser({ username, password, name, email, isTeacher = false }) {
   const existing = await prisma.user.findUnique({
     where: { login_id: username },
   });
@@ -102,9 +102,11 @@ export async function signupLocalUser({ username, password, name, email }) {
         password: passwordHash,
         name: displayName,
         email: email ?? null,
+        role: isTeacher ? 'teacher' : 'student',
         stats: { create: {} },
+        ...(isTeacher ? { teacher_settings: { create: {} } } : {}),
       },
-      include: { stats: true },
+      include: { stats: true, teacher_settings: true },
     });
     return sanitizeUser(result);
   } catch (error) {
@@ -123,6 +125,7 @@ export async function loginLocalUser({ username, password }) {
     },
     include: {
       stats: true,
+      teacher_settings: true,
     },
   });
 
@@ -147,14 +150,16 @@ export function serializeAuthUser(user) {
     email: user.email ?? null,
     name: user.name ?? null,
     profile_image: user.profile_image ?? null,
+    role: user.role ?? 'student',
     stats: user.stats ?? null,
+    teacher_settings: user.teacher_settings ?? null,
   };
 }
 
 export async function getUserWithStats(userId) {
   const user = await prisma.user.findUnique({
     where: { user_id: userId },
-    include: { stats: true },
+    include: { stats: true, teacher_settings: true },
   });
   return user ? sanitizeUser(user) : null;
 }
@@ -167,6 +172,7 @@ export function createAccessToken(user, nonce) {
       username: user.login_id,
       email: user.email,
       name: user.name,
+      role: user.role ?? 'student',
       ...(nonce ? { nonce } : {}),
     },
     JWT_SECRET,

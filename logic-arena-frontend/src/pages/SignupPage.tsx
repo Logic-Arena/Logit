@@ -10,6 +10,7 @@ export function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
+  const [teacherCode, setTeacherCode] = useState('');
   const [loading, setLoading] = useState(false);
 
   const setAuth = useUserStore((s) => s.setAuth);
@@ -44,6 +45,7 @@ export function SignupPage() {
         password,
         name,
         email: email || undefined,
+        teacherCode: teacherCode.trim() || undefined,
       });
       const hybridUser = createHybridUser(response.user);
       setAuth(response.token, hybridUser);
@@ -157,6 +159,21 @@ export function SignupPage() {
                 autoComplete="new-password"
                 value={passwordConfirm}
                 onChange={(e) => setPasswordConfirm(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+
+            <div className="form-field">
+              <label className="form-label" htmlFor="signup-teacher-code">
+                선생님 코드 <span className="auth-optional">(선생님만 입력)</span>
+              </label>
+              <input
+                id="signup-teacher-code"
+                className="form-input"
+                type="text"
+                placeholder="학교/기관에서 발급된 코드"
+                value={teacherCode}
+                onChange={(e) => setTeacherCode(e.target.value)}
                 disabled={loading}
               />
             </div>

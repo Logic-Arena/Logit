@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useUserStore } from "../store/useUserStore";
-import { getDebateHistory, updateProfile, type DebateHistoryItem } from "../lib/api";
+import { getDebateHistory, updateProfile, joinClass, type DebateHistoryItem } from "../lib/api";
 import {
   AnalyticsDashboardSection,
   AnalyticsHistorySection,
@@ -25,6 +25,52 @@ function PillarIcon({ className }: { className?: string }) {
       <rect x="2" y="3" width="20" height="3" rx="1" fill="currentColor" />
       <path d="M2 3 L12 0 L22 3 Z" fill="currentColor" />
     </svg>
+  );
+}
+
+function ClassJoinSection() {
+  const token = useUserStore(s => s.token);
+  const [code, setCode] = useState("");
+  const [joining, setJoining] = useState(false);
+  const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+
+  const handleJoin = async () => {
+    if (!code.trim() || !token) return;
+    setJoining(true);
+    setMsg(null);
+    try {
+      const res = await joinClass(token, code.trim());
+      setMsg({ text: res.alreadyJoined ? `이미 "${res.className}"에 속해 있습니다.` : `"${res.className}"에 참가했습니다!`, ok: true });
+      setCode("");
+    } catch (e) {
+      setMsg({ text: e instanceof Error ? e.message : "참가에 실패했습니다.", ok: false });
+    } finally {
+      setJoining(false);
+    }
+  };
+
+  return (
+    <div className={styles.classJoinCard}>
+      <div className={styles.classJoinTitle}>학급 참가</div>
+      <div className={styles.classJoinRow}>
+        <input
+          className={styles.classJoinInput}
+          placeholder="학급 코드 6자리"
+          value={code}
+          maxLength={8}
+          onChange={e => setCode(e.target.value.toUpperCase())}
+          onKeyDown={e => e.key === "Enter" && handleJoin()}
+        />
+        <button className="btn btn--primary" onClick={handleJoin} disabled={joining || !code.trim()}>
+          {joining ? "참가 중..." : "참가"}
+        </button>
+      </div>
+      {msg && (
+        <div className={msg.ok ? styles.classJoinSuccess : styles.classJoinError}>
+          {msg.text}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -220,6 +266,9 @@ export function MyPage() {
             </div>
           </div>
         </div>
+
+        {/* ── 학급 참가 (학생 계정) ───────────────────────── */}
+        {user.role !== 'teacher' && <ClassJoinSection />}
 
         {/* ── 탭 메뉴 ──────────────────────────────────────── */}
         <div className={styles.tabBar}>

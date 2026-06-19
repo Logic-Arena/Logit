@@ -9,7 +9,7 @@ import { PhaseTimer } from "../components/debate/PhaseTimer";
 import { SubmitPanel } from "../components/debate/SubmitPanel";
 import { Popover } from "../components/common/Popover";
 import DotSphereLoader from "../components/common/DotSphereLoader";
-import type { Room, Phase, PlayerRole, RoomContent } from "../types/room";
+import type { Room, Phase, PlayerRole, RoomContent, ParticipantScore, DebateResult, VoteOption } from "../types/room";
 
 // ─── 상수 ──────────────────────────────────────────────────────
 
@@ -32,6 +32,7 @@ const PHASE_LABELS: Record<Phase, string> = {
   coaching: "AI 훈수 (자동)",
   final_argument: "최종 변론",
   judging: "AI 판정 중",
+  peer_voting: "동료 평가 투표",
   ended: "토론 종료",
 };
 
@@ -1102,17 +1103,165 @@ function TopicSelectionView({
   );
 }
 
+// ─── 동료 평가 투표 화면 ────────────────────────────────────────
+
+function PeerVoteView({
+  room,
+  myRole,
+}: {
+  room: Room;
+  myRole: PlayerRole | null;
+}) {
+  const [voted, setVoted] = useState(false);
+  const [voteProgress, setVoteProgress] = useState({ voted: 0, total: 0, proVotes: 0, conVotes: 0 });
+  const isObserver = myRole === "observer";
+  const observerCount = room.observers?.length ?? 0;
+
+  useEffect(() => {
+    const handleProgress = (data: { voted: number; total: number; proVotes: number; conVotes: number }) => {
+      setVoteProgress(data);
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (socket as any).on("peer_vote_progress", handleProgress);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return () => { (socket as any).off("peer_vote_progress", handleProgress); };
+  }, []);
+
+  const handleVote = (votedFor: "pro" | "con") => {
+    if (voted || !isObserver) return;
+    socket.emit("peer_vote", { votedFor });
+    setVoted(true);
+  };
+
+  const totalVotes = voteProgress.proVotes + voteProgress.conVotes;
+  const proRatio = totalVotes === 0 ? 50 : Math.round((voteProgress.proVotes / totalVotes) * 100);
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: "24px",
+        padding: "48px 20px",
+      }}
+    >
+      <div style={{ fontSize: "40px" }}>🗳️</div>
+      <div style={{ fontSize: "20px", fontWeight: 700 }}>관전자 투표</div>
+      <p
+        style={{
+          fontSize: "14px",
+          color: "var(--color-text-muted)",
+          textAlign: "center",
+          lineHeight: 1.6,
+          margin: 0,
+        }}
+      >
+        {isObserver
+          ? "어느 팀의 토론이 더 설득력 있었나요?"
+          : `관전자 ${observerCount}명이 투표하는 중입니다...`}
+      </p>
+
+      {/* 줄다리기 바 — 관전자에게만 실시간 투표 현황 표시 */}
+      {isObserver && (
+        <div style={{ width: "100%", maxWidth: "440px" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              marginBottom: "6px",
+              fontSize: "12px",
+              fontWeight: 600,
+            }}
+          >
+            <span style={{ color: "var(--color-primary)" }}>찬성팀</span>
+            <span style={{ color: "var(--color-con-orange)" }}>반대팀</span>
+          </div>
+          <div
+            style={{
+              height: "18px",
+              borderRadius: "9px",
+              overflow: "hidden",
+              background: "var(--color-con-orange)",
+              display: "flex",
+            }}
+          >
+            <div
+              style={{
+                width: `${proRatio}%`,
+                background: "var(--color-primary)",
+                transition: "width 0.4s ease",
+                height: "100%",
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {isObserver ? (
+        !voted ? (
+          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", justifyContent: "center" }}>
+            <button
+              className="btn btn--primary"
+              onClick={() => handleVote("pro")}
+              style={{ minWidth: "180px" }}
+            >
+              찬성팀이 더 설득력 있었다
+            </button>
+            <button
+              className="btn"
+              onClick={() => handleVote("con")}
+              style={{
+                minWidth: "180px",
+                background: "rgba(212,98,46,0.12)",
+                border: "1px solid var(--color-con-orange)",
+                color: "var(--color-con-orange)",
+                cursor: "pointer",
+                borderRadius: "var(--radius-sm)",
+                padding: "8px 16px",
+                fontWeight: 600,
+              }}
+            >
+              반대팀이 더 설득력 있었다
+            </button>
+          </div>
+        ) : (
+          <div style={{ textAlign: "center" }}>
+            <p style={{ fontWeight: 700, color: "var(--color-success, #4caf50)", margin: "0 0 4px" }}>
+              투표 완료 ✓
+            </p>
+            <p style={{ fontSize: "13px", color: "var(--color-text-muted)", margin: 0 }}>
+              결과를 기다리는 중...
+            </p>
+          </div>
+        )
+      ) : (
+        <p style={{ fontSize: "13px", color: "var(--color-text-muted)", margin: 0 }}>
+          AI 채점 결과를 집계하는 중입니다...
+        </p>
+      )}
+
+      {isObserver && voteProgress.total > 0 && (
+        <p style={{ fontSize: "13px", color: "var(--color-text-muted)", margin: 0 }}>
+          {voteProgress.voted} / {voteProgress.total}명 투표 완료
+        </p>
+      )}
+    </div>
+  );
+}
+
 // ─── 결과 화면 ──────────────────────────────────────────────────
 
-const RANK_BADGE = ["🥇", "🥈", "🥉", "4위"];
+const RANK_BADGE = ["🥇", "🥈", "🥉", "4위", "5위"];
 const SCORE_CRITERIA: {
-  key: "logic" | "evidence" | "persuasion" | "rebuttal";
+  key: "logic" | "evidence" | "persuasion" | "rebuttal" | "consistency";
   label: string;
 }[] = [
     { key: "logic", label: "논리성" },
     { key: "evidence", label: "근거" },
     { key: "persuasion", label: "설득력" },
     { key: "rebuttal", label: "반론" },
+    { key: "consistency", label: "일관성" },
   ];
 
 function ScoreBar({ value }: { value: number }) {
@@ -1145,6 +1294,192 @@ function ScoreBar({ value }: { value: number }) {
       <span style={{ fontSize: "12px", minWidth: "22px", textAlign: "right" }}>
         {value}
       </span>
+    </div>
+  );
+}
+
+function useCountUp(target: number, duration = 1000) {
+  const [value, setValue] = useState(0);
+  useEffect(() => {
+    let startTime: number | null = null;
+    let raf: number;
+    const step = (ts: number) => {
+      if (startTime === null) startTime = ts;
+      const progress = Math.min((ts - startTime) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setValue(Math.round(eased * target));
+      if (progress < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration]);
+  return value;
+}
+
+function AnimatedScore({ value }: { value: number }) {
+  const animated = useCountUp(value);
+  return <>{animated}</>;
+}
+
+function TeamCompareBar({ scores }: { scores: ParticipantScore[] }) {
+  const proTotal = scores.filter(s => s.vote === 'pro' && s.type === 'player').reduce((sum, s) => sum + s.total, 0);
+  const conTotal = scores.filter(s => s.vote === 'con' && s.type === 'player').reduce((sum, s) => sum + s.total, 0);
+  const sum = proTotal + conTotal || 1;
+  const proRatio = (proTotal / sum) * 100;
+  return (
+    <div style={{ padding: '14px 16px', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+      <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: '10px' }}>
+        팀 대결 종합
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px', fontWeight: 700 }}>
+        <span style={{ color: 'var(--color-primary)' }}>찬성팀 {proTotal}점</span>
+        <span style={{ color: 'var(--color-con-orange)' }}>반대팀 {conTotal}점</span>
+      </div>
+      <div style={{ height: '14px', borderRadius: '7px', overflow: 'hidden', background: 'var(--color-con-orange)', display: 'flex' }}>
+        <div style={{ width: `${proRatio}%`, background: 'var(--color-primary)', height: '100%', transition: 'width 0.8s ease' }} />
+      </div>
+      <div style={{ textAlign: 'center', marginTop: '8px', fontSize: '12px', color: 'var(--color-text-muted)' }}>
+        {proTotal > conTotal ? `찬성팀 ${proTotal - conTotal}점 앞섬` : conTotal > proTotal ? `반대팀 ${conTotal - proTotal}점 앞섬` : '동점'}
+      </div>
+    </div>
+  );
+}
+
+function DecisiveEdgeBadge({ scores }: { scores: ParticipantScore[] }) {
+  const pro = scores.find(s => s.vote === 'pro' && s.type === 'player');
+  const con = scores.find(s => s.vote === 'con' && s.type === 'player');
+  if (!pro || !con) return null;
+  let maxDiff = 0;
+  let bestLabel = '논리성';
+  let bestKey: typeof SCORE_CRITERIA[0]['key'] = 'logic';
+  let winner: 'pro' | 'con' = 'pro';
+  SCORE_CRITERIA.forEach(({ key, label }) => {
+    const diff = (pro[key] ?? 0) - (con[key] ?? 0);
+    if (Math.abs(diff) > maxDiff) {
+      maxDiff = Math.abs(diff);
+      bestLabel = label;
+      bestKey = key;
+      winner = diff >= 0 ? 'pro' : 'con';
+    }
+  });
+  if (maxDiff === 0) return null;
+  const color = winner === 'pro' ? 'var(--color-primary)' : 'var(--color-con-orange)';
+  const proScore = pro[bestKey] ?? 0;
+  const conScore = con[bestKey] ?? 0;
+  return (
+    <div style={{ padding: '12px 14px', background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span style={{ fontSize: '16px' }}>🎯</span>
+        <span style={{ fontSize: '13px' }}>
+          <strong style={{ color }}>{bestLabel}</strong>에서 승부가 갈렸습니다
+        </span>
+      </div>
+      {/* 결정적 항목 점수 비교 */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
+        <span style={{ fontWeight: 700, color: 'var(--color-primary)', minWidth: '60px' }}>{pro.name}</span>
+        <span style={{ fontWeight: 700, color: 'var(--color-primary)', fontSize: '18px' }}>{proScore}</span>
+        <span style={{ color: 'var(--color-text-muted)', fontSize: '11px' }}>vs</span>
+        <span style={{ fontWeight: 700, color: 'var(--color-con-orange)', fontSize: '18px' }}>{conScore}</span>
+        <span style={{ fontWeight: 700, color: 'var(--color-con-orange)', minWidth: '60px' }}>{con.name}</span>
+        <span style={{ marginLeft: 'auto', fontWeight: 700, color, fontSize: '12px', background: `${color}22`, padding: '2px 8px', borderRadius: '999px' }}>
+          {winner === 'pro' ? `찬성 +${maxDiff}` : `반대 +${maxDiff}`}
+        </span>
+      </div>
+      {/* 전체 항목 차이 요약 */}
+      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+        {SCORE_CRITERIA.map(({ key, label }) => {
+          const diff = (pro[key] ?? 0) - (con[key] ?? 0);
+          const isDecisive = key === bestKey;
+          const chipColor = diff > 0 ? 'var(--color-primary)' : diff < 0 ? 'var(--color-con-orange)' : 'var(--color-text-muted)';
+          return (
+            <span key={key} style={{
+              fontSize: '11px', fontWeight: isDecisive ? 700 : 400,
+              padding: '2px 8px', borderRadius: '999px',
+              background: isDecisive ? `${chipColor}22` : 'var(--color-surface)',
+              border: `1px solid ${isDecisive ? chipColor : 'var(--color-border)'}`,
+              color: chipColor,
+            }}>
+              {label} {diff === 0 ? '동점' : diff > 0 ? `+${diff}` : diff}
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function RpChangeCard({ result, myRole }: { result: DebateResult; myRole: PlayerRole | null }) {
+  if (!myRole || myRole === 'observer') return null;
+  const myVote: VoteOption = myRole === 'pro_player' ? 'pro' : 'con';
+  const WIN_RP = 20, LOSE_RP = 20;
+  const isDraw = result.winner === 'draw';
+  const isWin = !isDraw && result.winner === myVote;
+  const delta = isDraw ? 0 : isWin ? WIN_RP : -LOSE_RP;
+  const label = isDraw ? '무승부 — RP 변동 없음' : isWin ? `+${WIN_RP} RP 획득` : `-${LOSE_RP} RP 차감`;
+  const color = delta > 0 ? 'var(--color-primary)' : delta < 0 ? '#dc3545' : 'var(--color-text-muted)';
+  const bg = delta > 0 ? 'var(--color-primary-soft)' : delta < 0 ? 'rgba(220,53,69,0.08)' : 'var(--color-surface-2)';
+  const border = delta > 0 ? 'rgba(108,99,255,0.3)' : delta < 0 ? 'rgba(220,53,69,0.3)' : 'var(--color-border)';
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', background: bg, borderRadius: 'var(--radius-md)', border: `1px solid ${border}` }}>
+      <span style={{ fontSize: '26px' }}>{delta > 0 ? '🏆' : delta < 0 ? '💔' : '🤝'}</span>
+      <div>
+        <div style={{ fontWeight: 700, color, fontSize: '16px' }}>{label}</div>
+        <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '2px' }}>이번 토론 결과</div>
+      </div>
+    </div>
+  );
+}
+
+function RadarChart({ pro, con }: { pro: ParticipantScore; con: ParticipantScore }) {
+  const cx = 130, cy = 120, r = 85;
+  const axes = SCORE_CRITERIA.map(({ key, label }, i) => ({
+    key, label,
+    deg: (i / SCORE_CRITERIA.length) * 360,
+  }));
+  const toXY = (pct: number, deg: number) => {
+    const rad = (deg - 90) * Math.PI / 180;
+    return { x: cx + pct * r * Math.cos(rad), y: cy + pct * r * Math.sin(rad) };
+  };
+  const toPath = (s: ParticipantScore) => {
+    const pts = axes.map(a => toXY((s[a.key] ?? 0) / 25, a.deg));
+    return pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ') + 'Z';
+  };
+  return (
+    <div>
+      <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: '10px' }}>
+        항목별 비교
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+        <svg width="260" height="240" viewBox="0 0 260 240">
+          {[1, 0.75, 0.5, 0.25].map(lvl => {
+            const pts = axes.map(a => toXY(lvl, a.deg));
+            const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ') + 'Z';
+            return <path key={lvl} d={d} fill="none" stroke="var(--color-border)" strokeWidth="1" />;
+          })}
+          {axes.map(a => {
+            const end = toXY(1, a.deg);
+            return <line key={a.key} x1={cx} y1={cy} x2={end.x.toFixed(1)} y2={end.y.toFixed(1)} stroke="var(--color-border)" strokeWidth="1" />;
+          })}
+          <path d={toPath(con)} fill="rgba(212,98,46,0.15)" stroke="var(--color-con-orange)" strokeWidth="2" />
+          <path d={toPath(pro)} fill="rgba(108,99,255,0.15)" stroke="var(--color-primary)" strokeWidth="2" />
+          {axes.map(a => {
+            const pos = toXY(1.32, a.deg);
+            const degNorm = ((a.deg % 360) + 360) % 360;
+            const anchor = degNorm > 45 && degNorm < 135 ? 'start' : degNorm > 225 && degNorm < 315 ? 'end' : 'middle';
+            return (
+              <text key={a.key} x={pos.x.toFixed(1)} y={pos.y.toFixed(1)}
+                textAnchor={anchor} dominantBaseline="middle"
+                fill="var(--color-text-muted)" fontSize="11" fontWeight="600">
+                {a.label}
+              </text>
+            );
+          })}
+        </svg>
+        <div style={{ display: 'flex', gap: '20px', fontSize: '12px', fontWeight: 600 }}>
+          <span><span style={{ color: 'var(--color-primary)' }}>■</span> {pro.name} (찬성)</span>
+          <span><span style={{ color: 'var(--color-con-orange)' }}>■</span> {con.name} (반대)</span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1188,6 +1523,18 @@ function EndedView({
         : "var(--color-text-muted)";
   const sorted = [...(result.scores ?? [])].sort((a, b) => a.rank - b.rank);
   const playerScores = sorted.filter((s) => s.type === "player");
+  const proPlayerVotes = playerScores.find((s) => s.vote === "pro")?.peerVotes ?? 0;
+  const conPlayerVotes = playerScores.find((s) => s.vote === "con")?.peerVotes ?? 0;
+
+  const getPeerLabel = (s: (typeof sorted)[0]) => {
+    if (s.type !== "player") return null;
+    const myVotes = s.vote === "pro" ? proPlayerVotes : conPlayerVotes;
+    const oppVotes = s.vote === "pro" ? conPlayerVotes : proPlayerVotes;
+    if (myVotes > oppVotes) return { text: "우세", color: "var(--color-pro, #4caf50)" };
+    if (myVotes < oppVotes) return { text: "열세", color: "var(--color-con-orange)" };
+    return { text: "동점", color: "var(--color-text-muted)" };
+  };
+
   return (
     <div
       style={{
@@ -1203,6 +1550,9 @@ function EndedView({
           {winnerLabel}
         </div>
       </div>
+      <TeamCompareBar scores={sorted} />
+      <DecisiveEdgeBadge scores={sorted} />
+      <RpChangeCard result={result} myRole={myRole} />
       {result.summary && (
         <div
           style={{
@@ -1241,7 +1591,7 @@ function EndedView({
               marginBottom: "10px",
             }}
           >
-            참가자별 점수 (100점 만점)
+            참가자별 점수
           </div>
           <table
             style={{
@@ -1259,7 +1609,10 @@ function EndedView({
                   "근거",
                   "설득력",
                   "반론",
-                  "합계",
+                  "일관성",
+                  "AI점수",
+                  "동료평가",
+                  "최종",
                 ].map((h) => (
                   <th
                     key={h}
@@ -1335,6 +1688,20 @@ function EndedView({
                         </span>
                       </td>
                     ))}
+                    <td style={{ padding: "10px 12px", textAlign: "center", fontWeight: 600 }}>
+                      {s.aiScore ?? Math.round(s.total * 0.7)}
+                    </td>
+                    <td style={{ padding: "10px 12px", textAlign: "center" }}>
+                      {(() => {
+                        const label = getPeerLabel(s);
+                        if (!label) return <span style={{ color: "var(--color-text-muted)" }}>-</span>;
+                        return (
+                          <span style={{ fontSize: "11px", fontWeight: 700, color: label.color }}>
+                            {label.text}
+                          </span>
+                        );
+                      })()}
+                    </td>
                     <td
                       style={{
                         padding: "10px 12px",
@@ -1344,7 +1711,7 @@ function EndedView({
                         color: sideColor,
                       }}
                     >
-                      {s.total}
+                      {s.finalScore ?? s.total}
                     </td>
                   </tr>
                 );
@@ -1353,6 +1720,12 @@ function EndedView({
           </table>
         </div>
       )}
+      {(() => {
+        const proPlayer = playerScores.find(s => s.vote === 'pro');
+        const conPlayer = playerScores.find(s => s.vote === 'con');
+        if (!proPlayer || !conPlayer) return null;
+        return <RadarChart pro={proPlayer} con={conPlayer} />;
+      })()}
       {sorted.length > 0 && (
         <div
           style={{
@@ -1389,8 +1762,8 @@ function EndedView({
                   <span style={{ fontWeight: 700, color: sideColor }}>
                     {RANK_BADGE[s.rank - 1]} {s.name}
                   </span>
-                  <span style={{ fontWeight: 700, fontSize: "15px" }}>
-                    {s.total}점
+                  <span style={{ fontWeight: 700, fontSize: "15px", color: sideColor }}>
+                    <AnimatedScore value={s.finalScore ?? s.total} />점
                   </span>
                 </div>
                 {SCORE_CRITERIA.map(({ key, label }) => (
@@ -1410,7 +1783,7 @@ function EndedView({
                     >
                       {label}
                     </span>
-                    <ScoreBar value={s[key]} />
+                    <ScoreBar value={s[key] ?? 0} />
                   </div>
                 ))}
               </div>
@@ -1951,6 +2324,10 @@ export function DebatePage() {
           <DebateChatView room={room} myRole={myRole} />
         ) : phase === "judging" ? (
           <JudgingWaitView room={room} myRole={myRole} />
+        ) : phase === "peer_voting" ? (
+          <div style={{ flex: 1, overflow: "auto" }}>
+            <PeerVoteView room={room} myRole={myRole} />
+          </div>
         ) : (
           <div style={{ flex: 1, overflow: "auto", padding: "20px" }}>
             {phase === "waiting" && (
