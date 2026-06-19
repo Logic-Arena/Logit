@@ -2102,7 +2102,7 @@ export function DebatePage() {
   const stageIdx = getStageIndex(phase);
 
   return (
-    <div className="debate-page">
+    <div className="debate-page debate-page--with-sidebar">
       <div className="debate-main">
         {/* 모바일 헤더 (대기/주제선택 phase에서는 숨김) */}
         {phase !== "waiting" && phase !== "topic_selection" && (

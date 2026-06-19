@@ -1220,14 +1220,13 @@ textarea {
 }
 
 .debate-page--with-sidebar {
-  grid-template-columns: 1fr 260px;
+  grid-template-columns: minmax(0, 1fr) 260px;
 }
 
 .debate-sidebar {
-  position: fixed;
-  top: 0;
-  right: 0;
-  width: 260px;
+  position: relative;
+  grid-column: 2;
+  width: 100%;
   height: 100%;
   z-index: 10;
   background: var(--color-surface);
@@ -1241,6 +1240,7 @@ textarea {
 .debate-main {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   overflow: hidden;
 }
 
