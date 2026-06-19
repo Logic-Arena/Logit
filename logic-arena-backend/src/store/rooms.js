@@ -68,16 +68,21 @@ export const PHASE_SUBMIT_KEY = {
   final_argument: { pro_player: 'pro_final', con_player: 'con_final' },
 };
 
-export function getNextPhase(currentPhase, mode = 'ai_debate') {
+export function getNextPhase(currentPhase, mode = 'ai_debate', coachingEnabled = true) {
   const sequence = mode === 'human_debate' ? HUMAN_PHASE_SEQUENCE : AI_PHASE_SEQUENCE;
   const idx = sequence.indexOf(currentPhase);
   if (idx === -1 || idx >= sequence.length - 1) return 'ended';
-  return sequence[idx + 1];
+  const next = sequence[idx + 1];
+  // coaching이 꺼져있으면 coaching phase 건너뜀
+  if (next === 'coaching' && !coachingEnabled) {
+    return sequence[idx + 2] ?? 'ended';
+  }
+  return next;
 }
 
 // ── Room CRUD ────────────────────────────────────────────────
 
-export function createRoom({ title, mode = 'ai_debate', topicMode = 'ai_auto', topic = null, password = null }) {
+export function createRoom({ title, mode = 'ai_debate', topicMode = 'ai_auto', topic = null, password = null, coachingEnabled = true }) {
   const id = uuidv4();
   const room = {
     id,
@@ -91,6 +96,7 @@ export function createRoom({ title, mode = 'ai_debate', topicMode = 'ai_auto', t
     phaseEndAt: null,
     createdAt: new Date(),
     status: 'pending', // 방장이 아직 입장하지 않은 상태. 방장 입장 시 'active'로 전환
+    coachingEnabled,
 
     host: null,        // socketId
     proPlayer: null,   // { socketId, userId, username }
@@ -403,6 +409,7 @@ function serializeRoom(room) {
     createdAt: room.createdAt,
     sideSelectionAttempts: room.sideSelectionAttempts,
     status: room.status,
+    coachingEnabled: room.coachingEnabled,
   };
 }
 
