@@ -106,10 +106,11 @@ export async function getRooms(): Promise<Room[]> {
 
 export async function createRoom(
   title: string,
-  mode: RoomMode = 'free_debate',
+  mode: RoomMode = 'ai_debate',
   topicMode: TopicMode = 'ai_auto',
   topic?: string,
   password?: string,
+  coachingEnabled: boolean = true,
 ): Promise<Room> {
   const res = await fetch(`${BASE}/rooms`, {
     method: 'POST',
@@ -118,6 +119,7 @@ export async function createRoom(
       title, mode, topicMode,
       ...(topic !== undefined && { topic }),
       ...(password !== undefined && { password }),
+      coachingEnabled,
     }),
   });
 
