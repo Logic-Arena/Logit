@@ -939,14 +939,126 @@ textarea {
 /* ── Create Room Layout ─────────────────────────────────── */
 .create-room-row1 {
   display: grid;
-  grid-template-columns: 1fr 280px;
+  grid-template-columns: 1.5fr 1fr;
   gap: 20px;
 }
 
 .create-room-row2 {
   display: grid;
-  grid-template-columns: 1.55fr 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 24px;
+}
+
+/* ── Coaching Toggle Section ─────────────────────────────── */
+.coaching-toggle-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 16px 18px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(221, 219, 213, 0.5);
+  border-radius: var(--radius-md);
+  transition: all var(--transition);
+}
+
+.coaching-toggle-section--on {
+  background: var(--color-primary-soft);
+  border-color: rgba(108, 99, 255, 0.4);
+}
+
+.coaching-toggle-section__text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.coaching-toggle-section__label {
+  font-size: var(--text-subtitle);
+  font-weight: 600;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: color var(--transition);
+}
+
+.coaching-toggle-section--on .coaching-toggle-section__label {
+  color: var(--color-primary);
+}
+
+.coaching-toggle-badge {
+  display: inline-block;
+  font-size: var(--text-caption);
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--color-text-muted);
+  border: 0.5px solid rgba(148, 163, 184, 0.4);
+  backdrop-filter: blur(10px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.coaching-toggle-badge--on {
+  background: rgba(108, 99, 255, 0.12);
+  color: var(--color-primary);
+  border: 0.5px solid rgba(108, 99, 255, 0.4);
+}
+
+.coaching-toggle-section__desc {
+  font-size: var(--text-caption);
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  margin: 0;
+  transition: color var(--transition);
+}
+
+.coaching-toggle-section--on .coaching-toggle-section__desc {
+  color: var(--color-primary);
+  opacity: 0.85;
+}
+
+/* ── Toggle Switch ─────────────────────────────────────── */
+.toggle-switch {
+  position: relative;
+  width: 56px;
+  height: 32px;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all var(--transition);
+  flex-shrink: 0;
+}
+
+.toggle-switch:hover {
+  border-color: var(--color-primary);
+}
+
+.toggle-switch--on {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.toggle-switch__slider {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  background: #fff;
+  border-radius: var(--radius-circle);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  transition: transform var(--transition);
+}
+
+.toggle-switch--on .toggle-switch__slider {
+  transform: translateX(24px);
 }
 
 .form-label__opt {
@@ -1102,9 +1214,13 @@ textarea {
 /* ── Debate Layout ─────────────────────────────────────── */
 .debate-page {
   display: grid;
-  grid-template-columns: 1fr 260px;
+  grid-template-columns: 1fr;
   height: 100%;
   overflow: hidden;
+}
+
+.debate-page--with-sidebar {
+  grid-template-columns: 1fr 260px;
 }
 
 .debate-sidebar {
@@ -3891,6 +4007,20 @@ textarea {
     gap: 16px;
   }
 
+  .coaching-toggle-section {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .coaching-toggle-section__text {
+    width: 100%;
+  }
+
+  .toggle-switch {
+    align-self: flex-end;
+  }
+
   .create-room-modal__footer {
     padding-top: 20px;
     gap: 10px;
@@ -4624,7 +4754,7 @@ textarea {
   position: relative;
   z-index: 1;
   width: 100%;
-  max-width: 1000px;
+  max-width: 800px;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
