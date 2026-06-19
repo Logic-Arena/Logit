@@ -116,27 +116,6 @@ export function CreateRoomModal({ isOpen, onClose }: Props) {
             </div>
 
             <div className="form-field">
-              <label className="form-label">훈수 AI</label>
-              <div className="mode-select">
-                <button
-                  type="button"
-                  className={`mode-card${coachingEnabled ? ' mode-card--selected' : ''}`}
-                  onClick={() => setCoachingEnabled(true)}
-                >
-                  <span className="mode-card__label">훈수 ON</span>
-                  <span className="mode-card__desc">최종 변론 전 AI가 힌트를 제공합니다</span>
-                </button>
-                <button
-                  type="button"
-                  className={`mode-card${!coachingEnabled ? ' mode-card--selected' : ''}`}
-                  onClick={() => setCoachingEnabled(false)}
-                >
-                  <span className="mode-card__label">훈수 OFF</span>
-                  <span className="mode-card__desc">AI 힌트 없이 바로 최종 변론으로 넘어갑니다</span>
-                </button>
-              </div>
-            </div>
-            <div className="form-field">
               <label className="form-label" htmlFor="password">
                 비밀번호 <span className="form-label__opt">(선택)</span>
               </label>
@@ -155,7 +134,7 @@ export function CreateRoomModal({ isOpen, onClose }: Props) {
           <div className="create-room-row2">
             <div className="form-field">
               <div className="form-label">토론 모드</div>
-              <div className="mode-select mode-select--3col">
+              <div className="mode-select mode-select--2col">
                 {(Object.values(ROOM_MODES) as typeof ROOM_MODES[RoomMode][]).map((m) => (
                   <button
                     key={m.key}
@@ -201,6 +180,27 @@ export function CreateRoomModal({ isOpen, onClose }: Props) {
               />
             </div>
           )}
+
+          {/* 훈수 AI 토글 영역 */}
+          <div className={`coaching-toggle-section${coachingEnabled ? ' coaching-toggle-section--on' : ''}`}>
+            <div className="coaching-toggle-section__text">
+              <label className="coaching-toggle-section__label" htmlFor="coachingToggle">
+                훈수 AI <span className={`coaching-toggle-badge${coachingEnabled ? ' coaching-toggle-badge--on' : ''}`}>{coachingEnabled ? 'ON' : 'OFF'}</span>
+              </label>
+              <p className="coaching-toggle-section__desc">
+                최종 변론 전, AI가 논점·근거 힌트를 제공합니다. 끄면 힌트 없이 바로 최종 변론으로 넘어갑니다.
+              </p>
+            </div>
+            <button
+              type="button"
+              id="coachingToggle"
+              className={`toggle-switch${coachingEnabled ? ' toggle-switch--on' : ''}`}
+              onClick={() => setCoachingEnabled(!coachingEnabled)}
+              aria-label="훈수 AI 토글"
+            >
+              <span className="toggle-switch__slider" />
+            </button>
+          </div>
 
           <div className="create-room-modal__footer">
             <button type="button" className="btn btn--ghost" onClick={onClose}>
