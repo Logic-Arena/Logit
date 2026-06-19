@@ -633,9 +633,9 @@ function StudentDetailView({ student, onBack, token, summary }: {
                 <PolarGrid gridType="polygon" stroke="var(--color-border)" />
                 <PolarAngleAxis dataKey="axis" tick={{ fontSize: 10, fill: 'var(--color-text-muted)' }} />
                 <PolarRadiusAxis domain={[0, 20]} tick={false} axisLine={false} />
-                <Radar name="나의 지표" dataKey="student" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.25} />
+                <Radar name="나의 지표" dataKey="student" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.2} />
                 {summary && (
-                  <Radar name="전체 평균" dataKey="classAvg" stroke="#9ca3af" strokeDasharray="4 2" fill="#9ca3af" fillOpacity={0} />
+                  <Radar name="전체 평균" dataKey="classAvg" stroke="#6b7280" strokeWidth={2} strokeDasharray="5 3" fill="none" />
                 )}
               </RadarChart>
             </ResponsiveContainer>

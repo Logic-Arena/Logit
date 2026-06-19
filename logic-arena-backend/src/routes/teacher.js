@@ -1,6 +1,7 @@
 import express from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { prisma } from '../db/prisma.js';
+import { generateTeacherDebateSummary } from '../services/ai.js';
 
 const router = express.Router();
 
@@ -334,7 +335,33 @@ router.get('/debate-summary/:historyId', requireAuth, requireTeacher, async (req
       select: { teacher_summary: true },
     });
     if (!record) return res.status(404).json({ error: '이력을 찾을 수 없습니다.' });
-    if (!record.teacher_summary) return res.status(202).json({ pending: true });
+    if (!record.teacher_summary) {
+      // 사전 생성 안 된 기록은 즉시 백그라운드 생성 트리거
+      const full = await prisma.debateHistory.findUnique({
+          where: { id: historyId },
+          select: { topic: true, position: true, result: true, score: true, logic: true, evidence: true, persuasion: true, rebuttal: true, consistency: true, advice: true, user_id: true },
+        });
+        ;(async () => {
+          try {
+            const user = await prisma.user.findUnique({ where: { user_id: full.user_id }, select: { name: true } });
+            const summary = await generateTeacherDebateSummary({
+              studentName: user?.name ?? '학생',
+              topic: full.topic,
+              position: full.position,
+              result: full.result,
+              score: full.score,
+              logic: full.logic,
+              evidence: full.evidence,
+              persuasion: full.persuasion,
+              rebuttal: full.rebuttal,
+              consistency: full.consistency,
+              advice: full.advice ?? null,
+            });
+            await prisma.debateHistory.update({ where: { id: historyId }, data: { teacher_summary: summary } });
+          } catch (e) { console.error('[debate-summary] 생성 실패:', e.message); }
+        })();
+      return res.status(202).json({ pending: true });
+    }
     return res.json(record.teacher_summary);
   } catch (e) {
     console.error('[debate-summary]', e);
