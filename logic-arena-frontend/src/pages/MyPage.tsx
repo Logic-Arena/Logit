@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useUserStore } from "../store/useUserStore";
-import { getDebateHistory, updateProfile, joinClass, type DebateHistoryItem } from "../lib/api";
+import { getDebateHistory, updateProfile, joinClass, getMe, type DebateHistoryItem } from "../lib/api";
 import {
   AnalyticsDashboardSection,
   AnalyticsHistorySection,
@@ -86,6 +86,7 @@ export function MyPage() {
 
   useEffect(() => {
     getDebateHistory().then(setHistory).catch(() => {});
+    getMe().then(setUser).catch(() => {});
   }, []);
 
   const growthRate = useMemo(() => {

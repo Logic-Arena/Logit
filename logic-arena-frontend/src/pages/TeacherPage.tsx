@@ -512,12 +512,24 @@ function ClassSummaryPanel({ summary, className }: { summary: ClassSummary; clas
       {catEntries.length > 0 && (
         <>
           <div className={styles.catLabel}>항목별 학급 평균</div>
-          {catEntries.map(e => (
-            <div key={e.key} className={styles.catRow}>
-              <div className={styles.catName}>{e.label}</div>
-              <MiniBar value={e.value} max={25} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 180px', gap: '16px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {catEntries.map(e => (
+                <div key={e.key} className={styles.catRow}>
+                  <div className={styles.catName}>{e.label}</div>
+                  <MiniBar value={e.value} max={20} />
+                </div>
+              ))}
             </div>
-          ))}
+            <ResponsiveContainer width="100%" height={160}>
+              <RadarChart data={catEntries.map(e => ({ axis: e.label, value: e.value }))}>
+                <PolarGrid gridType="polygon" stroke="var(--color-border)" />
+                <PolarAngleAxis dataKey="axis" tick={{ fontSize: 10, fill: 'var(--color-text-muted)' }} />
+                <PolarRadiusAxis domain={[0, 20]} tick={false} axisLine={false} />
+                <Radar name="학급 평균" dataKey="value" stroke="#8b5cf6" strokeWidth={2} fill="#8b5cf6" fillOpacity={0.2} />
+              </RadarChart>
+            </ResponsiveContainer>
+          </div>
         </>
       )}
 
@@ -619,12 +631,12 @@ function StudentDetailView({ student, onBack, token, summary }: {
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', fontSize: '10px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <span style={{ display: 'inline-block', width: '12px', height: '3px', background: '#3b82f6', borderRadius: '2px' }} />
-                나의 지표
+                {student.name}의 지표
               </span>
               {summary && (
                 <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <svg width="14" height="4"><line x1="0" y1="2" x2="14" y2="2" stroke="#9ca3af" strokeWidth="2" strokeDasharray="4 2" /></svg>
-                  전체 평균
+                  학급 평균
                 </span>
               )}
             </div>
@@ -633,9 +645,9 @@ function StudentDetailView({ student, onBack, token, summary }: {
                 <PolarGrid gridType="polygon" stroke="var(--color-border)" />
                 <PolarAngleAxis dataKey="axis" tick={{ fontSize: 10, fill: 'var(--color-text-muted)' }} />
                 <PolarRadiusAxis domain={[0, 20]} tick={false} axisLine={false} />
-                <Radar name="나의 지표" dataKey="student" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.25} />
+                <Radar name={`${student.name}의 지표`} dataKey="student" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.2} />
                 {summary && (
-                  <Radar name="전체 평균" dataKey="classAvg" stroke="#9ca3af" strokeDasharray="4 2" fill="#9ca3af" fillOpacity={0} />
+                  <Radar name="학급 평균" dataKey="classAvg" stroke="#6b7280" strokeWidth={2} strokeDasharray="5 3" fill="none" />
                 )}
               </RadarChart>
             </ResponsiveContainer>
