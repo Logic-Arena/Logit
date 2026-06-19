@@ -2,7 +2,7 @@ export type PlayerRole = 'pro_player' | 'con_player' | 'observer';
 export type UserRole = 'host' | 'participant' | 'observer' | 'ai';
 export type VoteOption = 'pro' | 'con';
 export type WinnerSide = 'pro' | 'con' | 'draw';
-export type RoomMode = 'free_debate' | 'ai_debate' | 'human_debate';
+export type RoomMode = 'ai_debate' | 'human_debate';
 export type TopicMode = 'manual' | 'ai_auto';
 export type TopicSource = 'ai' | 'fallback';
 
@@ -119,4 +119,5 @@ export interface Room {
   result: DebateResult | null;
   createdAt: string;
   sideSelectionAttempts: number;
+  coachingEnabled: boolean;
 }

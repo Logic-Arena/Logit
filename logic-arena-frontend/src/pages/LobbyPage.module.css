@@ -1,14 +1,18 @@
 /* ── Lobby ── */
-/* 전체 로비: 사이드바(220px) + 메인 콘텐츠 + 리포트(260px) */
+/* 전체 로비: 사이드바(280px) + 메인 콘텐츠 + vote-widget(오른쪽 고정) */
 .lobby-layout {
-  display: grid;
-  grid-template-columns: 280px 1fr 300px;
+  display: flex;
   height: 100%;
   overflow: hidden;
+  position: relative;
 }
 
 .lobby-sidebar {
-  grid-column: 1;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 280px;
+  height: 100vh;
   border-right: 1px solid var(--color-border);
   overflow-y: auto;
   background: var(--color-surface);
@@ -16,6 +20,7 @@
   display: flex;
   flex-direction: column;
   gap: 0;
+  z-index: 100;
 }
 
 .lobby-sidebar-backdrop {
@@ -27,9 +32,10 @@
 }
 
 .lobby-page {
-  grid-column: 2;
   flex: 1;
   overflow-y: auto;
+  margin-left: 280px;
+  padding-right: 300px;
 }
 
 .lobby-actions {
@@ -71,10 +77,20 @@
 }
 
 .lobby-report {
-  grid-column: 3;
-  background: var(--color-bg);
-  overflow-y: auto;
-  align-content: start;
+  position: fixed;
+  top: var(--header-height);
+  right: 24px;
+  width: 260px;
+  height: calc(100vh - var(--header-height));
+  background: transparent;
+  padding: 24px 0;
+  display: flex;
+  align-items: flex-start;
+  pointer-events: none;
+}
+
+.lobby-report > * {
+  pointer-events: auto;
 }
 
 /* ── Report Widget ── */
@@ -84,7 +100,7 @@
   flex-direction: column;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   padding: 16px;
   gap: 0;
 }
@@ -123,7 +139,7 @@
 .report-item__dot {
   width: 9px;
   height: 9px;
-  border-radius: 50%;
+  border-radius: var(--radius-circle);
   flex-shrink: 0;
   position: relative;
   z-index: 1;
@@ -186,7 +202,7 @@
   font-weight: 700;
   color: var(--color-text);
   padding: 1px 6px;
-  border-radius: 9999px;
+  border-radius: var(--radius-full);
   flex-shrink: 0;
   line-height: 1.6;
   background: rgba(255, 255, 255, 0.08);
@@ -212,7 +228,7 @@
   white-space: nowrap;
   flex-shrink: 0;
   padding: 1px 5px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   text-transform: uppercase;
 }
 
@@ -249,7 +265,7 @@
   z-index: 9999;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   padding: 12px 14px;
   color: var(--color-text);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
@@ -278,7 +294,7 @@
   font-weight: 700;
   color: var(--color-text);
   padding: 1px 7px;
-  border-radius: 9999px;
+  border-radius: var(--radius-full);
   flex-shrink: 0;
   background: rgba(255, 255, 255, 0.08);
   border: 0.5px solid rgba(255, 255, 255, 0.3);
@@ -390,7 +406,7 @@
   font-size: var(--text-caption);
   font-weight: 500;
   padding: 3px 10px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
 }
 .room-card__phase--waiting {
   background: rgba(108, 99, 255, 0.15);
@@ -427,7 +443,7 @@
 .tier-widget__avatar {
   width: 60px;
   height: 60px;
-  border-radius: 50%;
+  border-radius: var(--radius-circle);
   background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
   display: flex;
   align-items: center;
@@ -480,14 +496,14 @@
 /* 프로그레스 바 */
 .tier-widget__progress-wrap {
   height: 6px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: var(--color-surface-2);
   overflow: hidden;
 }
 
 .tier-widget__progress-fill {
   height: 100%;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: linear-gradient(90deg, var(--color-primary), var(--color-primary-hover));
   transition: width 0.4s ease;
 }
@@ -593,28 +609,24 @@
 
 @media (max-width: 768px) {
   .lobby-layout {
-    grid-template-columns: 1fr;
-    grid-template-rows: 1fr 1fr;
-    overflow-y: hidden;
-    overflow-x: hidden;
-    height: 100%;
+    flex-direction: column;
   }
 
   .page.lobby-page {
-    grid-column: 1;
-    grid-row: 1;
+    padding-right: 24px;
     overflow-y: auto;
     min-height: 0;
     padding: 24px;
+    margin-left: 0;
   }
 
   .lobby-report {
-    grid-column: 1;
-    grid-row: 2;
+    position: static;
+    width: 100%;
+    height: auto;
     border-left: none;
     border-top: 1px solid var(--color-border);
-    overflow-y: auto;
-    min-height: 0;
+    padding: 24px;
   }
 
   .lobby-sidebar {

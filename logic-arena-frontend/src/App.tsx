@@ -34,7 +34,15 @@ export default function App() {
             <Route element={<AppLayout />}>
               <Route index element={<LobbyPage />} />
               <Route path="rooms/new" element={<CreateRoomPage />} />
-              <Route path="rooms/:roomId" element={<RoomEntryPage />} />
+              <Route
+                path="rooms/:roomId"
+                element={
+                  <>
+                    <LobbyPage />
+                    <RoomEntryPage />
+                  </>
+                }
+              />
               <Route path="rooms/:roomId/debate" element={<DebatePage />} />
               <Route path="analytics" element={<AnalyticsPage />} />
               <Route path="mypage" element={<MyPage />} />

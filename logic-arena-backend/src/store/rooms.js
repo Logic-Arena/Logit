@@ -70,11 +70,16 @@ export const PHASE_SUBMIT_KEY = {
   final_argument: { pro_player: 'pro_final', con_player: 'con_final' },
 };
 
-export function getNextPhase(currentPhase, mode = 'ai_debate') {
+export function getNextPhase(currentPhase, mode = 'ai_debate', coachingEnabled = true) {
   const sequence = mode === 'human_debate' ? HUMAN_PHASE_SEQUENCE : AI_PHASE_SEQUENCE;
   const idx = sequence.indexOf(currentPhase);
   if (idx === -1 || idx >= sequence.length - 1) return 'ended';
-  return sequence[idx + 1];
+  const next = sequence[idx + 1];
+  // coaching이 꺼져있으면 coaching phase 건너뜀
+  if (next === 'coaching' && !coachingEnabled) {
+    return sequence[idx + 2] ?? 'ended';
+  }
+  return next;
 }
 
 // ── Room CRUD ────────────────────────────────────────────────
@@ -103,7 +108,7 @@ export function getPhaseDuration(phase, phaseDurations = null) {
   return customSec * 1_000 + bonus;
 }
 
-export function createRoom({ title, mode = 'ai_debate', topicMode = 'ai_auto', topic = null, password = null, handicap = null }) {
+export function createRoom({ title, mode = 'ai_debate', topicMode = 'ai_auto', topic = null, password = null, handicap = null, coachingEnabled = true }) {
   const defaultHandicap = { enabled: true, vocab: true, evidenceLimit: true, rebuttalLimit: true, phaseDurations: null };
   const resolvedHandicap = (handicap && typeof handicap === 'object') ? handicap : defaultHandicap;
   const id = uuidv4();
@@ -119,6 +124,7 @@ export function createRoom({ title, mode = 'ai_debate', topicMode = 'ai_auto', t
     phaseEndAt: null,
     createdAt: new Date(),
     status: 'pending', // 방장이 아직 입장하지 않은 상태. 방장 입장 시 'active'로 전환
+    coachingEnabled: coachingEnabled !== false,
 
     host: null,        // socketId
     proPlayer: null,   // { socketId, userId, username }
@@ -160,7 +166,7 @@ export function createRoom({ title, mode = 'ai_debate', topicMode = 'ai_auto', t
     topicGenerationSeq: 0,
 
     handicap: resolvedHandicap,
-    peerVotes: { pro: 0, con: 0, voters: new Set() },
+    peerVotes: { pro: 0, con: 0, voters: new Set(), initialObserverCount: null },
   };
   rooms.set(id, room);
   return serializeRoom(room);
@@ -430,6 +436,7 @@ function serializeRoom(room) {
     createdAt: room.createdAt,
     sideSelectionAttempts: room.sideSelectionAttempts,
     status: room.status,
+    coachingEnabled: room.coachingEnabled,
   };
 }
 

@@ -8,6 +8,7 @@ import { useUserStore } from "../store/useUserStore";
 import { PhaseTimer } from "../components/debate/PhaseTimer";
 import { SubmitPanel } from "../components/debate/SubmitPanel";
 import { Popover } from "../components/common/Popover";
+import DotSphereLoader from "../components/common/DotSphereLoader";
 import type { Room, Phase, PlayerRole, RoomContent, ParticipantScore, DebateResult, VoteOption } from "../types/room";
 
 // ─── 상수 ──────────────────────────────────────────────────────
@@ -765,16 +766,12 @@ function JudgingWaitView({
 
   return (
     <div className="judging-wait">
-      <div className="judging-wait__scan" aria-hidden="true" />
-
       <section className="judging-wait__hero" aria-live="polite">
         <div className="judging-wait__side-chip judging-wait__side-chip--pro">
           찬성
         </div>
-        <div className="judging-wait__scale-stage" aria-hidden="true">
-          <div className="judging-wait__ring" />
-          <div className="judging-wait__scale">⚖️</div>
-          <div className="judging-wait__beam" />
+        <div className="judging-wait__scale-stage">
+          <DotSphereLoader size={240} hue={243} speed={0.008} wobbleAmount={0.08} />
         </div>
         <div className="judging-wait__side-chip judging-wait__side-chip--con">
           반대
@@ -782,22 +779,24 @@ function JudgingWaitView({
       </section>
 
       <div className="judging-wait__headline">
-        <p className="judging-wait__eyebrow">Cyber Courtroom</p>
-        <h2>AI 판정단이 논점을 심문 중...</h2>
+        <h2>AI 판정단이 논점을 심문 중.</h2>
         <p>주장, 근거, 반박을 스캔해서 승부를 계산하고 있어요</p>
       </div>
 
-      <div className="judging-wait__analysis-rail" aria-label="분석 항목">
-        {JUDGING_ANALYSIS_STEPS.map((step) => (
-          <span key={step} className="judging-wait__analysis-chip">
-            {step}
-          </span>
+      <div className="judging-wait__stepper" aria-label="분석 단계">
+        {JUDGING_ANALYSIS_STEPS.map((step, i) => (
+          <div key={step} className="judging-wait__step" style={{ animationDelay: `${i * 0.15}s` }}>
+            <div className="judging-wait__step-dot-wrapper">
+              {i < JUDGING_ANALYSIS_STEPS.length - 1 && (
+                <div className={`judging-wait__step-line ${i < 2 ? 'judging-wait__step-line--filled' : ''}`} />
+              )}
+              <div className={`judging-wait__step-dot ${i < 3 ? 'judging-wait__step-dot--filled' : 'judging-wait__step-dot--current'}`} />
+            </div>
+            <span className="judging-wait__step-label">{step}</span>
+          </div>
         ))}
       </div>
 
-      <div className="judging-wait__progress" aria-hidden="true">
-        <div className="judging-wait__progress-bar" />
-      </div>
       <div className="judging-wait__status-badge">
         <span />
         판결문 작성 중
@@ -810,12 +809,9 @@ function JudgingWaitView({
         </article>
       )}
 
-      <article className="judging-wait__glass-card judging-wait__glass-card--tip">
-        <div className="judging-wait__card-label">토론 꿀팁</div>
-        <p key={tipIdx} className="judging-wait__tip-text">
-          {DEBATE_TIPS[tipIdx]}
-        </p>
-      </article>
+      <p key={tipIdx} className="judging-wait__tip-inline">
+        <strong>토론 꿀팁</strong> · {DEBATE_TIPS[tipIdx]}
+      </p>
     </div>
   );
 }
@@ -2142,18 +2138,20 @@ export function DebatePage() {
   return (
     <div className="debate-page">
       <div className="debate-main">
-        {/* 모바일 헤더 */}
-        <div className="debate-mobile-header">
-          <button
-            className="sidebar-toggle-btn"
-            onClick={() => setSidebarOpen((v) => !v)}
-          >
-            정보 ▸
-          </button>
-          {room.topic && (
-            <span className="debate-mobile-header__topic">{room.topic}</span>
-          )}
-        </div>
+        {/* 모바일 헤더 (대기/주제선택 phase에서는 숨김) */}
+        {phase !== "waiting" && phase !== "topic_selection" && (
+          <div className="debate-mobile-header">
+            <button
+              className="sidebar-toggle-btn"
+              onClick={() => setSidebarOpen((v) => !v)}
+            >
+              정보 ▸
+            </button>
+            {room.topic && (
+              <span className="debate-mobile-header__topic">{room.topic}</span>
+            )}
+          </div>
+        )}
 
         {/* 통합 페이즈 헤더 */}
         <div

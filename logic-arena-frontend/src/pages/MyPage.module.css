@@ -27,7 +27,7 @@
 .profileCard {
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 16px;
+  border-radius: var(--radius-md);
   padding: 28px 32px;
   display: flex;
   align-items: center;
@@ -45,7 +45,7 @@
 .avatar {
   width: 72px;
   height: 72px;
-  border-radius: 50%;
+  border-radius: var(--radius-circle);
   background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
   display: flex;
   align-items: center;
@@ -59,7 +59,7 @@
 .avatarImg {
   width: 72px;
   height: 72px;
-  border-radius: 50%;
+  border-radius: var(--radius-circle);
   object-fit: cover;
   flex-shrink: 0;
 }
@@ -72,7 +72,7 @@
   min-height: 72px;
   flex-shrink: 0;
   cursor: pointer;
-  border-radius: 50%;
+  border-radius: var(--radius-circle);
   overflow: hidden;
 }
 
@@ -86,7 +86,7 @@
 .avatarOverlay {
   position: absolute;
   inset: 0;
-  border-radius: 50%;
+  border-radius: var(--radius-circle);
   background: rgba(0,0,0,0.45);
   color: #fff;
   font-size: 12px;
@@ -175,7 +175,7 @@
   background-color: rgba(108, 99, 255, 0.12);
   border: 0.5px solid rgba(108, 99, 255, 0.4);
   padding: 4px 10px;
-  border-radius: 9999px;
+  border-radius: var(--radius-full);
   backdrop-filter: blur(10px);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.6),
@@ -216,7 +216,7 @@
 .tierProgressWrap {
   position: relative;
   background-color: var(--color-border);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   height: 6px;
   margin-bottom: 6px;
   overflow: hidden;
@@ -239,7 +239,7 @@
 .tierProgressFill {
   height: 100%;
   background: linear-gradient(to right, var(--color-primary), var(--color-primary-hover));
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   transition: width 0.3s ease;
 }
 
@@ -289,7 +289,7 @@
 .statCard {
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   padding: 20px 24px;
   transition: border-color 0.15s;
   display: flex;
@@ -464,7 +464,7 @@
   height: 120px;
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 16px;
+  border-radius: var(--radius-md);
   animation: pulse 1.5s ease-in-out infinite;
 }
 

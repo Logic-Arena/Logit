@@ -115,15 +115,15 @@ async function startPhase(io, roomId, phase) {
   const isHumanMode = room.mode === 'human_debate';
 
   if (isHumanMode) {
-    // 인간 vs 인간: coaching과 judging만 AI 사용
-    if (phase === 'coaching' || phase === 'judging') {
+    // 인간 vs 인간: coaching(활성화된 경우)과 judging만 AI 사용
+    if (phase === 'judging' || (phase === 'coaching' && room.coachingEnabled)) {
       handleAiAutoPhase(io, roomId, phase).catch((e) =>
         console.error(`[AI] ${phase} 생성 실패:`, e.message)
       );
     }
   } else {
     // ai_debate: 기존 로직 그대로
-    if (AI_AUTO_PHASES.has(phase)) {
+    if (AI_AUTO_PHASES.has(phase) && (phase !== 'coaching' || room.coachingEnabled)) {
       handleAiAutoPhase(io, roomId, phase).catch((e) =>
         console.error(`[AI] ${phase} 자동 생성 실패:`, e.message)
       );
@@ -163,7 +163,7 @@ async function advancePhase(io, roomId) {
     return;
   }
 
-  const next = getNextPhase(room.phase, room.mode);
+  const next = getNextPhase(room.phase, room.mode, room.coachingEnabled);
   await startPhase(io, roomId, next);
 }
 
