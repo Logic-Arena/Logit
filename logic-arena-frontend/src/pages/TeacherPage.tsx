@@ -2,10 +2,14 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUserStore } from "../store/useUserStore";
 import styles from "./TeacherPage.module.css";
+import {
+  RadarChart, Radar, PolarAngleAxis, PolarGrid, PolarRadiusAxis, ResponsiveContainer,
+} from "recharts";
 import type {
   ClassInfo,
   StudentStat,
   ClassSummary,
+  TeacherDebateSummary,
 } from "../lib/api";
 import {
   getTeacherClasses,
@@ -13,6 +17,7 @@ import {
   deleteClass,
   getClassStudents,
   getClassSummary,
+  getStoredDebateSummary,
 } from "../lib/api";
 
 const BASE = import.meta.env.VITE_API_URL ?? "/api";
@@ -102,11 +107,141 @@ function CopyButton({ text }: { text: string }) {
 
 function MiniBar({ value, max = 25 }: { value: number; max?: number }) {
   const pct = Math.min(100, Math.round((value / max) * 100));
-  const color = pct >= 80 ? "#4ade80" : pct >= 52 ? "#facc15" : "#fb923c";
+  const color = value >= 21 ? "#4ade80" : value >= 16 ? "#facc15" : value >= 11 ? "#fb923c" : "#f87171";
   return (
     <div className={styles.miniBarWrap}>
       <div className={styles.miniBar} style={{ width: `${pct}%`, background: color }} />
       <span className={styles.miniBarVal}>{value}</span>
+    </div>
+  );
+}
+
+type DebateRow = StudentStat['recentDebates'][number];
+
+function DebateSummaryModal({ debate, token, onClose }: {
+  debate: DebateRow;
+  token: string;
+  onClose: () => void;
+}) {
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<TeacherDebateSummary | null>(null);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState('');
+
+  const load = useCallback(() => {
+    setLoading(true);
+    setError('');
+    setPending(false);
+    getStoredDebateSummary(token, debate.id)
+      .then(res => {
+        if ('pending' in res && res.pending) {
+          setPending(true);
+        } else {
+          setData(res as TeacherDebateSummary);
+        }
+      })
+      .catch(() => setError('요약을 불러오지 못했습니다.'))
+      .finally(() => setLoading(false));
+  }, [token, debate.id]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const positionLabel = debate.position === 'pro' ? '찬성' : '반대';
+  const positionColor = debate.position === 'pro' ? 'var(--color-primary)' : 'var(--color-con-orange)';
+  const resultLabel = debate.result === 'win' ? '승리' : debate.result === 'lose' ? '패배' : '무승부';
+  const dateStr = new Date(debate.playedAt).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+      onClick={onClose}
+    >
+      <div
+        style={{ background: 'var(--color-surface)', borderRadius: '20px', padding: '28px', maxWidth: '520px', width: '100%', maxHeight: '88vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '20px', boxShadow: '0 24px 60px rgba(0,0,0,0.3)' }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* 헤더 */}
+        <div>
+          <div style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginBottom: '6px' }}>{dateStr}</div>
+          <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-text)', lineHeight: 1.5 }}>{debate.topic}</div>
+          <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
+            <span style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '12px', fontWeight: 700, background: debate.position === 'pro' ? 'var(--color-pro-bg)' : 'var(--color-con-bg)', color: positionColor }}>{positionLabel}측</span>
+            <span style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '12px', fontWeight: 700, background: 'var(--color-surface-2)', color: 'var(--color-text-muted)', border: '1px solid var(--color-border)' }}>{resultLabel}</span>
+            <span style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '12px', fontWeight: 700, background: 'var(--color-surface-2)', color: 'var(--color-primary)' }}>{debate.score}점</span>
+          </div>
+        </div>
+
+        {loading && (
+          <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--color-text-muted)' }}>
+            <div style={{ fontSize: '24px', marginBottom: '12px', animation: 'spin 1s linear infinite', display: 'inline-block' }}>⏳</div>
+            <div style={{ fontSize: '14px' }}>불러오는 중...</div>
+          </div>
+        )}
+
+        {pending && !loading && (
+          <div style={{ textAlign: 'center', padding: '24px 0' }}>
+            <div style={{ fontSize: '20px', marginBottom: '10px' }}>🔄</div>
+            <div style={{ fontSize: '14px', color: 'var(--color-text-muted)', marginBottom: '14px', lineHeight: 1.6 }}>
+              AI 요약이 아직 생성 중입니다.<br />잠시 후 다시 확인해주세요.
+            </div>
+            <button
+              onClick={load}
+              style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '6px 20px', cursor: 'pointer', fontSize: '13px', color: 'var(--color-text)' }}
+            >
+              다시 확인
+            </button>
+          </div>
+        )}
+
+        {error && (
+          <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--color-con-orange)', fontSize: '14px' }}>{error}</div>
+        )}
+
+        {data && !loading && (
+          <>
+            {/* 토론 총평 */}
+            <div style={{ background: 'var(--color-surface-2)', borderRadius: '12px', padding: '16px 18px', border: '1px solid var(--color-border)' }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: '8px' }}>토론 총평</div>
+              <p style={{ fontSize: '14px', lineHeight: 1.8, color: 'var(--color-text)', margin: 0 }}>{data.summary}</p>
+            </div>
+
+            {/* 잘한 점 */}
+            <div style={{ background: 'rgba(99,255,180,0.06)', borderRadius: '12px', padding: '16px 18px', border: '1px solid var(--color-pro)' }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-pro)', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: '10px' }}>잘한 점</div>
+              <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {data.strengths.map((s, i) => (
+                  <li key={i} style={{ fontSize: '14px', lineHeight: 1.7, color: 'var(--color-text)' }}>{s}</li>
+                ))}
+              </ul>
+            </div>
+
+            {/* 개선할 점 */}
+            <div style={{ background: 'rgba(255,120,90,0.06)', borderRadius: '12px', padding: '16px 18px', border: '1px solid var(--color-con-orange)' }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-con-orange)', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: '10px' }}>개선할 점</div>
+              <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {data.improvements.map((s, i) => (
+                  <li key={i} style={{ fontSize: '14px', lineHeight: 1.7, color: 'var(--color-text)' }}>{s}</li>
+                ))}
+              </ul>
+            </div>
+
+            {/* 다음 토론을 위한 한마디 */}
+            {data.coaching && (
+              <div style={{ background: 'rgba(59,130,246,0.06)', borderRadius: '12px', padding: '16px 18px', border: '1px solid rgba(59,130,246,0.3)' }}>
+                <div style={{ fontSize: '11px', fontWeight: 700, color: '#3b82f6', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: '8px' }}>다음 토론을 위한 한마디</div>
+                <p style={{ fontSize: '14px', lineHeight: 1.8, color: 'var(--color-text)', margin: 0, fontStyle: 'italic' }}>{data.coaching}</p>
+              </div>
+            )}
+          </>
+        )}
+
+        <button
+          onClick={onClose}
+          style={{ alignSelf: 'center', background: 'none', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '8px 28px', cursor: 'pointer', color: 'var(--color-text-muted)', fontSize: '13px' }}
+        >
+          닫기
+        </button>
+      </div>
     </div>
   );
 }
@@ -281,7 +416,7 @@ function StatsTab({ token }: { token: string }) {
       {loadingStudents ? (
         <div className={styles.loadingMsg}>학생 데이터 불러오는 중...</div>
       ) : selectedStudent ? (
-        <StudentDetailView student={selectedStudent} onBack={() => setSelectedStudent(null)} />
+        <StudentDetailView student={selectedStudent} onBack={() => setSelectedStudent(null)} token={token} summary={summary} />
       ) : (
         <>
           {/* 학급 요약 */}
@@ -403,17 +538,40 @@ function ClassSummaryPanel({ summary, className }: { summary: ClassSummary; clas
   );
 }
 
-function StudentDetailView({ student, onBack }: { student: StudentStat; onBack: () => void }) {
+function StudentDetailView({ student, onBack, token, summary }: {
+  student: StudentStat;
+  onBack: () => void;
+  token: string;
+  summary: ClassSummary | null;
+}) {
+  const [selectedDebate, setSelectedDebate] = useState<DebateRow | null>(null);
+
   const categories = [
-    { key: "avgLogic", label: "논리성" },
-    { key: "avgEvidence", label: "근거" },
-    { key: "avgPersuasion", label: "설득력" },
-    { key: "avgRebuttal", label: "반론" },
-    { key: "avgConsistency", label: "일관성" },
-  ] as const;
+    { key: 'avgLogic' as const, label: '논리성', classKey: 'logic' as const },
+    { key: 'avgEvidence' as const, label: '근거', classKey: 'evidence' as const },
+    { key: 'avgPersuasion' as const, label: '설득력', classKey: 'persuasion' as const },
+    { key: 'avgRebuttal' as const, label: '반론', classKey: 'rebuttal' as const },
+    { key: 'avgConsistency' as const, label: '일관성', classKey: 'consistency' as const },
+  ];
+
+  const barColor = (v: number) => v >= 17 ? '#4ade80' : v >= 13 ? '#facc15' : v >= 8 ? '#fb923c' : '#f87171';
+
+  const radarData = categories.map(c => ({
+    axis: c.label,
+    student: student[c.key],
+    classAvg: summary?.avgByCategory[c.classKey] ?? 0,
+  }));
 
   return (
     <div>
+      {selectedDebate && (
+        <DebateSummaryModal
+          debate={selectedDebate}
+          token={token}
+          onClose={() => setSelectedDebate(null)}
+        />
+      )}
+
       <button className={styles.backBtn} onClick={onBack}>← 목록으로</button>
 
       <div className={styles.card}>
@@ -431,12 +589,58 @@ function StudentDetailView({ student, onBack }: { student: StudentStat; onBack: 
         <hr className={styles.divider} />
 
         <div className={styles.catLabel}>항목별 평균 (최근 10판)</div>
-        {categories.map(c => (
-          <div key={c.key} className={styles.catRow}>
-            <div className={styles.catName}>{c.label}</div>
-            <MiniBar value={student[c.key]} max={25} />
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 190px', gap: '20px', alignItems: 'center' }}>
+          {/* 왼쪽: 가로 막대그래프 */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {categories.map(c => {
+              const val = student[c.key];
+              const color = barColor(val);
+              return (
+                <div key={c.key} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '44px', fontSize: '12px', color: 'var(--color-text-muted)', flexShrink: 0 }}>{c.label}</div>
+                  <div style={{ flex: 1, height: '10px', background: 'var(--color-surface-2)', borderRadius: '5px', overflow: 'hidden' }}>
+                    <div style={{
+                      height: '100%',
+                      width: `${Math.min(100, (val / 20) * 100)}%`,
+                      background: color,
+                      borderRadius: '5px',
+                      transition: 'width 0.4s ease',
+                    }} />
+                  </div>
+                  <span style={{ fontSize: '13px', fontWeight: 700, color, minWidth: '22px', textAlign: 'right' }}>{val}</span>
+                </div>
+              );
+            })}
           </div>
-        ))}
+
+          {/* 오른쪽: 방사형 차트 */}
+          <div>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', fontSize: '10px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span style={{ display: 'inline-block', width: '12px', height: '3px', background: '#3b82f6', borderRadius: '2px' }} />
+                나의 지표
+              </span>
+              {summary && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <svg width="14" height="4"><line x1="0" y1="2" x2="14" y2="2" stroke="#9ca3af" strokeWidth="2" strokeDasharray="4 2" /></svg>
+                  전체 평균
+                </span>
+              )}
+            </div>
+            <ResponsiveContainer width="100%" height={160}>
+              <RadarChart data={radarData}>
+                <PolarGrid gridType="polygon" stroke="var(--color-border)" />
+                <PolarAngleAxis dataKey="axis" tick={{ fontSize: 10, fill: 'var(--color-text-muted)' }} />
+                <PolarRadiusAxis domain={[0, 20]} tick={false} axisLine={false} />
+                <Radar name="나의 지표" dataKey="student" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.25} />
+                {summary && (
+                  <Radar name="전체 평균" dataKey="classAvg" stroke="#9ca3af" strokeDasharray="4 2" fill="#9ca3af" fillOpacity={0} />
+                )}
+              </RadarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
 
         <div className={styles.growthRow}>
           <span>성장률</span>
@@ -447,15 +651,21 @@ function StudentDetailView({ student, onBack }: { student: StudentStat; onBack: 
 
       {student.recentDebates.length > 0 && (
         <div className={styles.card}>
-          <div className={styles.cardTitle}>최근 토론 이력</div>
+          <div className={styles.cardTitle}>최근 토론 이력 <span style={{ fontSize: '11px', fontWeight: 400, color: 'var(--color-text-muted)' }}>— 클릭하면 AI 요약을 볼 수 있어요</span></div>
           {student.recentDebates.map((d, i) => (
-            <div key={i} className={styles.debateHistoryRow}>
+            <div
+              key={i}
+              className={styles.debateHistoryRow}
+              onClick={() => setSelectedDebate(d)}
+              style={{ cursor: 'pointer' }}
+            >
               <div className={`${styles.resultBadge} ${styles[`result--${d.result}`]}`}>
                 {d.result === "win" ? "승" : d.result === "lose" ? "패" : "무"}
               </div>
               <div className={styles.debateTopic}>{d.topic}</div>
               <div className={styles.debateScore}>{d.score}점</div>
               <div className={styles.debateDate}>{new Date(d.playedAt).toLocaleDateString("ko-KR")}</div>
+              <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', flexShrink: 0 }}>AI 요약 →</div>
             </div>
           ))}
         </div>

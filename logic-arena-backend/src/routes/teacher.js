@@ -241,8 +241,15 @@ router.get('/classes/:classId/students', requireAuth, requireTeacher, async (req
         recentDebates: recent.slice(0, 5).map(h => ({
           id: h.id,
           topic: h.topic,
+          position: h.position,
           result: h.result,
           score: h.score,
+          logic: h.logic,
+          evidence: h.evidence,
+          persuasion: h.persuasion,
+          rebuttal: h.rebuttal,
+          consistency: h.consistency,
+          advice: h.advice ?? null,
           playedAt: h.played_at,
         })),
       };
@@ -313,6 +320,25 @@ router.get('/classes/:classId/summary', requireAuth, requireTeacher, async (req,
   } catch (e) {
     console.error(e);
     return res.status(500).json({ error: '통계를 불러오지 못했습니다.' });
+  }
+});
+
+// ─── 교사: 토론 LLM 요약 (사전 생성된 요약 조회) ─────────────────────
+
+router.get('/debate-summary/:historyId', requireAuth, requireTeacher, async (req, res) => {
+  try {
+    const historyId = parseInt(req.params.historyId, 10);
+    if (!Number.isFinite(historyId)) return res.status(400).json({ error: '잘못된 요청입니다.' });
+    const record = await prisma.debateHistory.findUnique({
+      where: { id: historyId },
+      select: { teacher_summary: true },
+    });
+    if (!record) return res.status(404).json({ error: '이력을 찾을 수 없습니다.' });
+    if (!record.teacher_summary) return res.status(202).json({ pending: true });
+    return res.json(record.teacher_summary);
+  } catch (e) {
+    console.error('[debate-summary]', e);
+    return res.status(500).json({ error: '요약 조회에 실패했습니다.' });
   }
 });
 

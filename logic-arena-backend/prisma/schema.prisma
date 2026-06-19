@@ -78,9 +78,10 @@ model DebateHistory {
   persuasion  Int      @default(0)
   rebuttal    Int      @default(0)
   consistency Int      @default(0)
-  advice      String?
-  result      String   @default("draw")
-  played_at   DateTime @default(now())
+  advice           String?
+  result           String   @default("draw")
+  played_at        DateTime @default(now())
+  teacher_summary  Json?
 
   user        User     @relation(fields: [user_id], references: [user_id])
 }

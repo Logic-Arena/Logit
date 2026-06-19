@@ -282,7 +282,20 @@ export interface StudentStat {
   avgRebuttal: number;
   avgConsistency: number;
   growthRate: number;
-  recentDebates: { id: number; topic: string; result: string; score: number; playedAt: string }[];
+  recentDebates: {
+    id: number;
+    topic: string;
+    position: string;
+    result: string;
+    score: number;
+    logic: number;
+    evidence: number;
+    persuasion: number;
+    rebuttal: number;
+    consistency: number;
+    advice: string | null;
+    playedAt: string;
+  }[];
 }
 
 export interface ClassSummary {
@@ -336,6 +349,27 @@ export async function getClassSummary(token: string, classId: number): Promise<C
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error('통계 로드 실패');
+  return res.json();
+}
+
+export interface TeacherDebateSummary {
+  summary: string;
+  strengths: string[];
+  improvements: string[];
+  coaching: string;
+}
+
+export async function getStoredDebateSummary(
+  token: string,
+  historyId: number
+): Promise<TeacherDebateSummary | { pending: true }> {
+  const res = await fetch(`${BASE}/teacher/debate-summary/${historyId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error ?? '요약 로드 실패');
+  }
   return res.json();
 }
 

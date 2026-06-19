@@ -208,63 +208,118 @@ const SCORE_CRITERIA_DETAIL = [
 
 function DetailModal({ item, onClose }: { item: DebateHistoryItem; onClose: () => void }) {
   const resultLabel = item.result === 'win' ? '승리' : item.result === 'lose' ? '패배' : '무승부';
+  const resultEmoji = item.result === 'win' ? '🏆' : item.result === 'lose' ? '⚖️' : '🤝';
   const resultColor = item.result === 'win' ? 'var(--color-primary)' : item.result === 'lose' ? 'var(--color-con-orange)' : 'var(--color-text-muted)';
   const positionLabel = item.position === 'pro' ? '찬성' : '반대';
   const positionColor = item.position === 'pro' ? 'var(--color-primary)' : 'var(--color-con-orange)';
 
+  const dateStr = new Date(item.played_at).toLocaleString('ko-KR', {
+    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
+  });
+
+  const criteria = [
+    { label: '논리성', value: item.logic },
+    { label: '근거', value: item.evidence },
+    { label: '설득력', value: item.persuasion },
+    { label: '반론', value: item.rebuttal },
+    { label: '일관성', value: item.consistency },
+  ];
+
+  const radarData = criteria.map(c => ({ axis: c.label, value: c.value }));
+
+  const sorted = [...criteria].sort((a, b) => b.value - a.value);
+  const best = sorted[0];
+  const worst = sorted[sorted.length - 1];
+
+  const scoreColor = (v: number) =>
+    v >= 17 ? 'var(--color-pro)' : v >= 13 ? 'var(--color-host,#f5a623)' : v >= 8 ? 'var(--color-text-muted)' : 'var(--color-con-orange)';
+  const scoreLabel = (v: number) =>
+    v >= 17 ? '우수' : v >= 13 ? '양호' : v >= 8 ? '보통' : '미흡';
+
+  const totalGradeColor = item.score >= 80 ? 'var(--color-pro)' : item.score >= 60 ? 'var(--color-host,#f5a623)' : item.score >= 40 ? 'var(--color-text-muted)' : 'var(--color-con-orange)';
+  const totalGradeLabel = item.score >= 80 ? '우수' : item.score >= 60 ? '양호' : item.score >= 40 ? '보통' : '미흡';
+
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }} onClick={onClose}>
-      <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '16px', padding: '28px', maxWidth: '520px', width: '100%', maxHeight: '86vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '24px' }} onClick={e => e.stopPropagation()}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.78)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }} onClick={onClose}>
+      <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '18px', padding: '28px 28px 24px', maxWidth: '600px', width: '100%', maxHeight: '92vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '22px' }} onClick={e => e.stopPropagation()}>
 
-        {/* 결과 헤더 */}
+        {/* ── 헤더 ─────────────────────────────────────── */}
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '40px', marginBottom: '8px' }}>⚖️</div>
-          <div style={{ fontSize: '24px', fontWeight: 700, color: resultColor }}>{resultLabel}</div>
-          <div style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginTop: '6px' }}>{item.topic}</div>
-          <span style={{ display: 'inline-block', marginTop: '8px', padding: '3px 12px', borderRadius: '999px', fontSize: '12px', fontWeight: 600, background: item.position === 'pro' ? 'var(--color-pro-bg)' : 'var(--color-con-bg)', color: positionColor }}>{positionLabel}</span>
-        </div>
-
-        {/* 점수 테이블 */}
-        <div style={{ overflowX: 'auto' }}>
-          <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: '10px' }}>
-            내 점수 (100점 만점)
+          <div style={{ fontSize: '42px', marginBottom: '6px' }}>{resultEmoji}</div>
+          <div style={{ fontSize: '26px', fontWeight: 800, color: resultColor, letterSpacing: '-0.5px' }}>{resultLabel}</div>
+          <div style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginTop: '8px', lineHeight: 1.6, maxWidth: '420px', margin: '8px auto 0' }}>{item.topic}</div>
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginTop: '12px', flexWrap: 'wrap' }}>
+            <span style={{ padding: '4px 14px', borderRadius: '999px', fontSize: '12px', fontWeight: 700, background: item.position === 'pro' ? 'var(--color-pro-bg)' : 'var(--color-con-bg)', color: positionColor }}>{positionLabel}측</span>
+            <span style={{ padding: '4px 14px', borderRadius: '999px', fontSize: '12px', color: 'var(--color-text-muted)', background: 'var(--color-surface-2)', border: '1px solid var(--color-border)' }}>{dateStr}</span>
           </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
-                {['참가자', '논리성', '근거', '설득력', '반론', '일관성', '합계'].map(h => (
-                  <th key={h} style={{ padding: '8px 12px', color: 'var(--color-text-muted)', fontWeight: 600, textAlign: h === '참가자' ? 'left' : 'center', whiteSpace: 'nowrap' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              <tr style={{ background: 'var(--color-surface-2)' }}>
-                <td style={{ padding: '10px 12px' }}>
-                  <span style={{ fontWeight: 600, color: positionColor }}>{positionLabel}P</span>
-                  <span style={{ fontSize: '11px', fontWeight: 700, color: positionColor, marginLeft: '5px' }}>(나)</span>
-                </td>
-                {SCORE_CRITERIA_DETAIL.map(({ key }) => (
-                  <td key={key} style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 600 }}>
-                    <span style={{ color: item[key] >= 20 ? 'var(--color-pro)' : item[key] >= 13 ? 'var(--color-host)' : 'var(--color-con)' }}>
-                      {item[key]}
-                    </span>
-                  </td>
-                ))}
-                <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 700, fontSize: '15px', color: positionColor }}>{item.score}</td>
-              </tr>
-            </tbody>
-          </table>
         </div>
 
-        {/* AI 조언 */}
+        {/* ── 총점 + 레이더 차트 ───────────────────────── */}
+        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+          <div style={{ textAlign: 'center', flexShrink: 0, minWidth: '110px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600, letterSpacing: '0.5px', marginBottom: '4px' }}>최종 점수</div>
+            <div style={{ fontSize: '56px', fontWeight: 900, color: resultColor, lineHeight: 1 }}>{item.score}</div>
+            <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '2px' }}>/ 100점</div>
+            <div style={{ marginTop: '10px', display: 'inline-block', fontSize: '12px', fontWeight: 700, padding: '4px 12px', borderRadius: '6px', color: totalGradeColor, border: `1px solid ${totalGradeColor}` }}>
+              {totalGradeLabel}
+            </div>
+          </div>
+          <div style={{ flex: 1, height: '210px' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="72%">
+                <PolarGrid stroke="var(--color-border)" />
+                <PolarAngleAxis dataKey="axis" tick={{ fill: 'var(--color-text-muted)', fontSize: 11, fontWeight: 600 }} />
+                <PolarRadiusAxis domain={[0, 20]} tick={false} axisLine={false} />
+                <Radar name="내 점수" dataKey="value" stroke={positionColor} fill={positionColor} fillOpacity={0.22} strokeWidth={2} />
+              </RadarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* ── 항목별 점수 바 ───────────────────────────── */}
+        <div>
+          <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px' }}>항목별 점수 (각 20점 만점)</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '9px' }}>
+            {criteria.map(({ label, value }) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '48px', fontSize: '12px', color: 'var(--color-text-muted)', textAlign: 'right', flexShrink: 0 }}>{label}</div>
+                <div style={{ flex: 1, height: '9px', background: 'var(--color-surface-2)', borderRadius: '5px', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${(value / 20) * 100}%`, background: scoreColor(value), borderRadius: '5px', transition: 'width 0.5s ease' }} />
+                </div>
+                <div style={{ width: '24px', fontSize: '13px', fontWeight: 700, color: scoreColor(value), textAlign: 'right', flexShrink: 0 }}>{value}</div>
+                <div style={{ width: '40px', fontSize: '10px', color: scoreColor(value), fontWeight: 600, flexShrink: 0 }}>{scoreLabel(value)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── 강점 / 약점 ─────────────────────────────── */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div style={{ background: 'rgba(99,255,180,0.07)', border: '1px solid var(--color-pro)', borderRadius: '12px', padding: '14px 16px' }}>
+            <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-pro)', letterSpacing: '0.5px', marginBottom: '4px' }}>강점</div>
+            <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text)' }}>{best.label}</div>
+            <div style={{ fontSize: '26px', fontWeight: 900, color: 'var(--color-pro)', marginTop: '2px', lineHeight: 1 }}>
+              {best.value}<span style={{ fontSize: '12px', fontWeight: 400, color: 'var(--color-text-muted)' }}>/20</span>
+            </div>
+          </div>
+          <div style={{ background: 'rgba(255,120,90,0.07)', border: '1px solid var(--color-con-orange)', borderRadius: '12px', padding: '14px 16px' }}>
+            <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-con-orange)', letterSpacing: '0.5px', marginBottom: '4px' }}>보완 필요</div>
+            <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text)' }}>{worst.label}</div>
+            <div style={{ fontSize: '26px', fontWeight: 900, color: 'var(--color-con-orange)', marginTop: '2px', lineHeight: 1 }}>
+              {worst.value}<span style={{ fontSize: '12px', fontWeight: 400, color: 'var(--color-text-muted)' }}>/20</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ── AI 조언 ──────────────────────────────────── */}
         {item.advice && (
-          <div style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '16px 20px', fontSize: '14px', lineHeight: 1.8 }}>
-            <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: '8px' }}>AI 조언</div>
-            {item.advice}
+          <div style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: '12px', padding: '18px 20px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>AI 조언</div>
+            <p style={{ fontSize: '14px', lineHeight: 1.85, color: 'var(--color-text)', margin: 0, whiteSpace: 'pre-line' }}>{item.advice}</p>
           </div>
         )}
 
-        <button onClick={onClose} style={{ alignSelf: 'center', background: 'none', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '8px 24px', cursor: 'pointer', color: 'var(--color-text-muted)', fontSize: '13px' }}>
+        <button onClick={onClose} style={{ alignSelf: 'center', background: 'none', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '9px 28px', cursor: 'pointer', color: 'var(--color-text-muted)', fontSize: '13px' }}>
           닫기
         </button>
       </div>

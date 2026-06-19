@@ -116,7 +116,10 @@ router.post('/signup', async (req, res) => {
       });
     }
 
-    const isTeacher = Boolean(teacherCode) && teacherCode === TEACHER_CODE;
+    if (teacherCode && teacherCode !== TEACHER_CODE) {
+      return res.status(400).json({ error: '선생님 코드가 올바르지 않습니다.' });
+    }
+    const isTeacher = Boolean(teacherCode);
     const user = await signupLocalUser({ username, password, name, email, isTeacher });
     const nonce = createSession(user.user_id);
     const token = createAccessToken(user, nonce);
