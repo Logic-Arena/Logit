@@ -9,7 +9,7 @@ export function RoomEntryPage() {
   const { user, setUser } = useUserStore();
   const hasPassword = (location.state as { hasPassword?: boolean } | null)?.hasPassword ?? false;
 
-  const [username, setLocalUsername] = useState(user?.name ?? user?.username ?? '');
+  const [username, setLocalUsername] = useState(user?.name ?? '');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 

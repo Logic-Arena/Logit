@@ -198,13 +198,6 @@ function RecommendationSection() {
   );
 }
 
-const SCORE_CRITERIA_DETAIL = [
-  { label: '논리성', key: 'logic' as const },
-  { label: '근거', key: 'evidence' as const },
-  { label: '설득력', key: 'persuasion' as const },
-  { label: '반론', key: 'rebuttal' as const },
-  { label: '일관성', key: 'consistency' as const },
-];
 
 function DetailModal({ item, onClose }: { item: DebateHistoryItem; onClose: () => void }) {
   const resultLabel = item.result === 'win' ? '승리' : item.result === 'lose' ? '패배' : '무승부';
