@@ -120,4 +120,5 @@ export interface Room {
   createdAt: string;
   sideSelectionAttempts: number;
   coachingEnabled: boolean;
+  pendingSelections: Record<string, 'pro' | 'con'>;
 }

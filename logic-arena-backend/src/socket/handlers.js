@@ -47,6 +47,12 @@ function pausePhaseTimer(roomId) {
 }
 
 function startPhaseTimer(io, roomId, phase) {
+  // 개발 모드에서 타이머 비활성화 (DISABLE_PHASE_TIMER=true로 설정)
+  if (process.env.DISABLE_PHASE_TIMER === 'true') {
+    console.log(`[DEV] Phase timer disabled for ${phase}`);
+    return false;
+  }
+
   const room = getRoom(roomId);
   const phaseDurations = room?.handicap?.phaseDurations ?? null;
   const duration = getPhaseDuration(phase, phaseDurations);
@@ -315,12 +321,28 @@ async function handleAiAutoPhase(io, roomId, phase) {
       return;
     }
     case 'judging': {
+      const judgingStartTime = Date.now();
       const result = await judgeDebate({ topic: room.topic, content: room.content, mode: room.mode });
       const currentRoom = getRoom(roomId);
       if (!currentRoom || currentRoom.phase === 'ended') return;
       setResult(roomId, result);
+
+      // 단계바 애니메이션 완료 대기 (최소 1.5초)
+      // 4단계 × 0.15s delay + 0.5s duration = 0.95s 기본 + 여유 0.55s
+      const MIN_JUDGING_DISPLAY_MS = 1500;
+      const elapsed = Date.now() - judgingStartTime;
+      const remainingWait = Math.max(0, MIN_JUDGING_DISPLAY_MS - elapsed);
+
+      if (remainingWait > 0) {
+        await new Promise(resolve => setTimeout(resolve, remainingWait));
+      }
+
+      // 대기 후 재확인 (다른 이벤트로 phase가 변경되었을 수 있음)
+      const roomAfterWait = getRoom(roomId);
+      if (!roomAfterWait || roomAfterWait.phase === 'ended') return;
+
       // 관전자가 있을 때만 peer_voting, 없으면 즉시 종료
-      if (currentRoom.observers.size > 0) {
+      if (roomAfterWait.observers.size > 0) {
         await startPhase(io, roomId, 'peer_voting');
       } else {
         await finalizePeerVoting(io, roomId);

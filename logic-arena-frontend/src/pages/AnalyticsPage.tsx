@@ -204,7 +204,7 @@ function DetailModal({ item, onClose }: { item: DebateHistoryItem; onClose: () =
   const resultEmoji = item.result === 'win' ? '🏆' : item.result === 'lose' ? '⚖️' : '🤝';
   const resultColor = item.result === 'win' ? 'var(--color-primary)' : item.result === 'lose' ? 'var(--color-con-orange)' : 'var(--color-text-muted)';
   const positionLabel = item.position === 'pro' ? '찬성' : '반대';
-  const positionColor = item.position === 'pro' ? 'var(--color-primary)' : 'var(--color-con-orange)';
+  const positionColor = item.position === 'pro' ? 'var(--color-pro)' : 'var(--color-con)';
 
   const dateStr = new Date(item.played_at).toLocaleString('ko-KR', {
     year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
@@ -295,10 +295,10 @@ function DetailModal({ item, onClose }: { item: DebateHistoryItem; onClose: () =
               {best.value}<span style={{ fontSize: '12px', fontWeight: 400, color: 'var(--color-text-muted)' }}>/20</span>
             </div>
           </div>
-          <div style={{ background: 'rgba(255,120,90,0.07)', border: '1px solid var(--color-con-orange)', borderRadius: '12px', padding: '14px 16px' }}>
-            <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-con-orange)', letterSpacing: '0.5px', marginBottom: '4px' }}>보완 필요</div>
+          <div style={{ background: 'var(--color-con-bg)', border: '1px solid var(--color-con)', borderRadius: '12px', padding: '14px 16px' }}>
+            <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-con)', letterSpacing: '0.5px', marginBottom: '4px' }}>보완 필요</div>
             <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text)' }}>{worst.label}</div>
-            <div style={{ fontSize: '26px', fontWeight: 900, color: 'var(--color-con-orange)', marginTop: '2px', lineHeight: 1 }}>
+            <div style={{ fontSize: '26px', fontWeight: 900, color: 'var(--color-con)', marginTop: '2px', lineHeight: 1 }}>
               {worst.value}<span style={{ fontSize: '12px', fontWeight: 400, color: 'var(--color-text-muted)' }}>/20</span>
             </div>
           </div>
