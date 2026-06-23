@@ -708,8 +708,8 @@ const DEBATE_TIPS = [
 const JUDGING_ANALYSIS_STEPS = ["논리", "근거", "반박", "설득"];
 
 function JudgingWaitView({
-  room,
-  myRole,
+  room: _room,
+  myRole: _myRole,
 }: {
   room: Room;
   myRole: PlayerRole | null;
@@ -854,7 +854,7 @@ function WaitingView({
   );
 }
 
-function TopicGeneratingCard({ attempts }: { attempts: number }) {
+function TopicGeneratingCard({ attempts: _attempts }: { attempts: number }) {
   return (
     <div className="topic-generating-view">
       {/* 타이틀 영역 */}

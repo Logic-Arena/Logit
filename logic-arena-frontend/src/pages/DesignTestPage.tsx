@@ -143,8 +143,6 @@ const DEBATE_TIPS = [
   "긴 문장보다 짧고 명확한 문장이 설득력이 강합니다.",
 ];
 
-const LOGIT_LETTERS = ["L", "O", "G", "I", "T"];
-
 const TYPEWRITER_THINKING_MS = 3000;
 const TYPEWRITER_CHAR_MS = 36;
 const TYPEWRITER_MAX_MS = 9000;
@@ -266,7 +264,7 @@ function TypewriterText({
 
 function DebateChatView() {
   const chatRef = useRef<HTMLDivElement>(null);
-  const mySide: AlignSide = "pro"; // 가정: 나는 찬성
+  const mySide: AlignSide | null = "pro"; // 가정: 나는 찬성
   const [inputText, setInputText] = useState("");
 
   useEffect(() => {
@@ -296,11 +294,11 @@ function DebateChatView() {
         }}
       >
         {MOCK_MESSAGES.map((item) => {
-          const isOnMySide = item.align === mySide;
+          const isOnMySide = mySide ? item.align === mySide : false;
           const avatarChar =
             item.variant === "ai"
               ? "AI"
-              : mySide === item.align
+              : mySide && mySide === item.align
                 ? "나"
                 : item.align === "pro"
                   ? "찬"
@@ -410,7 +408,7 @@ function DebateChatView() {
   );
 }
 
-function TopicGeneratingCard({ attempts }: { attempts: number }) {
+function TopicGeneratingCard({ attempts: _attempts }: { attempts: number }) {
   return (
     <div className="topic-generating-view">
       {/* 타이틀 영역 */}
@@ -631,7 +629,6 @@ function JudgingWaitView() {
   }, []);
 
   const JUDGING_ANALYSIS_STEPS = ["논리", "근거", "반박", "설득"];
-  const myFinalArgument = "인공지능의 발전은 인류에게 긍정적인 영향을 미칩니다. AI는 반복적인 업무를 자동화하고, 의료 분야에서 생명을 구하며, 교육의 효율성을 높입니다. 일자리 문제는 재교육과 사회안전망으로 해결 가능하며, 역사적으로 기술 발전은 항상 새로운 기회를 창출해왔습니다.";
 
   return (
     <div className="judging-wait">
