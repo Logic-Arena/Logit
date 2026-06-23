@@ -708,19 +708,14 @@ const DEBATE_TIPS = [
 const JUDGING_ANALYSIS_STEPS = ["논리", "근거", "반박", "설득"];
 
 function JudgingWaitView({
-  room,
-  myRole,
+  room: _room,
+  myRole: _myRole,
 }: {
   room: Room;
   myRole: PlayerRole | null;
 }) {
   const [tipIdx, setTipIdx] = useState(0);
-  const myFinal =
-    myRole === "pro_player"
-      ? room.content.pro_final
-      : myRole === "con_player"
-        ? room.content.con_final
-        : null;
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
 
   useEffect(() => {
     const timer = setInterval(
@@ -730,33 +725,39 @@ function JudgingWaitView({
     return () => clearInterval(timer);
   }, []);
 
+  // 단계바 순차 활성화 애니메이션
+  useEffect(() => {
+    const stepTimers: number[] = [];
+    JUDGING_ANALYSIS_STEPS.forEach((_, i) => {
+      const timer = window.setTimeout(() => {
+        setCurrentStepIndex(i);
+      }, i * 400); // 각 단계마다 400ms 간격으로 활성화
+      stepTimers.push(timer);
+    });
+    return () => stepTimers.forEach(t => clearTimeout(t));
+  }, []);
+
   return (
     <div className="judging-wait">
       <section className="judging-wait__hero" aria-live="polite">
-        <div className="judging-wait__side-chip judging-wait__side-chip--pro">
-          찬성
-        </div>
         <div className="judging-wait__scale-stage">
           <DotSphereLoader size={240} hue={243} speed={0.008} wobbleAmount={0.08} />
-        </div>
-        <div className="judging-wait__side-chip judging-wait__side-chip--con">
-          반대
         </div>
       </section>
 
       <div className="judging-wait__headline">
-        <h2>AI 판정단이 논점을 심문 중.</h2>
+        <h2>AI 판정단이 논점을 심문 중</h2>
         <p>주장, 근거, 반박을 스캔해서 승부를 계산하고 있어요</p>
       </div>
 
       <div className="judging-wait__stepper" aria-label="분석 단계">
         {JUDGING_ANALYSIS_STEPS.map((step, i) => (
-          <div key={step} className="judging-wait__step" style={{ animationDelay: `${i * 0.15}s` }}>
+          <div key={step} className="judging-wait__step">
             <div className="judging-wait__step-dot-wrapper">
               {i < JUDGING_ANALYSIS_STEPS.length - 1 && (
-                <div className={`judging-wait__step-line ${i < 2 ? 'judging-wait__step-line--filled' : ''}`} />
+                <div className={`judging-wait__step-line ${i <= currentStepIndex ? 'judging-wait__step-line--filled' : ''}`} />
               )}
-              <div className={`judging-wait__step-dot ${i < 3 ? 'judging-wait__step-dot--filled' : 'judging-wait__step-dot--current'}`} />
+              <div className={`judging-wait__step-dot ${i < currentStepIndex ? 'judging-wait__step-dot--filled' : i === currentStepIndex ? 'judging-wait__step-dot--current' : ''}`} />
             </div>
             <span className="judging-wait__step-label">{step}</span>
           </div>
@@ -767,13 +768,6 @@ function JudgingWaitView({
         <span />
         판결문 작성 중
       </div>
-
-      {myFinal && (
-        <article className="judging-wait__glass-card judging-wait__glass-card--final">
-          <div className="judging-wait__card-label">내 최종 변론</div>
-          <p>{myFinal}</p>
-        </article>
-      )}
 
       <p key={tipIdx} className="judging-wait__tip-inline">
         <strong>토론 꿀팁</strong> · {DEBATE_TIPS[tipIdx]}
@@ -794,7 +788,7 @@ function WaitingView({
   const isHost = room.host === mySocketId;
   const canStart = !!room.proPlayer && !!room.conPlayer;
   return (
-    <div className="topic-selection-view" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+    <div className="waiting-view-centered" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
       <p style={{ color: "var(--color-text-muted)", fontSize: "13px" }}>
         찬성P, 반대P 두 명이 모이면 방장이 게임을 시작합니다.
       </p>
@@ -855,59 +849,147 @@ function WaitingView({
       ) : (
         <NotMyTurnBanner message="방장이 게임을 시작할 때까지 기다려 주세요" />
       )}
-      <div className="topic-selection-watermark-slot" aria-hidden="true" />
+      <div className="watermark-slot topic-selection-watermark-slot" aria-hidden="true" />
     </div>
   );
 }
 
-const LOGIT_LETTERS = ["L", "O", "G", "I", "T"];
-
-function TopicGeneratingCard() {
+function TopicGeneratingCard({ attempts: _attempts }: { attempts: number }) {
   return (
-    <div className="topic-generating-card" aria-live="polite">
-      <div className="topic-generating-card__logo" aria-label="LOGIT">
-        {LOGIT_LETTERS.map((letter, index) => (
-          <span
-            key={`${letter}-${index}`}
-            className="topic-generating-card__letter"
-            style={{ animationDelay: `${index * 0.09}s` }}
-          >
-            {letter}
-          </span>
-        ))}
+    <div className="topic-generating-view">
+      {/* 타이틀 영역 */}
+      <div className="topic-generating-view__header">
+        <div className="topic-generating-view__title-row">
+          <div className="topic-generating-view__icon">
+            <div className="topic-generating-view__icon-inner" />
+          </div>
+          <span className="topic-generating-view__title-text">AI가 주제를 만드는 중</span>
+          <div className="topic-generating-view__dots">
+            <span />
+            <span />
+            <span />
+          </div>
+        </div>
+        {/* 시머 스켈레톤 바 1 */}
+        <div className="topic-generating-view__shimmer-bar topic-generating-view__shimmer-bar--long" />
+        {/* 시머 스켈레톤 바 2 */}
+        <div className="topic-generating-view__shimmer-bar topic-generating-view__shimmer-bar--short" />
       </div>
-      <div className="topic-generating-card__message">
-        <span>주제 생성중</span>
-        <span className="topic-generating-card__dots" aria-hidden="true">
-          <span />
-          <span />
-          <span />
-        </span>
+
+      {/* 보조 텍스트 */}
+      <p className="topic-generating-view__subtitle">AI가 더 흥미로운 쟁점을 고르고 있어요.</p>
+
+      {/* 흰 패널 (ghosted 찬성/반대 프리뷰) */}
+      <div className="topic-generating-view__panel">
+        <div className="topic-generating-view__ghosted-choices">
+          {/* 찬성 placeholder */}
+          <div className="topic-generating-view__ghosted-item">
+            <div className="topic-generating-view__ghosted-icon" />
+            <div className="topic-generating-view__ghosted-text" />
+          </div>
+          {/* 반대 placeholder */}
+          <div className="topic-generating-view__ghosted-item">
+            <div className="topic-generating-view__ghosted-icon" />
+            <div className="topic-generating-view__ghosted-text" />
+          </div>
+        </div>
+        <p className="topic-generating-view__panel-footer">주제가 확정되면 진영을 선택할 수 있어요.</p>
       </div>
-      <p>AI가 더 흥미로운 쟁점을 고르고 있어요.</p>
     </div>
   );
 }
 
-function SelectionWaitingCard({ side }: { side: "pro" | "con" }) {
-  const label = side === "pro" ? "찬성" : "반대";
+function SelectionWaitingCard({ side, room }: { side: "pro" | "con"; room: Room }) {
+  const myLabel = side === "pro" ? "찬성" : "반대";
+
+  // 상대가 선택을 완료했는지 감지:
+  // - 양쪽 플레이어가 모두 방에 배정되어 있고 (proPlayer && conPlayer)
+  // - 양쪽 모두 pendingSelections에 선택이 기록되어 있어야 함
+  const proSid = room.proPlayer?.socketId;
+  const conSid = room.conPlayer?.socketId;
+  const bothSelected = !!(
+    proSid &&
+    conSid &&
+    room.pendingSelections?.[proSid] &&
+    room.pendingSelections?.[conSid]
+  );
+  const opponentReady = bothSelected;
+
+  // 상대 진영 (내가 찬성이면 상대는 반대, 내가 반대면 상대는 찬성)
+  // 단, opponentReady가 true일 때만 진영 정보 노출
+  const opponentSide = opponentReady ? (side === "pro" ? "con" : "pro") : null;
+  const opponentLabel = opponentSide === "pro" ? "찬성" : opponentSide === "con" ? "반대" : "대기 중";
 
   return (
-    <div
-      className={`selection-waiting-card selection-waiting-card--${side}`}
-      aria-live="polite"
-    >
-      <div className="selection-waiting-card__header">
-        <span className="selection-waiting-card__gear" aria-hidden="true" />
-        <span>{label} 선택 완료</span>
-      </div>
-      <div className="selection-waiting-card__status">
-        <span>상대방 선택을 기다리는 중</span>
-        <span className="selection-waiting-card__dots" aria-hidden="true">
-          <span />
-          <span />
-          <span />
-        </span>
+    <div className="selection-dual-card-wrapper" aria-live="polite">
+      <p className="selection-dual-card-wrapper__guidance">
+        상대방이 진영을 선택하면 토론이 시작됩니다.
+      </p>
+      <div className="selection-dual-card">
+        {/* 내 선택 행 */}
+        <div className={`selection-dual-item selection-dual-item--my selection-dual-item--${side}`}>
+          <div className={`selection-dual-item__icon selection-dual-item__icon--filled selection-dual-item__icon--${side}`}>
+            {side === "pro" ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            )}
+          </div>
+          <div className="selection-dual-item__content">
+            <div className="selection-dual-item__label-group">
+              <div className="selection-dual-item__small-label">내 선택</div>
+              <div className="selection-dual-item__value">{myLabel}</div>
+            </div>
+          </div>
+          <div className={`selection-dual-item__badge selection-dual-item__badge--${side}`}>
+            선택 완료
+          </div>
+        </div>
+
+        {/* 상대 선택 행 (대기 중 / 완료) */}
+        <div className={`selection-dual-item selection-dual-item--opponent${opponentReady ? ' selection-dual-item--ready' : ''}${opponentSide ? ` selection-dual-item--${opponentSide}` : ''}`}>
+          <div className="selection-dual-item__icon selection-dual-item__icon--dashed">
+            {opponentReady && opponentSide ? (
+              opponentSide === "pro" ? (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              )
+            ) : (
+              <div className="selection-dual-item__icon-placeholder" />
+            )}
+          </div>
+          <div className="selection-dual-item__content">
+            <div className="selection-dual-item__label-group">
+              <div className="selection-dual-item__small-label">상대 선택</div>
+              <div className={`selection-dual-item__value${opponentReady ? '' : ' selection-dual-item__value--pending'}`}>
+                {opponentReady ? opponentLabel : "선택하는 중..."}
+              </div>
+            </div>
+          </div>
+          {!opponentReady && (
+            <div className="selection-dual-item__dots">
+              <span />
+              <span />
+              <span />
+            </div>
+          )}
+          {opponentReady && opponentSide && (
+            <div className={`selection-dual-item__badge selection-dual-item__badge--${opponentSide}`}>
+              선택 완료
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -932,16 +1014,13 @@ function TopicSelectionView({
   };
   return (
     <div
-      className="topic-selection-view"
-      style={{ display: "flex", flexDirection: "column", gap: "20px" }}
+      className="topic-selection-view topic-selection-view-centered"
+      style={{ display: "flex", flexDirection: "column", gap: "20px", position: "relative" }}
     >
       {room.topic ? (
         <div
           style={{
-            background: "var(--color-primary-soft)",
-            border: "1px solid rgba(108,99,255,0.3)",
-            borderRadius: "var(--radius-md)",
-            padding: "20px",
+            padding: "12px 0 20px 0",
             textAlign: "center",
           }}
         >
@@ -951,13 +1030,13 @@ function TopicSelectionView({
               alignItems: "center",
               justifyContent: "center",
               gap: "8px",
-              marginBottom: "8px",
+              marginBottom: "10px",
             }}
           >
             <span
               style={{
-                fontSize: "11px",
-                color: "var(--color-primary)",
+                fontSize: "13px",
+                color: "var(--color-text-muted)",
                 fontWeight: 600,
                 textTransform: "uppercase",
                 letterSpacing: "0.5px",
@@ -970,7 +1049,7 @@ function TopicSelectionView({
                 style={{
                   border: "1px solid rgba(240,160,112,0.55)",
                   borderRadius: "999px",
-                  color: "var(--color-con-orange)",
+                  color: "var(--color-con)",
                   fontSize: "10px",
                   fontWeight: 700,
                   lineHeight: 1,
@@ -981,90 +1060,59 @@ function TopicSelectionView({
               </span>
             )}
           </div>
-          <div style={{ fontSize: "17px", fontWeight: 700, lineHeight: 1.5 }}>
+          <div style={{ fontSize: "20px", fontWeight: 700, lineHeight: 1.4, color: "var(--color-text)" }}>
             {room.topic}
           </div>
         </div>
       ) : (
-        <TopicGeneratingCard />
-      )}
-      {isPlayer && !mySelection && !room.topic && (
-        <p
-          style={{
-            textAlign: "center",
-            color: "var(--color-text-muted)",
-            fontSize: "13px",
-            fontStyle: "italic",
-          }}
-        >
-          주제가 확정된 후 진영을 선택할 수 있습니다.
-        </p>
+        <TopicGeneratingCard attempts={attempts} />
       )}
       {isPlayer && !mySelection && !!room.topic && (
-        <>
-          <p
-            style={{
-              textAlign: "center",
-              color: "var(--color-text-muted)",
-              fontSize: "13px",
-            }}
-          >
+        <div className="selection-dual-card-wrapper">
+          <p className="selection-dual-card-wrapper__guidance">
             원하는 진영을 선택하세요
-            {attempts > 0 ? ` (충돌 ${attempts}/7회, 다시 선택해 주세요)` : ""}.
+            {attempts > 0 ? ` (진영 선택 중복 ${attempts}/7회)` : ""}
           </p>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "12px",
-            }}
-          >
+          <div className="side-selection-container">
             {(["pro", "con"] as const).map((side) => {
               const label = side === "pro" ? "찬성" : "반대";
-              const color = side === "pro" ? "var(--color-primary)" : "var(--color-con-orange)";
-              const bg =
-                side === "pro"
-                  ? "var(--color-primary-soft)"
-                  : "rgba(212,98,46,0.1)";
-              const border =
-                side === "pro"
-                  ? "rgba(108,99,255,0.45)"
-                  : "rgba(212,98,46,0.45)";
+              const desc = side === "pro" ? "주제에 동의합니다" : "주제에 반대합니다";
               return (
-                <button
+                <div
                   key={side}
+                  className={`side-selection-item side-selection-item--${side}`}
                   onClick={() => handleSelect(side)}
-                  style={{
-                    padding: "24px",
-                    borderRadius: "var(--radius-md)",
-                    fontWeight: 700,
-                    fontSize: "18px",
-                    background: bg,
-                    border: `2px solid ${border}`,
-                    color,
-                    cursor: "pointer",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.filter = "brightness(1.3)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.filter = "none";
-                  }}
                 >
-                  {label}
-                </button>
+                  <div className="side-selection-item__icon">
+                    {side === "pro" ? (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    ) : (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
+                    )}
+                  </div>
+                  <div className="side-selection-item__content">
+                    <div className="side-selection-item__label">{label}</div>
+                    <div className="side-selection-item__desc">{desc}</div>
+                  </div>
+                </div>
               );
             })}
           </div>
-        </>
+        </div>
       )}
       {isPlayer && mySelection && (
-        <SelectionWaitingCard side={mySelection} />
+        <SelectionWaitingCard side={mySelection} room={room} />
       )}
       {!isPlayer && (
         <NotMyTurnBanner message="플레이어들이 진영을 선택 중입니다..." />
       )}
-      <div className="topic-selection-watermark-slot" aria-hidden="true" />
+
+      <div className="watermark-slot topic-selection-watermark-slot" aria-hidden="true" />
     </div>
   );
 }
@@ -1140,22 +1188,22 @@ function PeerVoteView({
               fontWeight: 600,
             }}
           >
-            <span style={{ color: "var(--color-primary)" }}>찬성팀</span>
-            <span style={{ color: "var(--color-con-orange)" }}>반대팀</span>
+            <span style={{ color: "var(--color-pro)" }}>찬성팀</span>
+            <span style={{ color: "var(--color-con)" }}>반대팀</span>
           </div>
           <div
             style={{
               height: "18px",
               borderRadius: "9px",
               overflow: "hidden",
-              background: "var(--color-con-orange)",
+              background: "var(--color-con)",
               display: "flex",
             }}
           >
             <div
               style={{
                 width: `${proRatio}%`,
-                background: "var(--color-primary)",
+                background: "var(--color-pro)",
                 transition: "width 0.4s ease",
                 height: "100%",
               }}
@@ -1180,8 +1228,8 @@ function PeerVoteView({
               style={{
                 minWidth: "180px",
                 background: "rgba(212,98,46,0.12)",
-                border: "1px solid var(--color-con-orange)",
-                color: "var(--color-con-orange)",
+                border: "1px solid var(--color-con)",
+                color: "var(--color-con)",
                 cursor: "pointer",
                 borderRadius: "var(--radius-sm)",
                 padding: "8px 16px",
@@ -1298,11 +1346,11 @@ function TeamCompareBar({ scores }: { scores: ParticipantScore[] }) {
         팀 대결 종합
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px', fontWeight: 700 }}>
-        <span style={{ color: 'var(--color-primary)' }}>찬성팀 {proTotal}점</span>
-        <span style={{ color: 'var(--color-con-orange)' }}>반대팀 {conTotal}점</span>
+        <span style={{ color: 'var(--color-pro)' }}>찬성팀 {proTotal}점</span>
+        <span style={{ color: 'var(--color-con)' }}>반대팀 {conTotal}점</span>
       </div>
-      <div style={{ height: '14px', borderRadius: '7px', overflow: 'hidden', background: 'var(--color-con-orange)', display: 'flex' }}>
-        <div style={{ width: `${proRatio}%`, background: 'var(--color-primary)', height: '100%', transition: 'width 0.8s ease' }} />
+      <div style={{ height: '14px', borderRadius: '7px', overflow: 'hidden', background: 'var(--color-con)', display: 'flex' }}>
+        <div style={{ width: `${proRatio}%`, background: 'var(--color-pro)', height: '100%', transition: 'width 0.8s ease' }} />
       </div>
       <div style={{ textAlign: 'center', marginTop: '8px', fontSize: '12px', color: 'var(--color-text-muted)' }}>
         {proTotal > conTotal ? `찬성팀 ${proTotal - conTotal}점 앞섬` : conTotal > proTotal ? `반대팀 ${conTotal - proTotal}점 앞섬` : '동점'}
@@ -1329,7 +1377,7 @@ function DecisiveEdgeBadge({ scores }: { scores: ParticipantScore[] }) {
     }
   });
   if (maxDiff === 0) return null;
-  const color = winner === 'pro' ? 'var(--color-primary)' : 'var(--color-con-orange)';
+  const color = winner === 'pro' ? 'var(--color-pro)' : 'var(--color-con)';
   const proScore = pro[bestKey] ?? 0;
   const conScore = con[bestKey] ?? 0;
   return (
@@ -1342,11 +1390,11 @@ function DecisiveEdgeBadge({ scores }: { scores: ParticipantScore[] }) {
       </div>
       {/* 결정적 항목 점수 비교 */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
-        <span style={{ fontWeight: 700, color: 'var(--color-primary)', minWidth: '60px' }}>{pro.name}</span>
-        <span style={{ fontWeight: 700, color: 'var(--color-primary)', fontSize: '18px' }}>{proScore}</span>
+        <span style={{ fontWeight: 700, color: 'var(--color-pro)', minWidth: '60px' }}>{pro.name}</span>
+        <span style={{ fontWeight: 700, color: 'var(--color-pro)', fontSize: '18px' }}>{proScore}</span>
         <span style={{ color: 'var(--color-text-muted)', fontSize: '11px' }}>vs</span>
-        <span style={{ fontWeight: 700, color: 'var(--color-con-orange)', fontSize: '18px' }}>{conScore}</span>
-        <span style={{ fontWeight: 700, color: 'var(--color-con-orange)', minWidth: '60px' }}>{con.name}</span>
+        <span style={{ fontWeight: 700, color: 'var(--color-con)', fontSize: '18px' }}>{conScore}</span>
+        <span style={{ fontWeight: 700, color: 'var(--color-con)', minWidth: '60px' }}>{con.name}</span>
         <span style={{ marginLeft: 'auto', fontWeight: 700, color, fontSize: '12px', background: `${color}22`, padding: '2px 8px', borderRadius: '999px' }}>
           {winner === 'pro' ? `찬성 +${maxDiff}` : `반대 +${maxDiff}`}
         </span>
@@ -1356,7 +1404,7 @@ function DecisiveEdgeBadge({ scores }: { scores: ParticipantScore[] }) {
         {SCORE_CRITERIA.map(({ key, label }) => {
           const diff = (pro[key] ?? 0) - (con[key] ?? 0);
           const isDecisive = key === bestKey;
-          const chipColor = diff > 0 ? 'var(--color-primary)' : diff < 0 ? 'var(--color-con-orange)' : 'var(--color-text-muted)';
+          const chipColor = diff > 0 ? 'var(--color-pro)' : diff < 0 ? 'var(--color-con)' : 'var(--color-text-muted)';
           return (
             <span key={key} style={{
               fontSize: '11px', fontWeight: isDecisive ? 700 : 400,
@@ -1426,8 +1474,8 @@ function RadarChart({ pro, con }: { pro: ParticipantScore; con: ParticipantScore
             const end = toXY(1, a.deg);
             return <line key={a.key} x1={cx} y1={cy} x2={end.x.toFixed(1)} y2={end.y.toFixed(1)} stroke="var(--color-border)" strokeWidth="1" />;
           })}
-          <path d={toPath(con)} fill="rgba(212,98,46,0.15)" stroke="var(--color-con-orange)" strokeWidth="2" />
-          <path d={toPath(pro)} fill="rgba(108,99,255,0.15)" stroke="var(--color-primary)" strokeWidth="2" />
+          <path d={toPath(con)} fill="var(--color-con-glow)" stroke="var(--color-con)" strokeWidth="2" />
+          <path d={toPath(pro)} fill="var(--color-pro-glow)" stroke="var(--color-pro)" strokeWidth="2" />
           {axes.map(a => {
             const pos = toXY(1.32, a.deg);
             const degNorm = ((a.deg % 360) + 360) % 360;
@@ -1442,8 +1490,8 @@ function RadarChart({ pro, con }: { pro: ParticipantScore; con: ParticipantScore
           })}
         </svg>
         <div style={{ display: 'flex', gap: '20px', fontSize: '12px', fontWeight: 600 }}>
-          <span><span style={{ color: 'var(--color-primary)' }}>■</span> {pro.name} (찬성)</span>
-          <span><span style={{ color: 'var(--color-con-orange)' }}>■</span> {con.name} (반대)</span>
+          <span><span style={{ color: 'var(--color-pro)' }}>■</span> {pro.name} (찬성)</span>
+          <span><span style={{ color: 'var(--color-con)' }}>■</span> {con.name} (반대)</span>
         </div>
       </div>
     </div>
@@ -1483,9 +1531,9 @@ function EndedView({
         : "무승부";
   const winnerColor =
     result.winner === "pro"
-      ? "var(--color-primary)"
+      ? "var(--color-pro)"
       : result.winner === "con"
-        ? "var(--color-con-orange)"
+        ? "var(--color-con)"
         : "var(--color-text-muted)";
   const sorted = [...(result.scores ?? [])].sort((a, b) => a.rank - b.rank);
   const playerScores = sorted.filter((s) => s.type === "player");
@@ -1497,7 +1545,7 @@ function EndedView({
     const myVotes = s.vote === "pro" ? proPlayerVotes : conPlayerVotes;
     const oppVotes = s.vote === "pro" ? conPlayerVotes : proPlayerVotes;
     if (myVotes > oppVotes) return { text: "우세", color: "var(--color-pro, #4caf50)" };
-    if (myVotes < oppVotes) return { text: "열세", color: "var(--color-con-orange)" };
+    if (myVotes < oppVotes) return { text: "열세", color: "var(--color-con)" };
     return { text: "동점", color: "var(--color-text-muted)" };
   };
 
@@ -1598,7 +1646,7 @@ function EndedView({
             </thead>
             <tbody>
               {sorted.map((s) => {
-                const sideColor = s.vote === "pro" ? "var(--color-primary)" : "var(--color-con-orange)";
+                const sideColor = s.vote === "pro" ? "var(--color-pro)" : "var(--color-con)";
                 const isMe = s.type === "player" && ((s.vote === "pro" && myRole === "pro_player") || (s.vote === "con" && myRole === "con_player"));
                 const displayName = s.type === "player"
                   ? (s.vote === "pro" ? room.proPlayer?.username : room.conPlayer?.username) ?? s.name
@@ -1701,16 +1749,16 @@ function EndedView({
           }}
         >
           {sorted.map((s) => {
-            const sideColor = s.vote === "pro" ? "var(--color-primary)" : "var(--color-con-orange)";
+            const sideColor = s.vote === "pro" ? "var(--color-pro)" : "var(--color-con)";
             return (
               <div
                 key={s.name}
                 style={{
                   background:
                     s.vote === "pro"
-                      ? "var(--color-primary-soft)"
-                      : "rgba(212,98,46,0.08)",
-                  border: `1px solid ${s.vote === "pro" ? "rgba(108,99,255,0.25)" : "rgba(212,98,46,0.25)"}`,
+                      ? "var(--color-pro-bg)"
+                      : "var(--color-con-bg)",
+                  border: `1px solid ${s.vote === "pro" ? "var(--color-pro)" : "var(--color-con)"}`,
                   borderRadius: "var(--radius-md)",
                   padding: "14px 16px",
                   display: "flex",
@@ -1791,7 +1839,7 @@ function EndedView({
                   style={{
                     fontSize: "12px",
                     fontWeight: 700,
-                    color: s.vote === "pro" ? "var(--color-primary)" : "var(--color-con-orange)",
+                    color: s.vote === "pro" ? "var(--color-pro)" : "var(--color-con)",
                     marginBottom: "6px",
                   }}
                 >
@@ -2082,15 +2130,17 @@ export function DebatePage() {
         >
           {joinError}
         </p>
-        <button
-          className="btn btn--ghost"
-          onClick={() => navigate(`/rooms/${roomId}`, { state: { hasPassword: true } })}
-        >
-          다시 입장하기
-        </button>
-        <button className="btn btn--ghost" onClick={() => navigate("/")}>
-          로비로 돌아가기
-        </button>
+        <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+          <button
+            className="btn btn--ghost"
+            onClick={() => navigate(`/rooms/${roomId}`, { state: { hasPassword: true } })}
+          >
+            다시 입장하기
+          </button>
+          <button className="btn btn--ghost" onClick={() => navigate("/")}>
+            로비로 돌아가기
+          </button>
+        </div>
       </div>
     );
   }
@@ -2102,7 +2152,7 @@ export function DebatePage() {
   const stageIdx = getStageIndex(phase);
 
   return (
-    <div className="debate-page debate-page--with-sidebar">
+    <div className={`debate-page${phase !== "waiting" && phase !== "topic_selection" ? " debate-page--with-sidebar" : ""}`}>
       <div className="debate-main">
         {/* 모바일 헤더 (대기/주제선택 phase에서는 숨김) */}
         {phase !== "waiting" && phase !== "topic_selection" && (
@@ -2131,20 +2181,34 @@ export function DebatePage() {
             gap: "4px",
           }}
         >
-          {/* 1행: 제목(좌) | 타이머(가운데) | n/4단계(우) */}
+          {/* 1행: 제목(좌) + 상태 뱃지 | 타이머(가운데) | n/4단계(우) */}
           <div style={{ display: "flex", alignItems: "center" }}>
-            <span
+            <div
               style={{
                 flex: 1,
-                fontSize: "11px",
-                color: "var(--color-text-muted)",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
                 overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
               }}
             >
-              {room.title}
-            </span>
+              <span
+                style={{
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  color: "var(--color-text)",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {room.title}
+              </span>
+              <span className="phase-status-badge">
+                <span className="phase-status-badge__dot" />
+                {PHASE_LABELS[phase]}
+              </span>
+            </div>
             <PhaseTimer phaseEndAt={room.phaseEndAt} />
             <div
               style={{ flex: 1, display: "flex", justifyContent: "flex-end" }}
@@ -2156,38 +2220,19 @@ export function DebatePage() {
               )}
             </div>
           </div>
-          {/* 2행: 현재단계 텍스트(좌) | 타임라인(우) */}
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "5px",
-                flexShrink: 0,
-              }}
-            >
-              <span
+          {/* 2행: 타임라인 바 (stageIdx >= 0일 때만 표시) */}
+          {stageIdx >= 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <div
                 style={{
-                  fontSize: "14px",
-                  fontWeight: 700,
+                  fontSize: "11px",
+                  color: "var(--color-text-muted)",
                   whiteSpace: "nowrap",
+                  flexShrink: 0,
                 }}
               >
-                {PHASE_LABELS[phase]}
-              </span>
-              {stageIdx >= 0 && (
-                <span
-                  style={{
-                    fontSize: "11px",
-                    color: "var(--color-text-muted)",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  · {DEBATE_STAGES[stageIdx].label} 진행 중
-                </span>
-              )}
-            </div>
-            {stageIdx >= 0 && (
+                {DEBATE_STAGES[stageIdx].label} 진행 중
+              </div>
               <div
                 style={{ flex: 1, display: "flex", gap: "4px", minWidth: 0 }}
               >
@@ -2199,8 +2244,8 @@ export function DebatePage() {
                   />
                 ))}
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* 퇴장 확인 모달 */}
@@ -2311,13 +2356,15 @@ export function DebatePage() {
         )}
       </div>
 
-      <DebateSidebar
-        room={room}
-        myRole={myRole}
-        mySocketId={mySocketId}
-        sidebarOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      />
+      {phase !== "waiting" && phase !== "topic_selection" && (
+        <DebateSidebar
+          room={room}
+          myRole={myRole}
+          mySocketId={mySocketId}
+          sidebarOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+        />
+      )}
     </div>
   );
 }

@@ -437,6 +437,7 @@ function serializeRoom(room) {
     sideSelectionAttempts: room.sideSelectionAttempts,
     status: room.status,
     coachingEnabled: room.coachingEnabled,
+    pendingSelections: Object.fromEntries(room.pendingSelections.entries()),
   };
 }
 

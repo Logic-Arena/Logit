@@ -147,7 +147,7 @@ function DebateSummaryModal({ debate, token, onClose }: {
   useEffect(() => { load(); }, [load]);
 
   const positionLabel = debate.position === 'pro' ? '찬성' : '반대';
-  const positionColor = debate.position === 'pro' ? 'var(--color-primary)' : 'var(--color-con-orange)';
+  const positionColor = debate.position === 'pro' ? 'var(--color-pro)' : 'var(--color-con)';
   const resultLabel = debate.result === 'win' ? '승리' : debate.result === 'lose' ? '패배' : '무승부';
   const dateStr = new Date(debate.playedAt).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
 
@@ -216,8 +216,8 @@ function DebateSummaryModal({ debate, token, onClose }: {
             </div>
 
             {/* 개선할 점 */}
-            <div style={{ background: 'rgba(255,120,90,0.06)', borderRadius: '12px', padding: '16px 18px', border: '1px solid var(--color-con-orange)' }}>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-con-orange)', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: '10px' }}>개선할 점</div>
+            <div style={{ background: 'var(--color-con-bg)', borderRadius: '12px', padding: '16px 18px', border: '1px solid var(--color-con)' }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-con)', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: '10px' }}>개선할 점</div>
               <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {data.improvements.map((s, i) => (
                   <li key={i} style={{ fontSize: '14px', lineHeight: 1.7, color: 'var(--color-text)' }}>{s}</li>

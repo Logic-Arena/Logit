@@ -65,6 +65,7 @@ export function LobbyPage() {
         </div>
 
         <div className="lobby-room-stage">
+          <div className="watermark-slot lobby-watermark-slot"></div>
           {loading ? (
             <div className="loading">불러오는 중...</div>
           ) : (
