@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { loginLocal, createHybridUser } from '../lib/api';
 import { useUserStore } from '../store/useUserStore';
 import { useToast } from '../hooks/useToast';
@@ -22,11 +22,14 @@ export function LoginPage() {
   const setAuth = useUserStore((s) => s.setAuth);
   const isLoggedIn = useUserStore((s) => s.isLoggedIn);
   const navigate = useNavigate();
+  const location = useLocation();
   const showToast = useToast();
+  // QR/링크로 보호된 경로에 바로 접근했다가 로그인으로 밀려난 경우, 로그인 후 원래 목적지로 돌려보냄
+  const redirectTo = (location.state as { from?: string } | null)?.from || '/';
 
   useEffect(() => {
-    if (isLoggedIn) navigate('/', { replace: true });
-  }, [isLoggedIn, navigate]);
+    if (isLoggedIn) navigate(redirectTo, { replace: true });
+  }, [isLoggedIn, navigate, redirectTo]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -38,7 +41,7 @@ export function LoginPage() {
     try {
       const response = await loginLocal({ username: loginId, password });
       setAuth(response.token, createHybridUser(response.user));
-      navigate('/', { replace: true });
+      navigate(redirectTo, { replace: true });
     } catch (err) {
       showToast(err instanceof Error ? err.message : '로그인에 실패했습니다', 'error');
     } finally {

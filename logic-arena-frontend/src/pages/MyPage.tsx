@@ -30,9 +30,21 @@ function PillarIcon({ className }: { className?: string }) {
 
 function ClassJoinSection() {
   const token = useUserStore(s => s.token);
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(() => {
+    // QR/링크로 들어온 경우 ?joinClass=코드 를 자동으로 입력창에 채워줌 (자동 참가는 아니고 입력만)
+    const fromUrl = new URLSearchParams(window.location.search).get("joinClass");
+    return fromUrl ? fromUrl.toUpperCase() : "";
+  });
   const [joining, setJoining] = useState(false);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+
+  useEffect(() => {
+    if (!new URLSearchParams(window.location.search).get("joinClass")) return;
+    // 쿼리스트링은 한 번만 읽고 주소창에서 지워서, 새로고침 시 재입력되지 않게 함
+    const url = new URL(window.location.href);
+    url.searchParams.delete("joinClass");
+    window.history.replaceState({}, "", url);
+  }, []);
 
   const handleJoin = async () => {
     if (!code.trim() || !token) return;

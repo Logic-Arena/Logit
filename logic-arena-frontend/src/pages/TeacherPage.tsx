@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUserStore } from "../store/useUserStore";
+import { InvitePanel } from "../components/common/InvitePanel";
 import styles from "./TeacherPage.module.css";
 import {
   RadarChart, Radar, PolarAngleAxis, PolarGrid, PolarRadiusAxis, ResponsiveContainer,
@@ -349,6 +350,14 @@ function ClassesTab({ token }: { token: string }) {
               <span className={styles.codeLabel}>학급 참가 코드</span>
               <span className={styles.code}>{cls.classCode}</span>
               <CopyButton text={cls.classCode} />
+            </div>
+            <div className={styles.inviteRow}>
+              <InvitePanel
+                code={cls.classCode}
+                joinUrl={`${window.location.origin}/mypage?joinClass=${cls.classCode}`}
+                codeLabel="학급 코드"
+                hint="QR 코드를 스캔하거나 학급 코드로 직접 참가하세요"
+              />
             </div>
           </div>
         ))
