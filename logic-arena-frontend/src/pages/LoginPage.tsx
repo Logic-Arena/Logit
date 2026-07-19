@@ -7,6 +7,7 @@ import { useToast } from '../hooks/useToast';
 const API_URL = import.meta.env.VITE_API_URL ?? '/api';
 
 type RecoveryMode = 'find-account' | 'reset-password' | null;
+type ResetStep = 'identity' | 'password' | 'done';
 
 export function LoginPage() {
   const [loginId, setLoginId] = useState('');
@@ -15,7 +16,11 @@ export function LoginPage() {
   const [recoveryMode, setRecoveryMode] = useState<RecoveryMode>(null);
   const [recoveryEmail, setRecoveryEmail] = useState('');
   const [recoveryLoginId, setRecoveryLoginId] = useState('');
+  const [recoveryName, setRecoveryName] = useState('');
+  const [resetStep, setResetStep] = useState<ResetStep>('identity');
+  const [resetToken, setResetToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
   const [recoveryResult, setRecoveryResult] = useState<string | null>(null);
   const [recoveryLoading, setRecoveryLoading] = useState(false);
 
@@ -70,20 +75,47 @@ export function LoginPage() {
     }
   }
 
-  async function handleResetPassword(e: React.FormEvent) {
+  async function handleVerifyIdentity(e: React.FormEvent) {
     e.preventDefault();
-    if (!recoveryLoginId.trim() || !recoveryEmail.trim() || !newPassword.trim()) return;
+    if (!recoveryLoginId.trim() || !recoveryName.trim()) return;
     setRecoveryLoading(true);
     setRecoveryResult(null);
     try {
-      const res = await fetch(`${API_URL}/auth/reset-password`, {
+      const res = await fetch(`${API_URL}/auth/reset-password/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ loginId: recoveryLoginId.trim(), email: recoveryEmail.trim(), newPassword }),
+        body: JSON.stringify({ loginId: recoveryLoginId.trim(), name: recoveryName.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setResetToken(data.resetToken);
+      setResetStep('password');
+    } catch (err) {
+      setRecoveryResult(err instanceof Error ? err.message : '계정 확인에 실패했습니다.');
+    } finally {
+      setRecoveryLoading(false);
+    }
+  }
+
+  async function handleConfirmNewPassword(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newPassword.trim() || !newPasswordConfirm.trim()) return;
+    if (newPassword !== newPasswordConfirm) {
+      setRecoveryResult('새 비밀번호가 서로 일치하지 않습니다.');
+      return;
+    }
+    setRecoveryLoading(true);
+    setRecoveryResult(null);
+    try {
+      const res = await fetch(`${API_URL}/auth/reset-password/confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resetToken, newPassword }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setRecoveryResult('비밀번호가 변경되었습니다. 다시 로그인해주세요.');
+      setResetStep('done');
     } catch (err) {
       setRecoveryResult(err instanceof Error ? err.message : '비밀번호 재설정에 실패했습니다.');
     } finally {
@@ -95,7 +127,11 @@ export function LoginPage() {
     setRecoveryMode(null);
     setRecoveryEmail('');
     setRecoveryLoginId('');
+    setRecoveryName('');
+    setResetStep('identity');
+    setResetToken('');
     setNewPassword('');
+    setNewPasswordConfirm('');
     setRecoveryResult(null);
   }
 
@@ -125,8 +161,8 @@ export function LoginPage() {
                   {recoveryLoading ? '조회 중...' : '아이디 찾기'}
                 </button>
               </form>
-            ) : (
-              <form onSubmit={handleResetPassword} className="auth-recovery-modal__form">
+            ) : resetStep === 'identity' ? (
+              <form onSubmit={handleVerifyIdentity} className="auth-recovery-modal__form">
                 <div className="form-field">
                   <label className="form-label">아이디</label>
                   <input
@@ -138,16 +174,21 @@ export function LoginPage() {
                   />
                 </div>
                 <div className="form-field">
-                  <label className="form-label">가입 이메일</label>
+                  <label className="form-label">이름</label>
                   <input
                     className="form-input"
-                    type="email"
-                    placeholder="가입 시 입력한 이메일"
-                    value={recoveryEmail}
-                    onChange={(e) => setRecoveryEmail(e.target.value)}
+                    placeholder="가입 시 입력한 이름"
+                    value={recoveryName}
+                    onChange={(e) => setRecoveryName(e.target.value)}
                     required
                   />
                 </div>
+                <button className="btn btn--primary" type="submit" disabled={recoveryLoading}>
+                  {recoveryLoading ? '확인 중...' : '본인 확인'}
+                </button>
+              </form>
+            ) : resetStep === 'password' ? (
+              <form onSubmit={handleConfirmNewPassword} className="auth-recovery-modal__form">
                 <div className="form-field">
                   <label className="form-label">새 비밀번호</label>
                   <input
@@ -160,11 +201,23 @@ export function LoginPage() {
                     minLength={6}
                   />
                 </div>
+                <div className="form-field">
+                  <label className="form-label">새 비밀번호 확인</label>
+                  <input
+                    className="form-input"
+                    type="password"
+                    placeholder="새 비밀번호를 한 번 더 입력하세요"
+                    value={newPasswordConfirm}
+                    onChange={(e) => setNewPasswordConfirm(e.target.value)}
+                    required
+                    minLength={6}
+                  />
+                </div>
                 <button className="btn btn--primary" type="submit" disabled={recoveryLoading}>
-                  {recoveryLoading ? '처리 중...' : '비밀번호 변경'}
+                  {recoveryLoading ? '변경 중...' : '비밀번호 변경'}
                 </button>
               </form>
-            )}
+            ) : null}
 
             {recoveryResult && (
               <p className="auth-recovery-modal__result">{recoveryResult}</p>
