@@ -5022,6 +5022,7 @@ textarea {
   font-weight: 500;
 }
 
+.header-user__teacher-btn,
 .header-user__logout {
   font-size: var(--text-caption);
   padding: 5px 12px;
