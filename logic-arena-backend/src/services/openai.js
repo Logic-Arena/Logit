@@ -237,6 +237,7 @@ export async function generateCoaching({ topic, content }) {
   }
 }
 
+// ⚠️ 5축 기준 문구는 judgeDebate/judgeSoloEssay 동기화 유지
 export async function judgeDebate({ topic, content, mode = 'ai_debate' }) {
   const isHumanMode = mode === 'human_debate';
   const summary = buildDebateSummary(content, isHumanMode);
@@ -352,6 +353,123 @@ function makeDrawResult(reason, isHumanMode = false) {
     defaultScore('반대P', 'con', 'player'),
   ];
   return { winner: 'draw', summary: reason, scores };
+}
+
+// ⚠️ 5축 기준 문구는 judgeDebate/judgeSoloEssay 동기화 유지
+export async function judgeSoloEssay({ topic, playerName, essayText }) {
+  if (!essayText || !essayText.trim()) {
+    return {
+      winner: null,
+      summary: '제출된 논술문이 없어 채점할 수 없습니다.',
+      scores: [{
+        name: playerName ?? '학생',
+        vote: 'pro',
+        type: 'player',
+        logic: 0, evidence: 0, persuasion: 0, rebuttal: 0, consistency: 0,
+        total: 0, rank: 1,
+        aiScore: 0, peerVotes: 0, peerScore: 0, finalScore: 0,
+        advice: '논술문을 제출해주세요.',
+      }],
+    };
+  }
+
+  const scoresTemplate =
+    `{"name":"${playerName ?? '학생'}","vote":"pro","type":"player","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"consistency":0,"total":0,"rank":1,"advice":"구체적 조언 3-4문장"}`;
+
+  const prompt =
+    `논술 주제: "${topic}"\n\n` +
+    `학생 "${playerName ?? '학생'}"의 제출문:\n${essayText}\n\n` +
+    `당신은 논술 평가 전문가입니다. 위 제출문은 【주장】【근거】【예시】【예상 반론】【재반론】 구분자 형식으로 작성되었습니다.\n` +
+    `학생 1명을 아래 기준으로 채점하세요.\n\n` +
+    `채점 기준 (각 항목 0~20점, 합계 0~100점):\n` +
+    `【논리성 0~20점】\n` +
+    `17~20: 전제와 결론의 구조가 명확하고 논리적 비약이 없으며 인과관계를 정확히 설명함\n` +
+    `13~16: 대체로 논리적이나 일부 연결이 어색하거나 약함\n` +
+    `8~12: 논리 구조는 있으나 인과관계가 자주 불명확함\n` +
+    `4~7: 주장과 근거가 자주 분리되어 있고 논리적 연결이 약함\n` +
+    `0~3: 논리적 구조가 거의 없고 단순 주장 나열에 불과함\n\n` +
+    `【근거 0~20점】\n` +
+    `17~20: 신뢰할 수 있는 출처(통계, 뉴스, 연구 사례 등)를 구체적으로 제시함\n` +
+    `13~16: 근거를 제시하나 출처가 불명확하거나 구체성이 부족함\n` +
+    `8~12: "~라고 들었다" 수준의 막연한 근거만 있음\n` +
+    `4~7: 근거가 추측이거나 개인 경험에만 의존함\n` +
+    `0~3: 근거 제시가 거의 없음\n\n` +
+    `【표현 명확성 0~20점】\n` +
+    `17~20: 표현이 명확하고 구조적이며 감정 호소 없이 이성적으로 청중을 설득함\n` +
+    `13~16: 대체로 명확하나 일부 표현이 모호하거나 전달력이 약함\n` +
+    `8~12: 전달하려는 내용은 있으나 구성이 산만하거나 핵심이 흐림\n` +
+    `4~7: 표현이 불명확하거나 같은 말을 반복함\n` +
+    `0~3: 무슨 말을 하려는지 거의 파악하기 어려움\n\n` +
+    `【반론 대응력 0~20점】\n` +
+    `제출문의 【예상 반론】【재반론】 섹션을 기준으로 채점:\n` +
+    `17~20: 예상 반론이 핵심적이고 재반론이 구체적인 근거로 뒷받침됨\n` +
+    `13~16: 예상 반론은 타당하나 재반론의 논거가 다소 약함\n` +
+    `8~12: 예상 반론이 형식적이거나 재반론이 "그건 틀렸다" 수준에 머묾\n` +
+    `4~7: 예상 반론이 논점에서 벗어났거나 재반론이 논리적으로 약함\n` +
+    `0~3: 예상 반론이나 재반론이 거의 없음\n\n` +
+    `【일관성 0~20점】\n` +
+    `주장~재반론 전체의 논지 일관성:\n` +
+    `17~20: 처음부터 끝까지 같은 입장을 유지, 앞뒤 발언이 모순 없음\n` +
+    `13~16: 대체로 일관적이나 한 군데 정도 앞뒤가 맞지 않는 부분 있음\n` +
+    `8~12: 중간에 입장이 흔들리거나 자기 주장을 스스로 부정하는 경우 있음\n` +
+    `4~7: 발언마다 입장이 달라지거나 같은 주제에 대해 다른 말을 함\n` +
+    `0~3: 처음과 끝의 주장이 완전히 다르거나 자기 주장이 없음\n\n` +
+    `채점 규칙 (반드시 준수):\n` +
+    `1. 1점 단위로 채점하고 절대 5의 배수로 반올림하지 말 것\n` +
+    `2. 내용이 부실하거나 짧으면 각 항목 0~7점, 평범하면 8~13점, 우수하면 14~20점\n` +
+    `3. 총점(5개 항목 합계) 기준: 미흡 0~39점, 보통 40~59점, 양호 60~79점, 우수 80~100점\n` +
+    `4. 실제 제출문 내용을 근거로 엄격하게 채점할 것\n\n` +
+    `summary(총평) 작성 규칙:\n` +
+    `- 3~4문장으로 작성\n` +
+    `- 이번 논술의 핵심 쟁점이 무엇이었는지 언급\n` +
+    `- 가장 강했던 논점과 가장 약했던 논점을 구체적으로 지적\n` +
+    `- 실제 제출문 내용을 인용하거나 참조하여 구체적으로 서술\n\n` +
+    `advice(개인 조언) 작성 규칙:\n` +
+    `- 3~4문장\n` +
+    `- 제출문에서 잘한 점 1가지와 개선할 점 1가지를 구체적으로 지적\n` +
+    `- 실제 논리나 표현을 인용해서 서술\n` +
+    `- 다음 논술에서 바로 적용 가능한 실천적 조언 포함\n\n` +
+    `반드시 아래 JSON 형식으로만 답하세요 (설명 없이 JSON만):\n` +
+    `{"winner":null,"summary":"총평 3-4문장","scores":[${scoresTemplate}]}`;
+
+  try {
+    const raw = await ask(prompt);
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('JSON 파싱 실패');
+    const parsed = JSON.parse(jsonMatch[0]);
+    if (!parsed.scores || !Array.isArray(parsed.scores) || parsed.scores.length === 0) throw new Error('scores 없음');
+
+    const s = parsed.scores[0];
+    s.logic = Math.min(Math.max(Math.round(s.logic ?? 0), 0), 20);
+    s.evidence = Math.min(Math.max(Math.round(s.evidence ?? 0), 0), 20);
+    s.persuasion = Math.min(Math.max(Math.round(s.persuasion ?? 0), 0), 20);
+    s.rebuttal = Math.min(Math.max(Math.round(s.rebuttal ?? 0), 0), 20);
+    s.consistency = Math.min(Math.max(Math.round(s.consistency ?? 0), 0), 20);
+    s.total = s.logic + s.evidence + s.persuasion + s.rebuttal + s.consistency;
+    s.aiScore = s.total; // 1인 모드: AI 100점 만점 = total 그대로
+    s.peerVotes = 0;
+    s.peerScore = 0;
+    s.finalScore = s.total;
+    s.rank = 1;
+
+    parsed.winner = null; // 승패 없음
+    return parsed;
+  } catch (e) {
+    console.error('[judgeSoloEssay] AI 파싱 실패:', e.message);
+    return {
+      winner: null,
+      summary: 'AI 평가 중 오류가 발생하여 기본 점수로 처리합니다.',
+      scores: [{
+        name: playerName ?? '학생',
+        vote: 'pro',
+        type: 'player',
+        logic: 0, evidence: 0, persuasion: 0, rebuttal: 0, consistency: 0,
+        total: 0, rank: 1,
+        aiScore: 0, peerVotes: 0, peerScore: 0, finalScore: 0,
+        advice: 'AI 평가 중 오류가 발생했습니다. 다시 시도해주세요.',
+      }],
+    };
+  }
 }
 
 function buildDebateSummary(content, isHumanMode = false) {

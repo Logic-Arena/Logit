@@ -30,6 +30,7 @@ import {
   generateCounter,
   generateCoaching,
   judgeDebate,
+  judgeSoloEssay,
 } from '../services/ai.js';
 
 import { updateStats, saveDebateHistory } from '../services/statsService.js';
@@ -247,8 +248,13 @@ async function finalizePeerVoting(io, roomId) {
   const participants = [];
   if (room.proPlayer) participants.push({ userId: room.proPlayer.userId, vote: 'pro' });
   if (room.conPlayer) participants.push({ userId: room.conPlayer.userId, vote: 'con' });
-  await updateStats(participants, result.winner).catch((e) => console.error('[peer_voting] updateStats 실패:', e.message));
-  await saveDebateHistory(participants, result, room.topic).catch((e) => console.error('[peer_voting] saveDebateHistory 실패:', e.message));
+
+  // solo_essay 모드는 DebateHistory 저장 스킵 (④에서 1인 저장 구현 예정)
+  if (room.mode !== 'solo_essay') {
+    await updateStats(participants, result.winner).catch((e) => console.error('[peer_voting] updateStats 실패:', e.message));
+    await saveDebateHistory(participants, result, room.topic).catch((e) => console.error('[peer_voting] saveDebateHistory 실패:', e.message));
+  }
+  // TODO: ④에서 solo 모드용 1인 DebateHistory 저장 구현
 
   io.to(roomId).emit('debate_ended', { result, room: getRoomSerialized(roomId) });
   await startPhase(io, roomId, 'ended');
@@ -331,6 +337,33 @@ async function handleAiAutoPhase(io, roomId, phase) {
     }
     case 'judging': {
       const judgingStartTime = Date.now();
+
+      // solo_essay 모드: judgeSoloEssay 호출
+      if (room.mode === 'solo_essay') {
+        const playerName = room.proPlayer?.username ?? '학생';
+        // ③에서 essay_revision 완료 후 퇴고본으로 교체 예정 — 현재는 essay_writing 제출문 사용
+        // TODO: essay_revision 단계 완료 후 퇴고본으로 대체
+        const essayText = room.content.pro_argument ?? ''; // pro_argument가 최종 제출문
+        const result = await judgeSoloEssay({ topic: room.topic, playerName, essayText });
+
+        const currentRoom = getRoom(roomId);
+        if (!currentRoom || currentRoom.phase === 'ended') return;
+        setResult(roomId, result);
+
+        const MIN_JUDGING_DISPLAY_MS = 1500;
+        const elapsed = Date.now() - judgingStartTime;
+        const remainingWait = Math.max(0, MIN_JUDGING_DISPLAY_MS - elapsed);
+        if (remainingWait > 0) await new Promise(resolve => setTimeout(resolve, remainingWait));
+
+        const roomAfterWait = getRoom(roomId);
+        if (!roomAfterWait || roomAfterWait.phase === 'ended') return;
+
+        // solo 모드는 peer_voting 없음 → 즉시 종료
+        await finalizePeerVoting(io, roomId);
+        return;
+      }
+
+      // 기존 2인 토론 모드 (ai_debate, human_debate)
       const result = await judgeDebate({ topic: room.topic, content: room.content, mode: room.mode });
       const currentRoom = getRoom(roomId);
       if (!currentRoom || currentRoom.phase === 'ended') return;

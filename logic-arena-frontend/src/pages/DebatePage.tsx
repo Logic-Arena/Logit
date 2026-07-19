@@ -1522,6 +1522,8 @@ function EndedView({
 }) {
   const result = room.result;
   const navigate = useNavigate();
+  const isSoloEssay = room.mode === "solo_essay";
+
   if (!result)
     return (
       <div
@@ -1538,18 +1540,22 @@ function EndedView({
         </p>
       </div>
     );
-  const winnerLabel =
-    result.winner === "pro"
+
+  const winnerLabel = isSoloEssay
+    ? "논술 평가 결과"
+    : result.winner === "pro"
       ? "찬성 팀 승리"
       : result.winner === "con"
         ? "반대 팀 승리"
         : "무승부";
-  const winnerColor =
-    result.winner === "pro"
+  const winnerColor = isSoloEssay
+    ? "var(--color-text)"
+    : result.winner === "pro"
       ? "var(--color-pro)"
       : result.winner === "con"
         ? "var(--color-con)"
         : "var(--color-text-muted)";
+
   const sorted = [...(result.scores ?? [])].sort((a, b) => a.rank - b.rank);
   const playerScores = sorted.filter((s) => s.type === "player");
   const proPlayerVotes = playerScores.find((s) => s.vote === "pro")?.peerVotes ?? 0;
@@ -1574,13 +1580,15 @@ function EndedView({
       }}
     >
       <div style={{ textAlign: "center", paddingTop: "16px" }}>
-        <div style={{ fontSize: "40px", marginBottom: "8px" }}>⚖️</div>
+        <div style={{ fontSize: "40px", marginBottom: "8px" }}>
+          {isSoloEssay ? "📝" : "⚖️"}
+        </div>
         <div style={{ fontSize: "24px", fontWeight: 700, color: winnerColor }}>
           {winnerLabel}
         </div>
       </div>
-      <TeamCompareBar scores={sorted} />
-      <DecisiveEdgeBadge scores={sorted} />
+      {!isSoloEssay && <TeamCompareBar scores={sorted} />}
+      {!isSoloEssay && <DecisiveEdgeBadge scores={sorted} />}
       <RpChangeCard result={result} myRole={myRole} />
       {result.summary && (
         <div
@@ -1640,7 +1648,7 @@ function EndedView({
                   "반론",
                   "일관성",
                   "AI점수",
-                  "동료평가",
+                  ...(isSoloEssay ? [] : ["동료평가"]),
                   "최종",
                 ].map((h) => (
                   <th
@@ -1718,17 +1726,19 @@ function EndedView({
                     <td style={{ padding: "10px 12px", textAlign: "center", fontWeight: 600 }}>
                       {s.aiScore ?? Math.round(s.total * 0.7)}
                     </td>
-                    <td style={{ padding: "10px 12px", textAlign: "center" }}>
-                      {(() => {
-                        const label = getPeerLabel(s);
-                        if (!label) return <span style={{ color: "var(--color-text-muted)" }}>-</span>;
-                        return (
-                          <span style={{ fontSize: "11px", fontWeight: 700, color: label.color }}>
-                            {label.text}
-                          </span>
-                        );
-                      })()}
-                    </td>
+                    {!isSoloEssay && (
+                      <td style={{ padding: "10px 12px", textAlign: "center" }}>
+                        {(() => {
+                          const label = getPeerLabel(s);
+                          if (!label) return <span style={{ color: "var(--color-text-muted)" }}>-</span>;
+                          return (
+                            <span style={{ fontSize: "11px", fontWeight: 700, color: label.color }}>
+                              {label.text}
+                            </span>
+                          );
+                        })()}
+                      </td>
+                    )}
                     <td
                       style={{
                         padding: "10px 12px",
@@ -1747,7 +1757,7 @@ function EndedView({
           </table>
         </div>
       )}
-      {(() => {
+      {!isSoloEssay && (() => {
         const proPlayer = playerScores.find(s => s.vote === 'pro');
         const conPlayer = playerScores.find(s => s.vote === 'con');
         if (!proPlayer || !conPlayer) return null;
