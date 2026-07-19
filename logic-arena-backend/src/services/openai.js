@@ -245,6 +245,7 @@ export async function judgeDebate({ topic, content, mode = 'ai_debate' }) {
   // ai_debate와 human_debate 모두 학생(플레이어) 2명만 채점
   const participantDesc = `참가자 2명(찬성P, 반대P)`;
 
+  // persuasion: 과거 데이터 호환을 위해 키 유지. 2026-07 이후 채점 기준은 '표현 명확성'
   const scoresTemplate =
     `{"name":"찬성P","vote":"pro","type":"player","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"consistency":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"},` +
     `{"name":"반대P","vote":"con","type":"player","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"consistency":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"}`;
@@ -267,7 +268,7 @@ export async function judgeDebate({ topic, content, mode = 'ai_debate' }) {
     `8~12: "~라고 들었다" 수준의 막연한 근거만 있음\n` +
     `4~7: 근거가 추측이거나 개인 경험에만 의존함\n` +
     `0~3: 근거 제시가 거의 없음\n\n` +
-    `【설득력 0~20점】\n` +
+    `【표현 명확성 0~20점】\n` +
     `17~20: 표현이 명확하고 구조적이며 감정 호소 없이 이성적으로 청중을 설득함\n` +
     `13~16: 대체로 명확하나 일부 표현이 모호하거나 전달력이 약함\n` +
     `8~12: 전달하려는 내용은 있으나 구성이 산만하거나 핵심이 흐림\n` +
@@ -496,10 +497,10 @@ export async function generateTeacherDebateSummary({ studentName, topic, positio
     `- 주제: ${topic}\n` +
     `- 포지션: ${positionLabel}\n` +
     `- 결과: ${resultLabel} (최종 ${score}점 / 100점 만점)\n` +
-    `- 항목별 점수 (20점 만점): 논리성 ${logic}, 근거 ${evidence}, 설득력 ${persuasion}, 반론 ${rebuttal}, 일관성 ${consistency}\n` +
+    `- 항목별 점수 (20점 만점): 논리성 ${logic}, 근거 ${evidence}, 표현 명확성 ${persuasion}, 반론 ${rebuttal}, 일관성 ${consistency}\n` +
     `- AI 채점관 상세 총평: ${advice || '없음'}\n\n` +
     `교사 관점에서 학생의 토론 수행을 전문적으로 분석하여, 아래 JSON 형식으로만 답하세요 (설명 없이 JSON만):\n` +
-    `{"summary":"해당 학생의 전반적인 토론 수행을 4~5문장으로 평가. 논리 구조, 근거의 질, 설득력, 반론 대응 방식, 일관성을 종합적으로 서술. 교사 전문 어투.","strengths":["구체적인 발언 내용을 인용하거나 근거로 들어 서술 (3~4가지)"],"improvements":["구체적인 발언 내용을 근거로 들고 개선 방향도 함께 제시 (3~4가지)"],"coaching":"교사가 학생에게 직접 건네는 따뜻하고 구체적인 코칭 멘트 1~2문장"}`;
+    `{"summary":"해당 학생의 전반적인 토론 수행을 4~5문장으로 평가. 논리 구조, 근거의 질, 표현 명확성, 반론 대응 방식, 일관성을 종합적으로 서술. 교사 전문 어투.","strengths":["구체적인 발언 내용을 인용하거나 근거로 들어 서술 (3~4가지)"],"improvements":["구체적인 발언 내용을 근거로 들고 개선 방향도 함께 제시 (3~4가지)"],"coaching":"교사가 학생에게 직접 건네는 따뜻하고 구체적인 코칭 멘트 1~2문장"}`;
 
   try {
     const raw = await ask(prompt);

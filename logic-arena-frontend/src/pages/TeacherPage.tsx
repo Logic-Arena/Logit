@@ -77,7 +77,7 @@ const PHASE_CONFIG: { key: keyof PhaseDurations; label: string; min: number; max
 ];
 
 const CATEGORY_LABELS: Record<string, string> = {
-  logic: "논리성", evidence: "근거", persuasion: "설득력", rebuttal: "반론", consistency: "일관성",
+  logic: "논리성", evidence: "근거", persuasion: "표현 명확성", rebuttal: "반론", consistency: "일관성",
 };
 
 // ─── 공용 컴포넌트 ────────────────────────────────────────────────
@@ -446,7 +446,7 @@ function StatsTab({ token }: { token: string }) {
                     <th>평균점수</th>
                     <th>논리성</th>
                     <th>근거</th>
-                    <th>설득력</th>
+                    <th>표현 명확성</th>
                     <th>반론</th>
                     <th>일관성</th>
                     <th>성장률</th>
@@ -570,7 +570,7 @@ function StudentDetailView({ student, onBack, token, summary }: {
   const categories = [
     { key: 'avgLogic' as const, label: '논리성', classKey: 'logic' as const },
     { key: 'avgEvidence' as const, label: '근거', classKey: 'evidence' as const },
-    { key: 'avgPersuasion' as const, label: '설득력', classKey: 'persuasion' as const },
+    { key: 'avgPersuasion' as const, label: '표현 명확성', classKey: 'persuasion' as const },
     { key: 'avgRebuttal' as const, label: '반론', classKey: 'rebuttal' as const },
     { key: 'avgConsistency' as const, label: '일관성', classKey: 'consistency' as const },
   ];

@@ -213,7 +213,7 @@ function DetailModal({ item, onClose }: { item: DebateHistoryItem; onClose: () =
   const criteria = [
     { label: '논리성', value: item.logic },
     { label: '근거', value: item.evidence },
-    { label: '설득력', value: item.persuasion },
+    { label: '표현 명확성', value: item.persuasion },
     { label: '반론', value: item.rebuttal },
     { label: '일관성', value: item.consistency },
   ];
@@ -422,14 +422,14 @@ export function AnalyticsDashboardSection({ hideKpi = false }: { hideKpi?: boole
       { axis: "반박 능력", userValue: 0, avgValue: 11 },
       { axis: "논리력",   userValue: 0, avgValue: 12 },
       { axis: "일관성",   userValue: 0, avgValue: 12 },
-      { axis: "설득력",   userValue: 0, avgValue: 12 },
+      { axis: "표현 명확성",   userValue: 0, avgValue: 12 },
     ];
     return [
       { axis: "근거 제시", userValue: avg(history.map((h) => h.evidence ?? 0)),   avgValue: 13 },
       { axis: "반박 능력", userValue: avg(history.map((h) => h.rebuttal ?? 0)),   avgValue: 11 },
       { axis: "논리력",   userValue: avg(history.map((h) => h.logic ?? 0)),       avgValue: 12 },
       { axis: "일관성",   userValue: avg(history.map((h) => h.consistency ?? 0)), avgValue: 12 },
-      { axis: "설득력",   userValue: avg(history.map((h) => h.persuasion ?? 0)),  avgValue: 12 },
+      { axis: "표현 명확성",   userValue: avg(history.map((h) => h.persuasion ?? 0)),  avgValue: 12 },
     ];
   }, [history]);
 

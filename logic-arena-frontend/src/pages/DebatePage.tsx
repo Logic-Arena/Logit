@@ -1280,7 +1280,7 @@ const SCORE_CRITERIA: {
 }[] = [
     { key: "logic", label: "논리성" },
     { key: "evidence", label: "근거" },
-    { key: "persuasion", label: "설득력" },
+    { key: "persuasion", label: "표현 명확성" },
     { key: "rebuttal", label: "반론" },
     { key: "consistency", label: "일관성" },
   ];
@@ -1628,7 +1628,7 @@ function EndedView({
                   "참가자",
                   "논리성",
                   "근거",
-                  "설득력",
+                  "표현 명확성",
                   "반론",
                   "일관성",
                   "AI점수",
