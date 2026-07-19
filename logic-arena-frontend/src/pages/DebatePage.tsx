@@ -32,6 +32,9 @@ const PHASE_LABELS: Record<Phase, string> = {
   con_a_counter: "반대AI 재반론 (자동)",
   coaching: "AI 훈수 (자동)",
   final_argument: "최종 변론",
+  essay_writing: "주장문 작성",
+  essay_feedback: "AI 피드백",
+  essay_revision: "퇴고",
   judging: "AI 판정 중",
   peer_voting: "동료 평가 투표",
   ended: "토론 종료",
@@ -657,7 +660,7 @@ function DebateChatView({
         }}
       >
         {myKey ? (
-          phase === "arguing" ? (
+          (phase === "arguing" || phase === "essay_writing") ? (
             <StructuredArgumentPanel
               key={phase}
               roomId={room.id}
@@ -665,6 +668,10 @@ function DebateChatView({
               submittedText={alreadySubmitted ? content[myKey] : null}
               phaseEndAt={room.phaseEndAt}
             />
+          ) : phase === "essay_feedback" || phase === "essay_revision" ? (
+            <div style={{ padding: "20px", textAlign: "center", color: "var(--color-text-secondary)" }}>
+              <p>{phase === "essay_feedback" ? "AI가 피드백을 준비하고 있어요 (준비 중 기능)" : "퇴고 기능 준비 중입니다"}</p>
+            </div>
           ) : (
             <SubmitPanel
               key={phase}
@@ -1011,6 +1018,7 @@ function TopicSelectionView({
 }) {
   const [mySelection, setMySelection] = useState<"pro" | "con" | null>(null);
   const isPlayer = myRole === "pro_player" || myRole === "con_player";
+  const isSoloEssay = room.mode === "solo_essay";
   const attempts = room.sideSelectionAttempts;
   useEffect(() => {
     if (attempts > 0) setMySelection(null);
@@ -1049,7 +1057,7 @@ function TopicSelectionView({
                 letterSpacing: "0.5px",
               }}
             >
-              토론 주제
+              {isSoloEssay ? "논술 주제" : "토론 주제"}
             </span>
             {room.topicSource === "fallback" && (
               <span
@@ -1074,7 +1082,7 @@ function TopicSelectionView({
       ) : (
         <TopicGeneratingCard attempts={attempts} />
       )}
-      {isPlayer && !mySelection && !!room.topic && (
+      {isPlayer && !isSoloEssay && !mySelection && !!room.topic && (
         <div className="selection-dual-card-wrapper">
           <p className="selection-dual-card-wrapper__guidance">
             원하는 진영을 선택하세요
@@ -1112,10 +1120,10 @@ function TopicSelectionView({
           </div>
         </div>
       )}
-      {isPlayer && mySelection && (
+      {isPlayer && !isSoloEssay && mySelection && (
         <SelectionWaitingCard side={mySelection} room={room} />
       )}
-      {!isPlayer && (
+      {!isPlayer && !isSoloEssay && (
         <NotMyTurnBanner message="플레이어들이 진영을 선택 중입니다..." />
       )}
 
@@ -2038,6 +2046,9 @@ const DEBATE_PHASES = new Set<Phase>([
   "con_a_counter",
   "coaching",
   "final_argument",
+  "essay_writing",
+  "essay_feedback",
+  "essay_revision",
 ]);
 
 export function DebatePage() {

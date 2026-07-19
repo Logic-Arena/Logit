@@ -119,8 +119,17 @@ async function startPhase(io, roomId, phase) {
   if (phase === 'ended') return;
 
   const isHumanMode = room.mode === 'human_debate';
+  const isSoloEssay = room.mode === 'solo_essay';
 
-  if (isHumanMode) {
+  if (isSoloEssay) {
+    // solo_essay: essay_feedback 단계에서만 AI 피드백 생성 (TODO: 다음 PR)
+    // TODO: essay_feedback 단계에서 피드백 생성 로직 추가
+    if (phase === 'judging') {
+      handleAiAutoPhase(io, roomId, phase).catch((e) =>
+        console.error(`[AI] ${phase} 생성 실패:`, e.message)
+      );
+    }
+  } else if (isHumanMode) {
     // 인간 vs 인간: coaching(활성화된 경우)과 judging만 AI 사용
     if (phase === 'judging' || (phase === 'coaching' && room.coachingEnabled)) {
       handleAiAutoPhase(io, roomId, phase).catch((e) =>
@@ -584,7 +593,13 @@ export function registerHandlers(io, socket) {
     if (!room) return socket.emit('error', { message: '방을 찾을 수 없습니다' });
     if (room.host !== socket.id) return socket.emit('error', { message: '방장만 시작할 수 있습니다' });
     if (room.phase !== 'waiting') return socket.emit('error', { message: '이미 게임이 시작됐습니다' });
-    if (!room.proPlayer || !room.conPlayer) return socket.emit('error', { message: '플레이어가 2명 이상 필요합니다' });
+
+    // solo_essay 모드는 proPlayer만 있으면 시작 가능
+    if (room.mode === 'solo_essay') {
+      if (!room.proPlayer) return socket.emit('error', { message: '플레이어가 필요합니다' });
+    } else {
+      if (!room.proPlayer || !room.conPlayer) return socket.emit('error', { message: '플레이어가 2명 이상 필요합니다' });
+    }
 
     // manual 주제면 topic_selection 스킵 가능
     if (room.topicMode === 'manual' && room.topic) {
