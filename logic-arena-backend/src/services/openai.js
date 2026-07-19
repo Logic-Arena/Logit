@@ -242,22 +242,18 @@ export async function judgeDebate({ topic, content, mode = 'ai_debate' }) {
   const summary = buildDebateSummary(content, isHumanMode);
   if (!summary) return makeDrawResult('토론 내용이 없어 무승부로 처리합니다.', isHumanMode);
 
-  const participantDesc = isHumanMode
-    ? `참가자 2명(찬성P, 반대P)`
-    : `참가자 4명(찬성P, 반대P, 찬성AI, 반대AI)`;
+  // ai_debate와 human_debate 모두 학생(플레이어) 2명만 채점
+  const participantDesc = `참가자 2명(찬성P, 반대P)`;
 
-  const scoresTemplate = isHumanMode
-    ? `{"name":"찬성P","vote":"pro","type":"player","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"consistency":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"},` +
-    `{"name":"반대P","vote":"con","type":"player","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"consistency":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"}`
-    : `{"name":"찬성P","vote":"pro","type":"player","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"consistency":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"},` +
-    `{"name":"반대P","vote":"con","type":"player","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"consistency":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"},` +
-    `{"name":"찬성AI","vote":"pro","type":"ai","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"consistency":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"},` +
-    `{"name":"반대AI","vote":"con","type":"ai","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"consistency":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"}`;
+  const scoresTemplate =
+    `{"name":"찬성P","vote":"pro","type":"player","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"consistency":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"},` +
+    `{"name":"반대P","vote":"con","type":"player","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"consistency":0,"total":0,"rank":0,"advice":"구체적 조언 3-4문장"}`;
 
   const prompt =
     `토론 주제: "${topic}"\n\n` +
     `${summary}\n\n` +
-    `당신은 공정한 토론 심판입니다. 위 전체 발언을 바탕으로 ${participantDesc}을 동일한 기준으로 채점하세요.\n\n` +
+    `당신은 공정한 토론 심판입니다. 위 발언에서 ${participantDesc}을 동일한 기준으로 채점하세요.\n` +
+    `(참고: AI 발언(찬성AI, 반대AI)은 토론 맥락 이해를 위한 참고용이며 채점 대상이 아닙니다. 오직 학생 2명만 채점하세요.)\n\n` +
     `채점 기준 (각 항목 0~20점, 합계 0~100점):\n` +
     `【논리성 0~20점】\n` +
     `17~20: 전제와 결론의 구조가 명확하고 논리적 비약이 없으며 인과관계를 정확히 설명함\n` +
@@ -331,9 +327,9 @@ export async function judgeDebate({ topic, content, mode = 'ai_debate' }) {
     const sorted = [...parsed.scores].sort((a, b) => b.total - a.total);
     sorted.forEach((s, i) => { s.rank = i + 1; });
 
-    // 총점 기반으로 winner 재계산
-    const proTotal = parsed.scores.filter(s => s.vote === 'pro').reduce((sum, s) => sum + s.total, 0);
-    const conTotal = parsed.scores.filter(s => s.vote === 'con').reduce((sum, s) => sum + s.total, 0);
+    // 플레이어 총점 기반으로 winner 계산
+    const proTotal = parsed.scores.filter(s => s.vote === 'pro' && s.type === 'player').reduce((sum, s) => sum + s.total, 0);
+    const conTotal = parsed.scores.filter(s => s.vote === 'con' && s.type === 'player').reduce((sum, s) => sum + s.total, 0);
     if (proTotal > conTotal) parsed.winner = 'pro';
     else if (conTotal > proTotal) parsed.winner = 'con';
     else parsed.winner = 'draw';
@@ -349,14 +345,11 @@ function makeDrawResult(reason, isHumanMode = false) {
     name, vote, type, logic: 0, evidence: 0, persuasion: 0, rebuttal: 0, consistency: 0, total: 0, rank: 0,
     aiScore: 0, peerVotes: 0, peerScore: 0, finalScore: 0, advice: reason,
   });
+  // ai_debate와 human_debate 모두 플레이어 2명만 반환
   const scores = [
     defaultScore('찬성P', 'pro', 'player'),
     defaultScore('반대P', 'con', 'player'),
   ];
-  if (!isHumanMode) {
-    scores.push(defaultScore('찬성AI', 'pro', 'ai'));
-    scores.push(defaultScore('반대AI', 'con', 'ai'));
-  }
   return { winner: 'draw', summary: reason, scores };
 }
 
