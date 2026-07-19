@@ -150,6 +150,10 @@
   padding: 8px 12px;
 }
 
+.inviteRow {
+  margin-top: 10px;
+}
+
 .codeLabel {
   font-size: var(--text-body);
   color: var(--color-text-muted);
