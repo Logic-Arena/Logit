@@ -20,6 +20,8 @@ import {
   serializeAuthUser,
   createAccessToken,
   getUserWithStats,
+  createPasswordResetToken,
+  verifyPasswordResetToken,
 } from '../services/authService.js';
 import { requireAuth } from '../middleware/auth.js';
 import { createSession } from '../store/sessionStore.js';
@@ -203,25 +205,47 @@ router.post('/find-account', async (req, res) => {
   }
 });
 
-router.post('/reset-password', async (req, res) => {
+// 1단계: 아이디 + 이름(둘 다 가입 필수 항목)으로 본인 확인 후, 짧게 유효한 재설정 토큰 발급
+router.post('/reset-password/verify', async (req, res) => {
   try {
-    const { loginId, email, newPassword } = req.body;
-    if (!loginId || !email || !newPassword) {
-      return res.status(400).json({ error: '아이디, 이메일, 새 비밀번호를 모두 입력해주세요.' });
+    const { loginId, name } = req.body;
+    if (!loginId || !name) {
+      return res.status(400).json({ error: '아이디와 이름을 모두 입력해주세요.' });
+    }
+    const { prisma } = await import('../db/prisma.js');
+    const user = await prisma.user.findFirst({
+      where: { login_id: loginId.trim(), name: name.trim(), provider: 'local' },
+    });
+    if (!user) {
+      return res.status(404).json({ error: '아이디와 이름이 일치하는 계정을 찾을 수 없습니다.' });
+    }
+    const resetToken = createPasswordResetToken(user.user_id);
+    return res.json({ resetToken });
+  } catch (error) {
+    return res.status(500).json({ error: '계정 확인에 실패했습니다.' });
+  }
+});
+
+// 2단계: 1단계에서 발급된 토큰으로 실제 비밀번호 변경 (토큰은 10분간만 유효)
+router.post('/reset-password/confirm', async (req, res) => {
+  try {
+    const { resetToken, newPassword } = req.body;
+    if (!resetToken || !newPassword) {
+      return res.status(400).json({ error: '본인 확인 정보와 새 비밀번호를 입력해주세요.' });
     }
     if (newPassword.length < 6) {
       return res.status(400).json({ error: '비밀번호는 6자리 이상이어야 합니다.' });
     }
+    let userId;
+    try {
+      userId = verifyPasswordResetToken(resetToken);
+    } catch {
+      return res.status(401).json({ error: '본인 확인이 만료되었습니다. 처음부터 다시 시도해주세요.' });
+    }
     const { prisma } = await import('../db/prisma.js');
     const bcrypt = (await import('bcrypt')).default;
-    const user = await prisma.user.findFirst({
-      where: { login_id: loginId.trim(), email: email.trim(), provider: 'local' },
-    });
-    if (!user) {
-      return res.status(404).json({ error: '아이디와 이메일이 일치하는 계정을 찾을 수 없습니다.' });
-    }
     const hashed = await bcrypt.hash(newPassword, 10);
-    await prisma.user.update({ where: { user_id: user.user_id }, data: { password: hashed } });
+    await prisma.user.update({ where: { user_id: userId }, data: { password: hashed } });
     return res.json({ message: '비밀번호가 변경되었습니다.' });
   } catch (error) {
     return res.status(500).json({ error: '비밀번호 재설정에 실패했습니다.' });

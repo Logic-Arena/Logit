@@ -164,6 +164,18 @@ export async function getUserWithStats(userId) {
   return user ? sanitizeUser(user) : null;
 }
 
+export function createPasswordResetToken(userId) {
+  return jwt.sign({ type: 'password_reset', userId }, JWT_SECRET, { expiresIn: '10m' });
+}
+
+export function verifyPasswordResetToken(token) {
+  const payload = jwt.verify(token, JWT_SECRET);
+  if (payload.type !== 'password_reset' || typeof payload.userId !== 'number') {
+    throw new Error('유효하지 않은 인증 토큰입니다.');
+  }
+  return payload.userId;
+}
+
 export function createAccessToken(user, nonce) {
   return jwt.sign(
     {
