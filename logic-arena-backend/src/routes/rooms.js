@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createRoom, getAllRooms } from '../store/rooms.js';
+import { createRoom, getAllRooms, getRoom } from '../store/rooms.js';
 
 const router = Router();
 
@@ -35,6 +35,20 @@ router.post('/', (req, res) => {
   io.emit('room_list', getAllRooms());
 
   res.status(201).json(room);
+});
+
+// 실제 입장(소켓 join) 전에 비밀번호만 미리 확인 — 틀렸을 때 방 목록/입장 폼에서 바로 재입력할 수 있게 함
+router.post('/:id/verify-password', (req, res) => {
+  const { id } = req.params;
+  const { password } = req.body;
+  const room = getRoom(id);
+  if (!room) {
+    return res.status(404).json({ error: '방을 찾을 수 없습니다' });
+  }
+  if (room.password && room.password !== password) {
+    return res.status(401).json({ error: '비밀번호가 틀렸습니다' });
+  }
+  res.json({ ok: true });
 });
 
 export default router;

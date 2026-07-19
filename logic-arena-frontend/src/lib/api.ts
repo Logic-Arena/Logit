@@ -134,6 +134,18 @@ export async function createRoom(
   return res.json();
 }
 
+export async function verifyRoomPassword(roomId: string, password: string): Promise<void> {
+  const res = await fetch(`${BASE}/rooms/${roomId}/verify-password`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ password }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error ?? '비밀번호가 틀렸습니다.');
+  }
+}
+
 export async function signupLocal(payload: {
   username: string;
   password: string;
