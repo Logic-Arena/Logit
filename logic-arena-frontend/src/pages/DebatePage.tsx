@@ -7,6 +7,7 @@ import { useRoomStore } from "../store/useRoomStore";
 import { useUserStore } from "../store/useUserStore";
 import { PhaseTimer } from "../components/debate/PhaseTimer";
 import { SubmitPanel } from "../components/debate/SubmitPanel";
+import { StructuredArgumentPanel } from "../components/debate/StructuredArgumentPanel";
 import { Popover } from "../components/common/Popover";
 import DotSphereLoader from "../components/common/DotSphereLoader";
 import type { Room, Phase, PlayerRole, RoomContent, ParticipantScore, DebateResult, VoteOption } from "../types/room";
@@ -656,20 +657,26 @@ function DebateChatView({
         }}
       >
         {myKey ? (
-          <SubmitPanel
-            key={phase}
-            roomId={room.id}
-            label={SUBMIT_LABELS[phase] ?? "내용 제출"}
-            placeholder={
-              phase === "arguing"
-                ? "논리적으로 주장을 3~5문장으로 작성해 주세요..."
-                : "내용을 입력하세요..."
-            }
-            alreadySubmitted={alreadySubmitted}
-            submittedText={alreadySubmitted ? content[myKey] : null}
-            optional={OPTIONAL_PHASES.has(phase)}
-            phaseEndAt={room.phaseEndAt}
-          />
+          phase === "arguing" ? (
+            <StructuredArgumentPanel
+              key={phase}
+              roomId={room.id}
+              alreadySubmitted={alreadySubmitted}
+              submittedText={alreadySubmitted ? content[myKey] : null}
+              phaseEndAt={room.phaseEndAt}
+            />
+          ) : (
+            <SubmitPanel
+              key={phase}
+              roomId={room.id}
+              label={SUBMIT_LABELS[phase] ?? "내용 제출"}
+              placeholder="내용을 입력하세요..."
+              alreadySubmitted={alreadySubmitted}
+              submittedText={alreadySubmitted ? content[myKey] : null}
+              optional={OPTIONAL_PHASES.has(phase)}
+              phaseEndAt={room.phaseEndAt}
+            />
+          )
         ) : (
           <div
             style={{
@@ -1645,12 +1652,10 @@ function EndedView({
               </tr>
             </thead>
             <tbody>
-              {sorted.map((s) => {
+              {sorted.filter((s) => s.type === "player").map((s) => {
                 const sideColor = s.vote === "pro" ? "var(--color-pro)" : "var(--color-con)";
-                const isMe = s.type === "player" && ((s.vote === "pro" && myRole === "pro_player") || (s.vote === "con" && myRole === "con_player"));
-                const displayName = s.type === "player"
-                  ? (s.vote === "pro" ? room.proPlayer?.username : room.conPlayer?.username) ?? s.name
-                  : s.name;
+                const isMe = (s.vote === "pro" && myRole === "pro_player") || (s.vote === "con" && myRole === "con_player");
+                const displayName = (s.vote === "pro" ? room.proPlayer?.username : room.conPlayer?.username) ?? s.name;
                 return (
                   <tr
                     key={s.name}
