@@ -78,6 +78,8 @@ export interface RoomContent {
   coaching_con: string | null;
   pro_final: string | null;
   con_final: string | null;
+  essay_feedback: string | null;
+  essay_final: string | null;
 }
 
 export interface ParticipantScore {

@@ -29,6 +29,7 @@ import {
   generateDefense,
   generateCounter,
   generateCoaching,
+  generateSoloFeedback,
   judgeDebate,
   judgeSoloEssay,
 } from '../services/ai.js';
@@ -123,9 +124,8 @@ async function startPhase(io, roomId, phase) {
   const isSoloEssay = room.mode === 'solo_essay';
 
   if (isSoloEssay) {
-    // solo_essay: essay_feedback 단계에서만 AI 피드백 생성 (TODO: 다음 PR)
-    // TODO: essay_feedback 단계에서 피드백 생성 로직 추가
-    if (phase === 'judging') {
+    // solo_essay: essay_feedback과 judging에서만 AI 사용
+    if (phase === 'essay_feedback' || phase === 'judging') {
       handleAiAutoPhase(io, roomId, phase).catch((e) =>
         console.error(`[AI] ${phase} 생성 실패:`, e.message)
       );
@@ -335,15 +335,27 @@ async function handleAiAutoPhase(io, roomId, phase) {
       }
       return;
     }
+    case 'essay_feedback': {
+      const essayText = c.pro_argument ?? '';
+      const feedbackResult = await generateSoloFeedback({ topic: room.topic, essayText });
+      if (getRoom(roomId)) {
+        setContent(roomId, 'essay_feedback', JSON.stringify(feedbackResult));
+        io.to(roomId).emit('ai_content', {
+          essay_feedback: feedbackResult,
+          room: getRoomSerialized(roomId),
+        });
+        // essay_feedback 단계는 60초 타이머가 있으므로 즉시 진행하지 않음 (학생이 읽는 시간)
+      }
+      return;
+    }
     case 'judging': {
       const judgingStartTime = Date.now();
 
       // solo_essay 모드: judgeSoloEssay 호출
       if (room.mode === 'solo_essay') {
         const playerName = room.proPlayer?.username ?? '학생';
-        // ③에서 essay_revision 완료 후 퇴고본으로 교체 예정 — 현재는 essay_writing 제출문 사용
-        // TODO: essay_revision 단계 완료 후 퇴고본으로 대체
-        const essayText = room.content.pro_argument ?? ''; // pro_argument가 최종 제출문
+        // essay_final(퇴고본)이 있으면 그것을, 없으면 pro_argument(초안) 사용
+        const essayText = room.content.essay_final ?? room.content.pro_argument ?? '';
         const result = await judgeSoloEssay({ topic: room.topic, playerName, essayText });
 
         const currentRoom = getRoom(roomId);

@@ -6,6 +6,8 @@ interface Props {
   alreadySubmitted?: boolean;
   submittedText?: string | null;
   phaseEndAt?: number | null;
+  initialSections?: ArgumentSections;
+  submitLabel?: string;
 }
 
 interface ArgumentSections {
@@ -54,14 +56,18 @@ export function StructuredArgumentPanel({
   alreadySubmitted = false,
   submittedText = null,
   phaseEndAt = null,
+  initialSections,
+  submitLabel = '제출하기',
 }: Props) {
-  const [sections, setSections] = useState<ArgumentSections>({
-    claim: '',
-    evidence: '',
-    explanation: '',
-    counterArgument: '',
-    rebuttal: '',
-  });
+  const [sections, setSections] = useState<ArgumentSections>(
+    initialSections ?? {
+      claim: '',
+      evidence: '',
+      explanation: '',
+      counterArgument: '',
+      rebuttal: '',
+    }
+  );
   const [submitted, setSubmitted] = useState(alreadySubmitted);
   const sectionsRef = useRef(sections);
   sectionsRef.current = sections;
@@ -232,7 +238,7 @@ export function StructuredArgumentPanel({
             cursor: isValid ? 'pointer' : 'not-allowed',
           }}
         >
-          제출하기
+          {submitLabel}
         </button>
       </div>
     </div>

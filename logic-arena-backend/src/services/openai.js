@@ -237,6 +237,53 @@ export async function generateCoaching({ topic, content }) {
   }
 }
 
+export async function generateSoloFeedback({ topic, essayText }) {
+  const prompt =
+    `논술 주제: "${topic}"\n\n` +
+    `학생이 작성한 주장문:\n${essayText}\n\n` +
+    `이 주장문은 다음 5단계 구조로 작성되었습니다:\n` +
+    `【주장】 — 자신의 입장 표명\n` +
+    `【근거】 — 핵심 근거 제시\n` +
+    `【예시】 — 근거를 뒷받침하는 예시\n` +
+    `【예상 반론】 — 예상되는 반론\n` +
+    `【재반론】 — 반론에 대한 답변\n\n` +
+    `당신은 논술 지도 교사입니다. 학생의 글을 읽고 섹션별로 개선 제안을 해주세요.\n` +
+    `각 섹션마다 "무엇이 좋았고, 어떻게 고치면 더 나아지는지" 구체적으로 1~2문장으로 제안하세요.\n` +
+    `정답을 알려주지 말고, 학생 스스로 퇴고하도록 유도하는 질문·제안형 문구로 작성하세요.\n\n` +
+    `다음 JSON 형식으로 답변하세요 (주석 제외, 순수 JSON만):\n` +
+    `{\n` +
+    `  "claim": "주장 섹션에 대한 피드백 1~2문장",\n` +
+    `  "evidence": "근거 섹션에 대한 피드백 1~2문장",\n` +
+    `  "example": "예시 섹션에 대한 피드백 1~2문장",\n` +
+    `  "counterArgument": "예상 반론 섹션에 대한 피드백 1~2문장",\n` +
+    `  "rebuttal": "재반론 섹션에 대한 피드백 1~2문장",\n` +
+    `  "overall": "전체 주장문에 대한 총평 1~2문장"\n` +
+    `}\n\n` +
+    `반드시 위 JSON 형식만 출력하고 다른 문구는 추가하지 마세요.`;
+
+  try {
+    const raw = await ask(prompt);
+    const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
+    return {
+      claim: parsed.claim || '주장을 다시 읽어보세요.',
+      evidence: parsed.evidence || '근거를 보강해 보세요.',
+      example: parsed.example || '예시를 추가해 보세요.',
+      counterArgument: parsed.counterArgument || '예상 반론을 생각해 보세요.',
+      rebuttal: parsed.rebuttal || '재반론을 보강해 보세요.',
+      overall: parsed.overall || '전체적으로 다시 읽어보고 퇴고해 보세요.',
+    };
+  } catch {
+    return {
+      claim: '피드백을 불러오지 못했어요. 주장을 다시 읽어보세요.',
+      evidence: '피드백을 불러오지 못했어요. 근거를 보강해 보세요.',
+      example: '피드백을 불러오지 못했어요. 예시를 추가해 보세요.',
+      counterArgument: '피드백을 불러오지 못했어요. 예상 반론을 생각해 보세요.',
+      rebuttal: '피드백을 불러오지 못했어요. 재반론을 보강해 보세요.',
+      overall: '피드백을 불러오지 못했어요. 자신의 글을 다시 읽고 근거를 보강해 보세요.',
+    };
+  }
+}
+
 // ⚠️ 5축 기준 문구는 judgeDebate/judgeSoloEssay 동기화 유지
 export async function judgeDebate({ topic, content, mode = 'ai_debate' }) {
   const isHumanMode = mode === 'human_debate';

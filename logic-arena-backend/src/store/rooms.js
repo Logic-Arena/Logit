@@ -76,6 +76,8 @@ export const PHASE_SUBMIT_KEY = {
   pro_a_defense: { con_player: 'pro_a_defense_player' },
   con_a_defense: { pro_player: 'con_a_defense_player' },
   final_argument: { pro_player: 'pro_final', con_player: 'con_final' },
+  essay_writing: { pro_player: 'pro_argument' },
+  essay_revision: { pro_player: 'essay_final' },
 };
 
 export function getNextPhase(currentPhase, mode = 'ai_debate', coachingEnabled = true) {
@@ -174,6 +176,8 @@ export function createRoom({ title, mode = 'ai_debate', topicMode = 'ai_auto', t
       coaching_con: null,
       pro_final: null,
       con_final: null,
+      essay_feedback: null,
+      essay_final: null,
     },
 
     result: null,

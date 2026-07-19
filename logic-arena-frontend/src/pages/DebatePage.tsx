@@ -10,6 +10,7 @@ import { SubmitPanel } from "../components/debate/SubmitPanel";
 import { StructuredArgumentPanel } from "../components/debate/StructuredArgumentPanel";
 import { Popover } from "../components/common/Popover";
 import DotSphereLoader from "../components/common/DotSphereLoader";
+import { parseStructuredArgument } from "../utils/parseStructuredArgument";
 import type { Room, Phase, PlayerRole, RoomContent, ParticipantScore, DebateResult, VoteOption } from "../types/room";
 
 // ─── 상수 ──────────────────────────────────────────────────────
@@ -53,6 +54,8 @@ const PHASE_SUBMIT_MAP: Partial<
   pro_a_defense: { con_player: "pro_a_defense_player" },
   con_a_defense: { pro_player: "con_a_defense_player" },
   final_argument: { pro_player: "pro_final", con_player: "con_final" },
+  essay_writing: { pro_player: "pro_argument" },
+  essay_revision: { pro_player: "essay_final" },
 };
 
 const PHASE_ACTIVE_ROLE: Partial<Record<Phase, string>> = {
@@ -668,10 +671,10 @@ function DebateChatView({
               submittedText={alreadySubmitted ? content[myKey] : null}
               phaseEndAt={room.phaseEndAt}
             />
-          ) : phase === "essay_feedback" || phase === "essay_revision" ? (
-            <div style={{ padding: "20px", textAlign: "center", color: "var(--color-text-secondary)" }}>
-              <p>{phase === "essay_feedback" ? "AI가 피드백을 준비하고 있어요 (준비 중 기능)" : "퇴고 기능 준비 중입니다"}</p>
-            </div>
+          ) : phase === "essay_feedback" ? (
+            <EssayFeedbackView room={room} />
+          ) : phase === "essay_revision" ? (
+            <EssayRevisionView room={room} myKey={myKey} alreadySubmitted={alreadySubmitted} />
           ) : (
             <SubmitPanel
               key={phase}
@@ -707,6 +710,240 @@ function DebateChatView({
 }
 
 // ─── Phase 별 뷰 (특수 케이스) ──────────────────────────────────
+
+function EssayFeedbackView({ room }: { room: Room }) {
+  const feedbackRaw = room.content.essay_feedback;
+  let feedback: {
+    claim?: string;
+    evidence?: string;
+    example?: string;
+    counterArgument?: string;
+    rebuttal?: string;
+    overall?: string;
+  } | null = null;
+
+  try {
+    feedback = feedbackRaw ? JSON.parse(feedbackRaw) : null;
+  } catch {
+    // 파싱 실패 시 null 유지
+  }
+
+  if (!feedback) {
+    return (
+      <div style={{ padding: "20px", textAlign: "center", color: "var(--color-text-muted)" }}>
+        AI가 피드백을 준비 중입니다...
+      </div>
+    );
+  }
+
+  const sections = [
+    { label: "① 주장", key: "claim" as const },
+    { label: "② 근거", key: "evidence" as const },
+    { label: "③ 예시", key: "example" as const },
+    { label: "④ 예상 반론", key: "counterArgument" as const },
+    { label: "⑤ 재반론", key: "rebuttal" as const },
+  ];
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "16px 0" }}>
+      <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--color-text)" }}>
+        AI 피드백
+      </div>
+      <div
+        style={{
+          background: "var(--color-surface-2)",
+          border: "1px solid var(--color-border)",
+          borderRadius: "var(--radius-md)",
+          padding: "16px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "14px",
+        }}
+      >
+        {sections.map(({ label, key }) => (
+          <div key={key} style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--color-text-muted)" }}>
+              {label}
+            </div>
+            <div style={{ fontSize: "13px", lineHeight: 1.6, color: "var(--color-text)" }}>
+              {feedback?.[key] || "피드백이 없습니다."}
+            </div>
+          </div>
+        ))}
+        {feedback.overall && (
+          <div
+            style={{
+              marginTop: "8px",
+              paddingTop: "14px",
+              borderTop: "1px solid var(--color-border)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "4px",
+            }}
+          >
+            <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--color-text-muted)" }}>
+              총평
+            </div>
+            <div style={{ fontSize: "13px", lineHeight: 1.6, color: "var(--color-text)" }}>
+              {feedback.overall}
+            </div>
+          </div>
+        )}
+      </div>
+      <div style={{ fontSize: "12px", color: "var(--color-text-muted)", textAlign: "center" }}>
+        다음 단계에서 피드백을 참고하여 글을 다듬어 보세요.
+      </div>
+    </div>
+  );
+}
+
+function EssayRevisionView({
+  room,
+  myKey,
+  alreadySubmitted,
+}: {
+  room: Room;
+  myKey: keyof RoomContent;
+  alreadySubmitted: boolean;
+}) {
+  const originalEssay = room.content.pro_argument ?? "";
+  const parsedSections = parseStructuredArgument(originalEssay);
+  const feedbackRaw = room.content.essay_feedback;
+
+  let feedback: {
+    claim?: string;
+    evidence?: string;
+    example?: string;
+    counterArgument?: string;
+    rebuttal?: string;
+    overall?: string;
+  } | null = null;
+
+  try {
+    feedback = feedbackRaw ? JSON.parse(feedbackRaw) : null;
+  } catch {
+    // 파싱 실패 시 null
+  }
+
+  const sections = [
+    { label: "① 주장", key: "claim" as const },
+    { label: "② 근거", key: "evidence" as const },
+    { label: "③ 예시", key: "example" as const },
+    { label: "④ 예상 반론", key: "counterArgument" as const },
+    { label: "⑤ 재반론", key: "rebuttal" as const },
+  ];
+
+  if (alreadySubmitted) {
+    return (
+      <div
+        style={{
+          background: "linear-gradient(180deg, #6AC982 0%, #52A068 100%)",
+          border: "1px solid rgba(82,160,104,0.4)",
+          borderRadius: "var(--radius-md)",
+          padding: "14px 16px",
+        }}
+      >
+        <div
+          style={{
+            fontSize: "11px",
+            color: "#fff",
+            fontWeight: 700,
+            marginBottom: "6px",
+            textShadow: "0 1px 2px rgba(0,0,0,0.2)",
+          }}
+        >
+          퇴고 완료
+        </div>
+        <p
+          style={{
+            fontSize: "14px",
+            lineHeight: 1.6,
+            color: "#fff",
+            margin: 0,
+            fontWeight: 500,
+            whiteSpace: "pre-wrap",
+          }}
+        >
+          {room.content[myKey] || "제출 완료"}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "8px 0" }}>
+      {/* 피드백 영역 (접기 가능, 기본 펼침) */}
+      {feedback && (
+        <details open style={{ background: "var(--color-surface-2)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", padding: "12px 14px" }}>
+          <summary style={{ cursor: "pointer", fontSize: "13px", fontWeight: 700, color: "var(--color-text)", userSelect: "none" }}>
+            AI 피드백 (클릭하여 접기/펼치기)
+          </summary>
+          <div style={{ marginTop: "12px", display: "flex", flexDirection: "column", gap: "10px" }}>
+            {sections.map(({ label, key }) => (
+              <div key={key} style={{ fontSize: "12px", lineHeight: 1.6 }}>
+                <span style={{ fontWeight: 600, color: "var(--color-text-muted)" }}>{label}:</span>{" "}
+                <span style={{ color: "var(--color-text)" }}>{feedback[key]}</span>
+              </div>
+            ))}
+            {feedback.overall && (
+              <div style={{ fontSize: "12px", lineHeight: 1.6, marginTop: "4px", paddingTop: "8px", borderTop: "1px solid var(--color-border)" }}>
+                <span style={{ fontWeight: 600, color: "var(--color-text-muted)" }}>총평:</span>{" "}
+                <span style={{ color: "var(--color-text)" }}>{feedback.overall}</span>
+              </div>
+            )}
+          </div>
+        </details>
+      )}
+
+      {/* 퇴고 폼 */}
+      {parsedSections ? (
+        <StructuredArgumentPanel
+          key="essay_revision"
+          roomId={room.id}
+          alreadySubmitted={false}
+          phaseEndAt={room.phaseEndAt}
+          initialSections={parsedSections}
+          submitLabel="퇴고 완료"
+        />
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          <div
+            style={{
+              padding: "12px 16px",
+              background: "var(--color-surface-2)",
+              border: "1px solid var(--color-border)",
+              borderRadius: "var(--radius-md)",
+              fontSize: "13px",
+              color: "var(--color-text-muted)",
+            }}
+          >
+            이전 제출문의 형식을 인식할 수 없어 새로 작성해야 합니다. 아래 참고:
+            <pre
+              style={{
+                marginTop: "8px",
+                fontSize: "12px",
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+                background: "var(--color-surface)",
+                padding: "8px",
+                borderRadius: "4px",
+              }}
+            >
+              {originalEssay || "(제출문 없음)"}
+            </pre>
+          </div>
+          <StructuredArgumentPanel
+            key="essay_revision_fallback"
+            roomId={room.id}
+            alreadySubmitted={false}
+            phaseEndAt={room.phaseEndAt}
+            submitLabel="퇴고 완료"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
 
 const DEBATE_TIPS = [
   "강한 논거는 구체적인 사례나 통계로 뒷받침됩니다.",
