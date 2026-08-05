@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { socket } from '../../lib/socket';
+import type { VoteOption } from '../../types/room';
 
 interface Props {
   roomId: string;
@@ -8,6 +9,7 @@ interface Props {
   phaseEndAt?: number | null;
   initialSections?: ArgumentSections;
   submitLabel?: string;
+  stance?: VoteOption | null;
 }
 
 interface ArgumentSections {
@@ -58,6 +60,7 @@ export function StructuredArgumentPanel({
   phaseEndAt = null,
   initialSections,
   submitLabel = '제출하기',
+  stance = null,
 }: Props) {
   const [sections, setSections] = useState<ArgumentSections>(
     initialSections ?? {
@@ -68,12 +71,12 @@ export function StructuredArgumentPanel({
       rebuttal: '',
     }
   );
-  const [submitted, setSubmitted] = useState(alreadySubmitted);
+  const [submitting, setSubmitting] = useState(false);
   const sectionsRef = useRef(sections);
   sectionsRef.current = sections;
 
   useEffect(() => {
-    if (!phaseEndAt || submitted || alreadySubmitted) return;
+    if (!phaseEndAt || submitting || alreadySubmitted) return;
     const delay = phaseEndAt - Date.now();
     const fire = () => {
       const combined = combineSections(sectionsRef.current);
@@ -84,15 +87,21 @@ export function StructuredArgumentPanel({
           // 향후 백엔드 스키마 확장 시 구조화 데이터 전송
           // structured: sectionsRef.current,
         });
-        setSubmitted(true);
+        setSubmitting(true);
       }
     };
     if (delay <= 0) { fire(); return; }
     const id = setTimeout(fire, delay);
     return () => clearTimeout(id);
-  }, [phaseEndAt, submitted, alreadySubmitted, roomId]);
+  }, [phaseEndAt, submitting, alreadySubmitted, roomId]);
 
-  if (submitted || alreadySubmitted) {
+  useEffect(() => {
+    if (!submitting || alreadySubmitted) return;
+    const id = window.setTimeout(() => setSubmitting(false), 5000);
+    return () => window.clearTimeout(id);
+  }, [submitting, alreadySubmitted]);
+
+  if (alreadySubmitted) {
     return (
       <div
         style={{
@@ -138,7 +147,7 @@ export function StructuredArgumentPanel({
       // 향후 백엔드 스키마 확장 시 구조화 데이터 전송
       // structured: sections,
     });
-    setSubmitted(true);
+    setSubmitting(true);
   };
 
   const updateSection = (key: keyof ArgumentSections, value: string) => {
@@ -167,6 +176,9 @@ export function StructuredArgumentPanel({
       {SECTION_CONFIG.map(({ key, label, placeholder, minLength }) => {
         const currentLength = sections[key].trim().length;
         const isInvalid = currentLength > 0 && currentLength < minLength;
+        const resolvedPlaceholder = key === 'claim' && stance
+          ? `저는 이 주제에 ${stance === 'pro' ? '찬성' : '반대'}합니다`
+          : placeholder;
 
         return (
           <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -202,7 +214,7 @@ export function StructuredArgumentPanel({
                 fontFamily: 'inherit',
                 transition: 'border-color var(--transition)',
               }}
-              placeholder={placeholder}
+              placeholder={resolvedPlaceholder}
               value={sections[key]}
               onChange={(e) => updateSection(key, e.target.value)}
               onFocus={(e) => {
@@ -230,7 +242,7 @@ export function StructuredArgumentPanel({
         </div>
         <button
           className="btn btn--primary"
-          disabled={!isValid}
+          disabled={!isValid || submitting}
           onClick={handleSubmit}
           style={{
             alignSelf: 'flex-end',
@@ -238,7 +250,7 @@ export function StructuredArgumentPanel({
             cursor: isValid ? 'pointer' : 'not-allowed',
           }}
         >
-          {submitLabel}
+          {submitting ? '제출 확인 중...' : submitLabel}
         </button>
       </div>
     </div>
