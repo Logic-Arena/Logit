@@ -6,10 +6,12 @@ interface InvitePanelProps {
   joinUrl: string;
   codeLabel?: string;
   hint?: string;
+  variant?: 'default' | 'compact';
 }
 
-export function InvitePanel({ code, joinUrl, codeLabel = '코드', hint }: InvitePanelProps) {
+export function InvitePanel({ code, joinUrl, codeLabel = '코드', hint, variant = 'default' }: InvitePanelProps) {
   const [copied, setCopied] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
 
   const handleCopy = () => {
@@ -19,9 +21,16 @@ export function InvitePanel({ code, joinUrl, codeLabel = '코드', hint }: Invit
     });
   };
 
+  const handleCodeCopy = () => {
+    navigator.clipboard.writeText(code).then(() => {
+      setCodeCopied(true);
+      setTimeout(() => setCodeCopied(false), 1500);
+    });
+  };
+
   return (
     <>
-      <div className="invite-panel">
+      <div className={`invite-panel ${variant === 'compact' ? 'invite-panel--compact' : ''}`}>
         <div className="invite-panel__qr">
           <QRCodeSVG value={joinUrl} size={88} bgColor="#ffffff" fgColor="#1e1c2e" level="M" />
         </div>
@@ -30,6 +39,11 @@ export function InvitePanel({ code, joinUrl, codeLabel = '코드', hint }: Invit
           <div className="invite-panel__row">
             <span className="invite-panel__label">{codeLabel}</span>
             <span className="invite-panel__code">{code}</span>
+            {variant === 'compact' && (
+              <button type="button" className="invite-panel__copy-btn" onClick={handleCodeCopy}>
+                {codeCopied ? '복사됨' : '코드 복사'}
+              </button>
+            )}
           </div>
           <div className="invite-panel__row">
             <span className="invite-panel__label">접속 링크</span>

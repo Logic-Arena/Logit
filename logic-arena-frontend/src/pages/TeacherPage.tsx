@@ -77,7 +77,7 @@ const PHASE_CONFIG: { key: keyof PhaseDurations; label: string; min: number; max
 ];
 
 const CATEGORY_LABELS: Record<string, string> = {
-  logic: "논리성", evidence: "근거", persuasion: "설득력", rebuttal: "반론", consistency: "일관성",
+  logic: "논리성", evidence: "근거", persuasion: "표현 명확성", rebuttal: "반론", consistency: "일관성",
 };
 
 // ─── 공용 컴포넌트 ────────────────────────────────────────────────
@@ -91,28 +91,29 @@ function ToggleSwitch({ checked, disabled, onChange }: { checked: boolean; disab
   );
 }
 
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
-  const copy = () => {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    });
-  };
+function MiniBar({ value, max = 25, warning = false }: { value: number; max?: number; warning?: boolean }) {
+  const pct = Math.min(100, Math.round((value / max) * 100));
   return (
-    <button className={styles.copyBtn} onClick={copy}>
-      {copied ? "✓ 복사됨" : "복사"}
-    </button>
+    <div className={styles.miniBarWrap}>
+      <div className={styles.miniBarTrack}>
+        <div className={`${styles.miniBar} ${warning ? styles.miniBarWarning : ""}`} style={{ width: `${pct}%` }} />
+      </div>
+      <span className={styles.miniBarVal}>{value}</span>
+    </div>
   );
 }
 
-function MiniBar({ value, max = 25 }: { value: number; max?: number }) {
-  const pct = Math.min(100, Math.round((value / max) * 100));
-  const color = value >= 21 ? "#4ade80" : value >= 16 ? "#facc15" : value >= 11 ? "#fb923c" : "#f87171";
+function MetricSparkline({ values }: { values: { label: string; value: number }[] }) {
   return (
-    <div className={styles.miniBarWrap}>
-      <div className={styles.miniBar} style={{ width: `${pct}%`, background: color }} />
-      <span className={styles.miniBarVal}>{value}</span>
+    <div className={styles.metricSparkline} aria-label="평가 지표">
+      {values.map(({ label, value }) => (
+        <span
+          key={label}
+          className={styles.metricSparkBar}
+          style={{ height: `${Math.max(4, Math.min(100, (value / 20) * 100))}%` }}
+          title={`${label}: ${value}/20`}
+        />
+      ))}
     </div>
   );
 }
@@ -147,17 +148,20 @@ function DebateSummaryModal({ debate, token, onClose }: {
 
   useEffect(() => { load(); }, [load]);
 
-  const positionLabel = debate.position === 'pro' ? '찬성' : '반대';
-  const positionColor = debate.position === 'pro' ? 'var(--color-pro)' : 'var(--color-con)';
-  const resultLabel = debate.result === 'win' ? '승리' : debate.result === 'lose' ? '패배' : '무승부';
+  const isSolo = debate.position === 'solo';
+  const positionLabel = isSolo ? '개인 논술' : (debate.position === 'pro' ? '찬성' : '반대');
+  const positionColor = isSolo ? 'var(--color-primary)' : (debate.position === 'pro' ? 'var(--color-pro)' : 'var(--color-con)');
+  const resultLabel = isSolo ? '논술' : (debate.result === 'win' ? '승리' : debate.result === 'lose' ? '패배' : '무승부');
   const dateStr = new Date(debate.playedAt).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
 
   return (
     <div
+      className={styles.debateSummaryOverlay}
       style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
       onClick={onClose}
     >
       <div
+        className={styles.debateSummaryModal}
         style={{ background: 'var(--color-surface)', borderRadius: '20px', padding: '28px', maxWidth: '520px', width: '100%', maxHeight: '88vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '20px', boxShadow: '0 24px 60px rgba(0,0,0,0.3)' }}
         onClick={e => e.stopPropagation()}
       >
@@ -200,16 +204,12 @@ function DebateSummaryModal({ debate, token, onClose }: {
 
         {data && !loading && (
           <>
-            {/* 토론 총평 */}
-            <div style={{ background: 'var(--color-surface-2)', borderRadius: '12px', padding: '16px 18px', border: '1px solid var(--color-border)' }}>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: '8px' }}>토론 총평</div>
-              <p style={{ fontSize: '14px', lineHeight: 1.8, color: 'var(--color-text)', margin: 0 }}>{data.summary}</p>
-            </div>
+            <p style={{ fontSize: '14px', lineHeight: 1.8, color: 'var(--color-text)', margin: 0 }}>{data.summary}</p>
 
             {/* 잘한 점 */}
-            <div style={{ background: 'rgba(99,255,180,0.06)', borderRadius: '12px', padding: '16px 18px', border: '1px solid var(--color-pro)' }}>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-pro)', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: '10px' }}>잘한 점</div>
-              <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ background: 'var(--color-surface-2)', borderRadius: '12px', padding: '16px 18px', border: '1px solid var(--color-border)' }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-pro)', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: '10px' }}>잘한 점</div>
+              <ul className={styles.debateSummaryList} style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {data.strengths.map((s, i) => (
                   <li key={i} style={{ fontSize: '14px', lineHeight: 1.7, color: 'var(--color-text)' }}>{s}</li>
                 ))}
@@ -217,9 +217,9 @@ function DebateSummaryModal({ debate, token, onClose }: {
             </div>
 
             {/* 개선할 점 */}
-            <div style={{ background: 'var(--color-con-bg)', borderRadius: '12px', padding: '16px 18px', border: '1px solid var(--color-con)' }}>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-con)', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: '10px' }}>개선할 점</div>
-              <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ background: 'var(--color-surface-2)', borderRadius: '12px', padding: '16px 18px', border: '1px solid var(--color-border)' }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-con)', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: '10px' }}>개선할 점</div>
+              <ul className={styles.debateSummaryList} style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {data.improvements.map((s, i) => (
                   <li key={i} style={{ fontSize: '14px', lineHeight: 1.7, color: 'var(--color-text)' }}>{s}</li>
                 ))}
@@ -229,7 +229,7 @@ function DebateSummaryModal({ debate, token, onClose }: {
             {/* 다음 토론을 위한 한마디 */}
             {data.coaching && (
               <div style={{ background: 'rgba(59,130,246,0.06)', borderRadius: '12px', padding: '16px 18px', border: '1px solid rgba(59,130,246,0.3)' }}>
-                <div style={{ fontSize: '11px', fontWeight: 700, color: '#3b82f6', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: '8px' }}>다음 토론을 위한 한마디</div>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: '#3b82f6', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: '8px' }}>다음 토론을 위한 한마디</div>
                 <p style={{ fontSize: '14px', lineHeight: 1.8, color: 'var(--color-text)', margin: 0, fontStyle: 'italic' }}>{data.coaching}</p>
               </div>
             )}
@@ -248,10 +248,10 @@ function DebateSummaryModal({ debate, token, onClose }: {
 }
 
 function GrowthBadge({ rate }: { rate: number }) {
-  if (rate === 0) return <span className={styles.growthNeutral}>—</span>;
+  if (rate === 0) return <span className={styles.growthNeutral}>− 0%</span>;
   return rate > 0
-    ? <span className={styles.growthUp}>+{rate}%</span>
-    : <span className={styles.growthDown}>{rate}%</span>;
+    ? <span className={styles.growthUp}>↗ +{rate}%</span>
+    : <span className={styles.growthDown}>↘ {rate}%</span>;
 }
 
 // ─── Tab 1: 학급 관리 ─────────────────────────────────────────────
@@ -309,7 +309,7 @@ function ClassesTab({ token }: { token: string }) {
 
       {/* 학급 생성 */}
       <div className={styles.card}>
-        <div className={styles.cardTitle}>새 학급 만들기</div>
+        <div className={styles.cardTitle}>새 학급 생성</div>
         <div className={styles.createRow}>
           <input
             className={styles.textInput}
@@ -319,7 +319,7 @@ function ClassesTab({ token }: { token: string }) {
             onKeyDown={e => e.key === "Enter" && handleCreate()}
           />
           <button className="btn btn--primary" onClick={handleCreate} disabled={creating || !newName.trim()}>
-            {creating ? "생성 중..." : "만들기"}
+            {creating ? "생성 중..." : "생성"}
           </button>
         </div>
         <div className={styles.createHint}>
@@ -342,14 +342,13 @@ function ClassesTab({ token }: { token: string }) {
                 className={styles.deleteBtn}
                 onClick={() => handleDelete(cls.id)}
                 disabled={deletingId === cls.id}
+                aria-label={`${cls.name} 삭제`}
+                title="학급 삭제"
               >
-                삭제
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13M10 11v5m4-5v5" />
+                </svg>
               </button>
-            </div>
-            <div className={styles.codeRow}>
-              <span className={styles.codeLabel}>학급 참가 코드</span>
-              <span className={styles.code}>{cls.classCode}</span>
-              <CopyButton text={cls.classCode} />
             </div>
             <div className={styles.inviteRow}>
               <InvitePanel
@@ -357,6 +356,7 @@ function ClassesTab({ token }: { token: string }) {
                 joinUrl={`${window.location.origin}/mypage?joinClass=${cls.classCode}`}
                 codeLabel="학급 코드"
                 hint="QR 코드를 스캔하거나 학급 코드로 직접 참가하세요"
+                variant="compact"
               />
             </div>
           </div>
@@ -444,13 +444,9 @@ function StatsTab({ token }: { token: string }) {
                   <tr>
                     <th>이름</th>
                     <th>평균점수</th>
-                    <th>논리성</th>
-                    <th>근거</th>
-                    <th>설득력</th>
-                    <th>반론</th>
-                    <th>일관성</th>
+                    <th>평가 지표</th>
                     <th>성장률</th>
-                    <th>판수</th>
+                    <th>토론 수</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -459,18 +455,24 @@ function StatsTab({ token }: { token: string }) {
                     .map((s, i) => (
                       <tr key={s.userId} className={styles.studentRow} onClick={() => setSelectedStudent(s)}>
                         <td>
-                          <div className={styles.studentName}>
+                          <div className={styles.studentIdentity}>
                             {i < 3 && <span className={styles.rankMedal}>{["🥇","🥈","🥉"][i]}</span>}
-                            {s.name}
+                            <div>
+                              <div className={styles.studentName}>{s.name}</div>
+                              <div className={styles.studentTier}>{s.tier}</div>
+                            </div>
                           </div>
-                          <div className={styles.studentTier}>{s.tier}</div>
                         </td>
                         <td><strong>{s.avgScore}</strong></td>
-                        <td><MiniBar value={s.avgLogic} /></td>
-                        <td><MiniBar value={s.avgEvidence} /></td>
-                        <td><MiniBar value={s.avgPersuasion} /></td>
-                        <td><MiniBar value={s.avgRebuttal} /></td>
-                        <td><MiniBar value={s.avgConsistency} /></td>
+                        <td>
+                          <MetricSparkline values={[
+                            { label: "논리성", value: s.avgLogic },
+                            { label: "근거", value: s.avgEvidence },
+                            { label: "표현 명확성", value: s.avgPersuasion },
+                            { label: "반론", value: s.avgRebuttal },
+                            { label: "일관성", value: s.avgConsistency },
+                          ]} />
+                        </td>
                         <td><GrowthBadge rate={s.growthRate} /></td>
                         <td>{s.totalGames}</td>
                       </tr>
@@ -506,13 +508,13 @@ function ClassSummaryPanel({ summary, className }: { summary: ClassSummary; clas
         </div>
         {strongest && (
           <div className={styles.summaryItem}>
-            <div className={styles.summaryVal} style={{ color: "#4ade80" }}>{strongest.label}</div>
+            <div className={`${styles.summaryVal} ${styles.summaryStrong}`}>{strongest.label}</div>
             <div className={styles.summaryKey}>가장 강한 항목</div>
           </div>
         )}
         {summary.weakestCategory && (
           <div className={styles.summaryItem}>
-            <div className={styles.summaryVal} style={{ color: "#fb923c" }}>{CATEGORY_LABELS[summary.weakestCategory.key] ?? summary.weakestCategory.key}</div>
+            <div className={`${styles.summaryVal} ${styles.summaryWarning}`}>{CATEGORY_LABELS[summary.weakestCategory.key] ?? summary.weakestCategory.key}</div>
             <div className={styles.summaryKey}>개선 필요 항목</div>
           </div>
         )}
@@ -521,21 +523,21 @@ function ClassSummaryPanel({ summary, className }: { summary: ClassSummary; clas
       {catEntries.length > 0 && (
         <>
           <div className={styles.catLabel}>항목별 학급 평균</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 180px', gap: '16px', alignItems: 'center' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <div className={styles.classMetricsGrid}>
+            <div className={styles.studentMetricBars}>
               {catEntries.map(e => (
                 <div key={e.key} className={styles.catRow}>
                   <div className={styles.catName}>{e.label}</div>
-                  <MiniBar value={e.value} max={20} />
+                  <MiniBar value={e.value} max={20} warning={e.key === summary.weakestCategory?.key} />
                 </div>
               ))}
             </div>
             <ResponsiveContainer width="100%" height={160}>
               <RadarChart data={catEntries.map(e => ({ axis: e.label, value: e.value }))}>
-                <PolarGrid gridType="polygon" stroke="var(--color-border)" />
+                <PolarGrid gridType="polygon" stroke="var(--color-text-muted)" strokeOpacity={0.35} />
                 <PolarAngleAxis dataKey="axis" tick={{ fontSize: 10, fill: 'var(--color-text-muted)' }} />
                 <PolarRadiusAxis domain={[0, 20]} tick={false} axisLine={false} />
-                <Radar name="학급 평균" dataKey="value" stroke="#8b5cf6" strokeWidth={2} fill="#8b5cf6" fillOpacity={0.2} />
+                <Radar name="학급 평균" dataKey="value" stroke="var(--color-primary)" strokeWidth={2} fill="var(--color-primary)" fillOpacity={0.2} />
               </RadarChart>
             </ResponsiveContainer>
           </div>
@@ -549,8 +551,8 @@ function ClassSummaryPanel({ summary, className }: { summary: ClassSummary; clas
             <div key={s.userId} className={styles.topStudentRow}>
               <span className={styles.topRank}>{i + 1}</span>
               <span className={styles.topName}>{s.name}</span>
-              <span className={styles.topScore}>{s.avgScore}점 avg</span>
-              <span className={styles.topGames}>{s.debateCount}판</span>
+              <span className={styles.topScore}>평균 {s.avgScore}점</span>
+              <span className={styles.topGames}>토론 {s.debateCount}회</span>
             </div>
           ))}
         </>
@@ -570,7 +572,7 @@ function StudentDetailView({ student, onBack, token, summary }: {
   const categories = [
     { key: 'avgLogic' as const, label: '논리성', classKey: 'logic' as const },
     { key: 'avgEvidence' as const, label: '근거', classKey: 'evidence' as const },
-    { key: 'avgPersuasion' as const, label: '설득력', classKey: 'persuasion' as const },
+    { key: 'avgPersuasion' as const, label: '표현 명확성', classKey: 'persuasion' as const },
     { key: 'avgRebuttal' as const, label: '반론', classKey: 'rebuttal' as const },
     { key: 'avgConsistency' as const, label: '일관성', classKey: 'consistency' as const },
   ];
@@ -611,15 +613,15 @@ function StudentDetailView({ student, onBack, token, summary }: {
 
         <div className={styles.catLabel}>항목별 평균 (최근 10판)</div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 190px', gap: '20px', alignItems: 'center' }}>
+        <div className={styles.studentMetricsGrid}>
           {/* 왼쪽: 가로 막대그래프 */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div className={styles.studentMetricBars}>
             {categories.map(c => {
               const val = student[c.key];
               const color = barColor(val);
               return (
-                <div key={c.key} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '44px', fontSize: '12px', color: 'var(--color-text-muted)', flexShrink: 0 }}>{c.label}</div>
+                <div key={c.key} className={styles.studentMetricRow}>
+                  <div className={styles.studentMetricLabel}>{c.label}</div>
                   <div style={{ flex: 1, height: '10px', background: 'var(--color-surface-2)', borderRadius: '5px', overflow: 'hidden' }}>
                     <div style={{
                       height: '100%',
@@ -636,8 +638,8 @@ function StudentDetailView({ student, onBack, token, summary }: {
           </div>
 
           {/* 오른쪽: 방사형 차트 */}
-          <div>
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', fontSize: '10px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>
+          <div className={styles.studentRadarPanel}>
+            <div className={styles.studentRadarLegend}>
               <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <span style={{ display: 'inline-block', width: '12px', height: '3px', background: '#3b82f6', borderRadius: '2px' }} />
                 {student.name}의 지표
@@ -661,12 +663,12 @@ function StudentDetailView({ student, onBack, token, summary }: {
               </RadarChart>
             </ResponsiveContainer>
           </div>
-        </div>
 
-        <div className={styles.growthRow}>
-          <span>성장률</span>
-          <GrowthBadge rate={student.growthRate} />
-          {student.growthRate === 0 && <span className={styles.growthHint}>(토론 4판 이상 시 집계)</span>}
+          <div className={styles.growthRow}>
+            <span>성장률</span>
+            <GrowthBadge rate={student.growthRate} />
+            {student.growthRate === 0 && <span className={styles.growthHint}>(토론 4판 이상 시 집계)</span>}
+          </div>
         </div>
       </div>
 
@@ -686,7 +688,6 @@ function StudentDetailView({ student, onBack, token, summary }: {
               <div className={styles.debateTopic}>{d.topic}</div>
               <div className={styles.debateScore}>{d.score}점</div>
               <div className={styles.debateDate}>{new Date(d.playedAt).toLocaleDateString("ko-KR")}</div>
-              <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', flexShrink: 0 }}>AI 요약 →</div>
             </div>
           ))}
         </div>

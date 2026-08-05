@@ -18,5 +18,11 @@ export const ROOM_MODES: Record<RoomMode, {
     description: 'AI 없이 인간끼리만 토론하는 모드 (최종 변론 시 훈수 AI 제공)',
     available: true,
   },
+  solo_essay: {
+    key: 'solo_essay',
+    label: '개인 논술',
+    description: '혼자서 주장문을 작성하고 AI 피드백을 받아 퇴고하는 논술 연습',
+    available: true,
+  },
 } as const;
 

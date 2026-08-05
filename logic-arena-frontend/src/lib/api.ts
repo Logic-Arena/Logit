@@ -113,6 +113,7 @@ export async function createRoom(
   password?: string,
   handicap?: Record<string, unknown> | null,
   coachingEnabled: boolean = true,
+  structuredArgumentEnabled: boolean = true,
 ): Promise<Room> {
   const res = await fetch(`${BASE}/rooms`, {
     method: 'POST',
@@ -123,6 +124,7 @@ export async function createRoom(
       ...(password !== undefined && { password }),
       ...(handicap !== undefined && handicap !== null && { handicap }),
       coachingEnabled,
+      structuredArgumentEnabled,
     }),
   });
 

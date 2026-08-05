@@ -710,7 +710,7 @@ function EndedView() {
   const SCORE_CRITERIA: { key: keyof ScoreData; label: string }[] = [
     { key: "logic", label: "논리성" },
     { key: "evidence", label: "근거" },
-    { key: "persuasion", label: "설득력" },
+    { key: "persuasion", label: "표현 명확성" },
     { key: "rebuttal", label: "반론" },
   ];
 

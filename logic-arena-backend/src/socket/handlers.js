@@ -29,7 +29,9 @@ import {
   generateDefense,
   generateCounter,
   generateCoaching,
+  generateSoloFeedback,
   judgeDebate,
+  judgeSoloEssay,
 } from '../services/ai.js';
 
 import { updateStats, saveDebateHistory } from '../services/statsService.js';
@@ -119,8 +121,16 @@ async function startPhase(io, roomId, phase) {
   if (phase === 'ended') return;
 
   const isHumanMode = room.mode === 'human_debate';
+  const isSoloEssay = room.mode === 'solo_essay';
 
-  if (isHumanMode) {
+  if (isSoloEssay) {
+    // solo_essay: essay_feedback과 judging에서만 AI 사용
+    if (phase === 'essay_feedback' || phase === 'judging') {
+      handleAiAutoPhase(io, roomId, phase).catch((e) =>
+        console.error(`[AI] ${phase} 생성 실패:`, e.message)
+      );
+    }
+  } else if (isHumanMode) {
     // 인간 vs 인간: coaching(활성화된 경우)과 judging만 AI 사용
     if (phase === 'judging' || (phase === 'coaching' && room.coachingEnabled)) {
       handleAiAutoPhase(io, roomId, phase).catch((e) =>
@@ -182,13 +192,23 @@ async function handleTopicSelectionEnd(io, roomId) {
     await generateAndApplyTopic(io, roomId, { emit: false });
   }
 
+  const currentRoom = getRoom(roomId);
+  if (currentRoom?.mode === 'solo_essay' && !currentRoom.essaySide) {
+    pausePhaseTimer(roomId);
+    io.to(roomId).emit('topic_set', {
+      topic: currentRoom.topic,
+      room: getRoomSerialized(roomId),
+    });
+    return;
+  }
+
   // 진영 미선택자 자동 배정 (한쪽이 선택 안 했을 때) — 현재 슬롯 그대로 유지
   io.to(roomId).emit('topic_set', {
     topic: getRoom(roomId)?.topic,
     room: getRoomSerialized(roomId),
   });
 
-  await startPhase(io, roomId, 'arguing');
+  await startPhase(io, roomId, room.mode === 'solo_essay' ? 'essay_writing' : 'arguing');
 }
 
 // ── Peer voting finalize ─────────────────────────────────────
@@ -236,10 +256,24 @@ async function finalizePeerVoting(io, roomId) {
   }
 
   const participants = [];
-  if (room.proPlayer) participants.push({ userId: room.proPlayer.userId, vote: 'pro' });
-  if (room.conPlayer) participants.push({ userId: room.conPlayer.userId, vote: 'con' });
-  await updateStats(participants, result.winner).catch((e) => console.error('[peer_voting] updateStats 실패:', e.message));
-  await saveDebateHistory(participants, result, room.topic).catch((e) => console.error('[peer_voting] saveDebateHistory 실패:', e.message));
+  if (room.mode === 'solo_essay') {
+    // 이력에서는 개인 논술로 구분하되, 선택 진영의 채점 결과를 연결한다.
+    if (room.proPlayer) participants.push({ userId: room.proPlayer.userId, vote: room.essaySide, isSolo: true });
+  } else {
+    // 2인 토론 모드
+    if (room.proPlayer) participants.push({ userId: room.proPlayer.userId, vote: 'pro' });
+    if (room.conPlayer) participants.push({ userId: room.conPlayer.userId, vote: 'con' });
+  }
+
+  // 통계 및 이력 저장
+  if (room.mode === 'solo_essay') {
+    // solo_essay: 승패 통계는 스킵, 점수 기록만 저장
+    await saveDebateHistory(participants, result, room.topic).catch((e) => console.error('[solo] saveDebateHistory 실패:', e.message));
+  } else {
+    // 2인 토론: 승패 통계 + 이력 모두 저장
+    await updateStats(participants, result.winner).catch((e) => console.error('[peer_voting] updateStats 실패:', e.message));
+    await saveDebateHistory(participants, result, room.topic).catch((e) => console.error('[peer_voting] saveDebateHistory 실패:', e.message));
+  }
 
   io.to(roomId).emit('debate_ended', { result, room: getRoomSerialized(roomId) });
   await startPhase(io, roomId, 'ended');
@@ -320,8 +354,47 @@ async function handleAiAutoPhase(io, roomId, phase) {
       }
       return;
     }
+    case 'essay_feedback': {
+      const essayText = c.pro_argument ?? '';
+      const feedbackResult = await generateSoloFeedback({ topic: room.topic, essaySide: room.essaySide, essayText });
+      if (getRoom(roomId)) {
+        setContent(roomId, 'essay_feedback', JSON.stringify(feedbackResult));
+        io.to(roomId).emit('ai_content', {
+          essay_feedback: feedbackResult,
+          room: getRoomSerialized(roomId),
+        });
+        // essay_feedback 단계는 60초 타이머가 있으므로 즉시 진행하지 않음 (학생이 읽는 시간)
+      }
+      return;
+    }
     case 'judging': {
       const judgingStartTime = Date.now();
+
+      // solo_essay 모드: judgeSoloEssay 호출
+      if (room.mode === 'solo_essay') {
+        const playerName = room.proPlayer?.username ?? '학생';
+        // essay_final(퇴고본)이 있으면 그것을, 없으면 pro_argument(초안) 사용
+        const essayText = room.content.essay_final ?? room.content.pro_argument ?? '';
+        const result = await judgeSoloEssay({ topic: room.topic, playerName, essaySide: room.essaySide, essayText });
+
+        const currentRoom = getRoom(roomId);
+        if (!currentRoom || currentRoom.phase === 'ended') return;
+        setResult(roomId, result);
+
+        const MIN_JUDGING_DISPLAY_MS = 1500;
+        const elapsed = Date.now() - judgingStartTime;
+        const remainingWait = Math.max(0, MIN_JUDGING_DISPLAY_MS - elapsed);
+        if (remainingWait > 0) await new Promise(resolve => setTimeout(resolve, remainingWait));
+
+        const roomAfterWait = getRoom(roomId);
+        if (!roomAfterWait || roomAfterWait.phase === 'ended') return;
+
+        // solo 모드는 peer_voting 없음 → 즉시 종료
+        await finalizePeerVoting(io, roomId);
+        return;
+      }
+
+      // 기존 2인 토론 모드 (ai_debate, human_debate)
       const result = await judgeDebate({ topic: room.topic, content: room.content, mode: room.mode });
       const currentRoom = getRoom(roomId);
       if (!currentRoom || currentRoom.phase === 'ended') return;
@@ -436,11 +509,11 @@ function checkArguingDone(io, roomId) {
   }
 }
 
-function checkSinglePlayerDone(io, roomId, phase) {
+async function checkSinglePlayerDone(io, roomId, phase) {
   const room = getRoom(roomId);
   if (!room || room.phase !== phase) return;
   // single-player phases advance immediately after submission
-  advancePhase(io, roomId);
+  await advancePhase(io, roomId);
 }
 
 function checkFinalDone(io, roomId) {
@@ -584,12 +657,18 @@ export function registerHandlers(io, socket) {
     if (!room) return socket.emit('error', { message: '방을 찾을 수 없습니다' });
     if (room.host !== socket.id) return socket.emit('error', { message: '방장만 시작할 수 있습니다' });
     if (room.phase !== 'waiting') return socket.emit('error', { message: '이미 게임이 시작됐습니다' });
-    if (!room.proPlayer || !room.conPlayer) return socket.emit('error', { message: '플레이어가 2명 이상 필요합니다' });
 
-    // manual 주제면 topic_selection 스킵 가능
-    if (room.topicMode === 'manual' && room.topic) {
+    // solo_essay 모드는 proPlayer만 있으면 시작 가능
+    if (room.mode === 'solo_essay') {
+      if (!room.proPlayer) return socket.emit('error', { message: '플레이어가 필요합니다' });
+    } else {
+      if (!room.proPlayer || !room.conPlayer) return socket.emit('error', { message: '플레이어가 2명 이상 필요합니다' });
+    }
+
+    // 개인 논술은 수동 주제여도 진영 선택을 위해 topic_selection을 거친다.
+    if (room.topicMode === 'manual' && room.topic && room.mode !== 'solo_essay') {
       io.to(roomId).emit('topic_set', { topic: room.topic, room: getRoomSerialized(roomId) });
-      await startPhase(io, roomId, 'arguing');
+      await startPhase(io, roomId, room.mode === 'solo_essay' ? 'essay_writing' : 'arguing');
     } else {
       await startPhase(io, roomId, 'topic_selection');
     }
@@ -605,7 +684,13 @@ export function registerHandlers(io, socket) {
     const result = selectSide(roomId, socket.id, side);
     if (!result) return socket.emit('error', { message: '진영을 선택할 수 없습니다' });
 
-    if (result.status === 'waiting') {
+    if (result.status === 'solo_assigned') {
+      io.to(roomId).emit('sides_assigned', { random: false, room: result.room });
+      clearPhaseTimer(roomId);
+      startPhase(io, roomId, 'essay_writing').catch((e) =>
+        console.error('[select_side] 개인 논술 시작 실패:', e.message)
+      );
+    } else if (result.status === 'waiting') {
       io.to(roomId).emit('side_selection_update', { room: result.room });
     } else if (result.status === 'assigned' || result.status === 'random_assigned') {
       io.to(roomId).emit('sides_assigned', {
@@ -674,6 +759,8 @@ export function registerHandlers(io, socket) {
     } else {
       // 단일 플레이어 제출 페이즈: 제출 즉시 다음으로
       const singlePlayerPhases = new Set([
+        // 개인 논술: 초안과 퇴고본은 한 명이 제출하면 즉시 다음 단계로 진행
+        'essay_writing', 'essay_revision',
         'pro_p_rebuttal', 'pro_p_counter',
         'con_p_rebuttal', 'con_p_counter',
         'pro_p_defense', 'con_p_defense',
@@ -689,7 +776,10 @@ export function registerHandlers(io, socket) {
             io.to(roomId).emit('ai_content', { [aiKey]: updatedRoom.content[aiKey], room: getRoomSerialized(roomId) });
           }
         }
-        checkSinglePlayerDone(io, roomId, phase);
+        checkSinglePlayerDone(io, roomId, phase).catch((e) => {
+          console.error(`[submit_content] ${phase} 다음 단계 전환 실패:`, e);
+          socket.emit('error', { message: '다음 단계로 전환하지 못했습니다. 다시 시도해주세요.' });
+        });
       }
     }
   });

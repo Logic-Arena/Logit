@@ -2062,8 +2062,8 @@ textarea {
 }
 
 .tier-widget__avatar {
-  width: 60px;
-  height: 60px;
+  width: 100px;
+  height: 100px;
   border-radius: var(--radius-circle);
   background: linear-gradient(
     135deg,
@@ -2532,6 +2532,50 @@ textarea {
 .invite-panel__expand-btn:hover {
   border-color: var(--color-primary);
   color: var(--color-primary);
+}
+
+.invite-panel--compact {
+  gap: 20px;
+  padding: 18px 20px;
+  font-size: 12px;
+  background: var(--color-surface-2);
+  border: 0;
+  border-radius: var(--radius-lg);
+}
+
+.invite-panel--compact .invite-panel__qr {
+  padding: 12px;
+  border-radius: var(--radius-md);
+  box-shadow: 0 2px 8px rgba(30, 28, 46, 0.08);
+}
+
+.invite-panel--compact .invite-panel__code {
+  color: var(--color-primary);
+  font-size: 20px;
+}
+
+.invite-panel--compact .invite-panel__row {
+  min-height: 30px;
+}
+
+.invite-panel--compact .invite-panel__info {
+  gap: 10px;
+}
+
+.invite-panel--compact .invite-panel__label,
+.invite-panel--compact .invite-panel__link,
+.invite-panel--compact .invite-panel__copy-btn {
+  font-size: 12px;
+}
+
+.invite-panel--compact .invite-panel__copy-btn {
+  margin-left: auto;
+  padding: 5px 16px;
+  border-radius: var(--radius-full);
+}
+
+.invite-panel--compact .invite-panel__expand-btn {
+  display: none;
 }
 
 @media (max-width: 640px) {
@@ -5244,6 +5288,7 @@ textarea {
   font-weight: 500;
 }
 
+.header-user__teacher-btn,
 .header-user__logout {
   font-size: var(--text-caption);
   padding: 5px 12px;

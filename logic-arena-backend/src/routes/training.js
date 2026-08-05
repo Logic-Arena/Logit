@@ -28,7 +28,7 @@ router.get('/', requireAuth, async (req, res) => {
     const weakScores = [
       { axis: '논리력', score: avg('logic') },
       { axis: '근거 제시', score: avg('evidence') },
-      { axis: '설득력', score: avg('persuasion') },
+      { axis: '표현 명확성', score: avg('persuasion') },
       { axis: '반박 능력', score: avg('rebuttal') },
     ];
 

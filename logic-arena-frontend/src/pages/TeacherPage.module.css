@@ -16,15 +16,16 @@
 }
 
 .title {
-  font-size: 22px;
+  font-size: var(--text-title);
   font-weight: 700;
+  color: var(--color-text);
 }
 
 .teacherBadge {
-  font-size: 11px;
+  font-size: var(--text-caption);
   font-weight: 700;
   padding: 3px 9px;
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   background: var(--color-primary-soft);
   color: var(--color-primary);
   border: 1px solid var(--color-primary);
@@ -46,11 +47,11 @@
   border: none;
   border-bottom: 2px solid transparent;
   margin-bottom: -2px;
-  font-size: 14px;
+  font-size: var(--text-subtitle);
   font-weight: 600;
   color: var(--color-text-muted);
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
+  transition: color var(--transition), border-color var(--transition);
 }
 
 .tabBtn:hover {
@@ -77,7 +78,7 @@
 }
 
 .cardTitle {
-  font-size: 14px;
+  font-size: var(--text-subtitle);
   font-weight: 700;
   margin-bottom: 14px;
   color: var(--color-text-muted);
@@ -99,7 +100,7 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   padding: 8px 12px;
-  font-size: 14px;
+  font-size: var(--text-subtitle);
   color: var(--color-text);
   outline: none;
 }
@@ -109,19 +110,20 @@
 }
 
 .createHint {
-  font-size: 12px;
+  font-size: var(--text-body);
   color: var(--color-text-muted);
 }
 
 .classCard {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 16px 20px;
-  margin-bottom: 12px;
+  border-radius: var(--radius-lg);
+  padding: 22px 24px;
+  margin-bottom: 16px;
 }
 
 .classCardHeader {
+  --class-name-height: 22px;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -129,12 +131,14 @@
 }
 
 .className {
-  font-size: 16px;
+  font-size: var(--text-title);
+  line-height: var(--class-name-height);
   font-weight: 700;
+  color: var(--color-text);
 }
 
 .classMeta {
-  font-size: 12px;
+  font-size: var(--text-body);
   color: var(--color-text-muted);
   margin-top: 2px;
 }
@@ -149,17 +153,17 @@
 }
 
 .inviteRow {
-  margin-top: 10px;
+  margin-top: 18px;
 }
 
 .codeLabel {
-  font-size: 12px;
+  font-size: var(--text-body);
   color: var(--color-text-muted);
   white-space: nowrap;
 }
 
 .code {
-  font-size: 18px;
+  font-size: var(--text-title);
   font-weight: 700;
   letter-spacing: 0.12em;
   font-family: monospace;
@@ -168,30 +172,44 @@
 }
 
 .copyBtn {
-  font-size: 12px;
+  font-size: var(--text-body);
   font-weight: 600;
   padding: 4px 10px;
   background: var(--color-primary-soft);
   border: 1px solid var(--color-primary);
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
   color: var(--color-primary);
   cursor: pointer;
   white-space: nowrap;
 }
 
 .deleteBtn {
-  font-size: 12px;
-  padding: 4px 10px;
-  background: none;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-circle);
   color: var(--color-text-muted);
   cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+
+.deleteBtn svg {
+  width: var(--class-name-height);
+  height: var(--class-name-height);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .deleteBtn:hover {
-  border-color: #ef4444;
-  color: #ef4444;
+  color: var(--color-danger);
+  background: var(--color-surface-2);
 }
 
 /* ─── Class selector tabs ────────────────────────────── */
@@ -207,14 +225,15 @@
   padding: 6px 14px;
   background: var(--color-surface-2);
   border: 1px solid var(--color-border);
-  border-radius: 20px;
-  font-size: 13px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-body);
   font-weight: 600;
   color: var(--color-text-muted);
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 6px;
+  transition: background var(--transition), border-color var(--transition), color var(--transition);
 }
 
 .classTab--active {
@@ -224,9 +243,9 @@
 }
 
 .classTabCount {
-  font-size: 11px;
+  font-size: var(--text-caption);
   background: var(--color-border);
-  border-radius: 10px;
+  border-radius: var(--radius-full);
   padding: 1px 6px;
 }
 
@@ -241,24 +260,40 @@
 
 .summaryItem {
   background: var(--color-surface-2);
-  border-radius: var(--radius-sm);
-  padding: 12px;
+  border-radius: var(--radius-md);
+  padding: 16px 12px;
   text-align: center;
 }
 
 .summaryVal {
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 800;
+  color: var(--color-text);
 }
 
 .summaryKey {
-  font-size: 11px;
+  font-size: var(--text-caption);
   color: var(--color-text-muted);
   margin-top: 2px;
 }
 
+.summaryStrong {
+  color: var(--color-pro);
+}
+
+.summaryWarning {
+  color: var(--color-con);
+}
+
+.classMetricsGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 200px;
+  gap: 24px;
+  align-items: center;
+}
+
 .catLabel {
-  font-size: 12px;
+  font-size: var(--text-body);
   font-weight: 600;
   color: var(--color-text-muted);
   margin-bottom: 8px;
@@ -270,14 +305,15 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 6px;
+  margin-bottom: 0;
 }
 
 .catName {
-  font-size: 13px;
-  width: 52px;
+  font-size: 12px;
+  width: 76px;
   flex-shrink: 0;
   color: var(--color-text-muted);
+  white-space: nowrap;
 }
 
 .topStudentRow {
@@ -286,6 +322,7 @@
   gap: 10px;
   padding: 6px 0;
   border-bottom: 1px solid var(--color-border);
+  margin-right: 12px;
 }
 
 .topStudentRow:last-child {
@@ -293,7 +330,7 @@
 }
 
 .topRank {
-  font-size: 13px;
+  font-size: var(--text-body);
   font-weight: 700;
   width: 20px;
   color: var(--color-primary);
@@ -301,17 +338,18 @@
 
 .topName {
   flex: 1;
-  font-size: 14px;
+  font-size: var(--text-subtitle);
   font-weight: 600;
+  color: var(--color-text);
 }
 
 .topScore {
-  font-size: 13px;
+  font-size: var(--text-body);
   color: var(--color-text-muted);
 }
 
 .topGames {
-  font-size: 12px;
+  font-size: var(--text-body);
   color: var(--color-text-muted);
 }
 
@@ -320,13 +358,13 @@
 .studentTable {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: var(--text-body);
 }
 
 .studentTable th {
   text-align: left;
   padding: 6px 8px;
-  font-size: 11px;
+  font-size: var(--text-caption);
   font-weight: 700;
   color: var(--color-text-muted);
   text-transform: uppercase;
@@ -337,7 +375,7 @@
 .studentRow {
   cursor: pointer;
   border-bottom: 1px solid var(--color-border);
-  transition: background 0.1s;
+  transition: background var(--transition);
 }
 
 .studentRow:hover {
@@ -345,25 +383,41 @@
 }
 
 .studentRow td {
-  padding: 10px 8px;
+  padding: 14px 8px;
   vertical-align: middle;
 }
 
 .studentName {
   font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 4px;
+  color: var(--color-text);
+  white-space: nowrap;
 }
 
 .studentTier {
-  font-size: 11px;
+  font-size: var(--text-caption);
   color: var(--color-text-muted);
   margin-top: 1px;
 }
 
 .rankMedal {
-  font-size: 14px;
+  font-size: var(--text-subtitle);
+  flex-shrink: 0;
+}
+
+.studentIdentity {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.studentIdentity:has(.rankMedal) {
+  grid-template-columns: 28px minmax(0, 1fr);
+}
+
+.studentIdentity:not(:has(.rankMedal))::before {
+  content: "";
+  width: 28px;
 }
 
 /* ─── Mini bar ───────────────────────────────────────── */
@@ -371,42 +425,104 @@
 .miniBarWrap {
   display: flex;
   align-items: center;
-  gap: 6px;
-  min-width: 70px;
+  gap: 12px;
+  width: 100%;
+  min-width: 160px;
+}
+
+.miniBarTrack {
+  flex: 1;
+  height: 10px;
+  overflow: hidden;
+  background: var(--color-surface-2);
+  border-radius: var(--radius-full);
 }
 
 .miniBar {
-  height: 6px;
-  border-radius: 3px;
-  flex: 1;
+  height: 100%;
+  border-radius: var(--radius-full);
   min-width: 4px;
-  transition: width 0.3s;
+  background: var(--color-text);
+  opacity: 0.78;
+  transition: width var(--transition);
+}
+
+.miniBarWarning {
+  background: var(--color-con);
+  opacity: 1;
 }
 
 .miniBarVal {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--color-text-muted);
-  width: 18px;
+  width: 22px;
   text-align: right;
+}
+
+.metricSparkline {
+  width: 190px;
+  height: 34px;
+  display: flex;
+  align-items: flex-end;
+  gap: 7px;
+}
+
+.metricSparkBar {
+  width: 30px;
+  min-height: 4px;
+  max-height: 100%;
+  background: var(--color-text-muted);
+  border-radius: 3px 3px 1px 1px;
+  opacity: 0.62;
+  transition: opacity var(--transition), transform var(--transition);
+}
+
+.metricSparkBar:hover {
+  opacity: 1;
+  transform: translateY(-1px);
 }
 
 /* ─── Growth badge ───────────────────────────────────── */
 
 .growthUp {
-  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: var(--text-body);
   font-weight: 700;
-  color: #4ade80;
+  color: var(--color-pro);
 }
 
 .growthDown {
-  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: var(--text-body);
   font-weight: 700;
-  color: #f87171;
+  color: var(--color-con);
 }
 
 .growthNeutral {
-  font-size: 12px;
+  font-size: var(--text-body);
   color: var(--color-text-muted);
+}
+
+@media (max-width: 760px) {
+  .summaryGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .classMetricsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .studentTable {
+    min-width: 680px;
+  }
+
+  .metricSparkline {
+    width: 150px;
+  }
 }
 
 /* ─── Student detail ─────────────────────────────────── */
@@ -414,33 +530,117 @@
 .backBtn {
   background: none;
   border: none;
-  font-size: 13px;
-  color: var(--color-primary);
+  font-size: var(--text-body);
+  color: var(--color-text-muted);
   cursor: pointer;
   padding: 0;
   margin-bottom: 16px;
-  font-weight: 600;
+  font-weight: 400;
+  transition: opacity var(--transition);
+}
+
+.backBtn:hover {
+  opacity: 0.8;
 }
 
 .studentDetailHeader {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
+  padding-right: 12px;
 }
 
 .studentDetailName {
-  font-size: 20px;
+  font-size: var(--text-title);
   font-weight: 800;
+  color: var(--color-text);
+}
+
+.studentDetailHeader > div:first-child {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .studentDetailMeta {
-  font-size: 13px;
+  font-size: var(--text-body);
   color: var(--color-text-muted);
   margin-top: 4px;
 }
 
 .studentDetailScore {
   text-align: center;
+}
+
+.studentMetricsGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 200px;
+  grid-template-rows: auto auto;
+  column-gap: 24px;
+  row-gap: 14px;
+  align-items: center;
+}
+
+.studentMetricBars {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.studentMetricRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.studentMetricLabel {
+  width: 76px;
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.studentRadarPanel {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  width: 200px;
+  display: flex;
+  flex-direction: column;
+}
+
+.studentRadarLegend {
+  order: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  margin: 6px auto 0;
+  width: fit-content;
+  color: var(--color-text-muted);
+  font-size: 10px;
+}
+
+.studentRadarLegend > span {
+  display: flex !important;
+  align-items: center;
+  gap: 4px !important;
+}
+
+@media (max-width: 760px) {
+  .studentMetricsGrid {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+  }
+
+  .studentRadarPanel {
+    grid-column: 1;
+    grid-row: auto;
+    width: min(100%, 240px);
+    justify-self: center;
+  }
 }
 
 .studentDetailScoreVal {
@@ -450,21 +650,27 @@
 }
 
 .studentDetailScoreKey {
-  font-size: 11px;
+  font-size: var(--text-caption);
   color: var(--color-text-muted);
 }
 
 .growthRow {
+  grid-column: 1;
+  grid-row: 2;
   display: flex;
+  flex-direction: row;
   align-items: center;
+  justify-content: flex-start;
   gap: 8px;
-  margin-top: 12px;
-  font-size: 13px;
+  margin-top: 0;
+  min-width: 0;
+  text-align: left;
+  font-size: var(--text-body);
   color: var(--color-text-muted);
 }
 
 .growthHint {
-  font-size: 11px;
+  font-size: var(--text-caption);
   color: var(--color-text-muted);
 }
 
@@ -476,7 +682,12 @@
   gap: 10px;
   padding: 8px 0;
   border-bottom: 1px solid var(--color-border);
-  font-size: 13px;
+  font-size: var(--text-body);
+  transition: background var(--transition);
+}
+
+.debateHistoryRow:hover {
+  background: var(--color-surface-2);
 }
 
 .debateHistoryRow:last-child {
@@ -484,22 +695,22 @@
 }
 
 .resultBadge {
-  font-size: 11px;
+  font-size: var(--text-caption);
   font-weight: 700;
   padding: 2px 8px;
-  border-radius: 10px;
+  border-radius: var(--radius-full);
   min-width: 28px;
   text-align: center;
 }
 
 .result--win {
-  background: rgba(74, 222, 128, 0.15);
-  color: #4ade80;
+  background: var(--color-pro-bg);
+  color: var(--color-pro);
 }
 
 .result--lose {
-  background: rgba(248, 113, 113, 0.12);
-  color: #f87171;
+  background: var(--color-con-bg);
+  color: var(--color-con);
 }
 
 .result--draw {
@@ -514,17 +725,18 @@
 
 .debateScore {
   font-weight: 700;
+  color: var(--color-text);
 }
 
 .debateDate {
-  font-size: 11px;
+  font-size: var(--text-caption);
   color: var(--color-text-muted);
 }
 
 /* ─── Settings tab ───────────────────────────────────── */
 
 .settingsDesc {
-  font-size: 13px;
+  font-size: var(--text-body);
   color: var(--color-text-muted);
   margin-bottom: 20px;
 }
@@ -537,12 +749,13 @@
 }
 
 .masterLabel {
-  font-size: 15px;
+  font-size: var(--text-subtitle);
   font-weight: 700;
+  color: var(--color-text);
 }
 
 .masterDesc {
-  font-size: 12px;
+  font-size: var(--text-body);
   color: var(--color-text-muted);
   margin-top: 2px;
 }
@@ -562,12 +775,13 @@
 }
 
 .toggleLabel {
-  font-size: 14px;
+  font-size: var(--text-subtitle);
   font-weight: 600;
+  color: var(--color-text);
 }
 
 .toggleDesc {
-  font-size: 12px;
+  font-size: var(--text-body);
   color: var(--color-text-muted);
   margin-top: 2px;
 }
@@ -580,10 +794,10 @@
 }
 
 .shortGameInfoItem {
-  font-size: 11px;
+  font-size: var(--text-caption);
   padding: 3px 10px;
   background: var(--color-surface-2);
-  border-radius: 10px;
+  border-radius: var(--radius-full);
   color: var(--color-text-muted);
 }
 
@@ -598,14 +812,14 @@
 
 .classSelectorBtn {
   padding: 6px 14px;
-  border-radius: 20px;
+  border-radius: var(--radius-full);
   border: 1px solid var(--color-border);
   background: var(--color-surface-2);
   color: var(--color-text-muted);
-  font-size: 13px;
+  font-size: var(--text-body);
   font-weight: 500;
   cursor: pointer;
-  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  transition: border-color var(--transition), color var(--transition), background var(--transition);
 }
 
 .classSelectorBtn:hover {
@@ -641,7 +855,7 @@
 }
 
 .phaseLabel {
-  font-size: 13px;
+  font-size: var(--text-body);
   font-weight: 500;
   color: var(--color-text);
   display: flex;
@@ -650,11 +864,11 @@
 }
 
 .phaseDefault {
-  font-size: 10px;
+  font-size: var(--text-caption);
   color: var(--color-text-muted);
   background: var(--color-surface-2);
   padding: 1px 6px;
-  border-radius: 8px;
+  border-radius: var(--radius-xs);
   font-weight: 400;
 }
 
@@ -667,17 +881,17 @@
 .stepBtn {
   width: 28px;
   height: 28px;
-  border-radius: 50%;
+  border-radius: var(--radius-circle);
   border: 1px solid var(--color-border);
   background: var(--color-surface-2);
   color: var(--color-text);
-  font-size: 16px;
+  font-size: var(--text-title);
   font-weight: 500;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color var(--transition), background var(--transition), color var(--transition);
   line-height: 1;
 }
 
@@ -693,7 +907,7 @@
 }
 
 .stepVal {
-  font-size: 13px;
+  font-size: var(--text-body);
   font-weight: 600;
   color: var(--color-text);
   min-width: 56px;
@@ -720,9 +934,10 @@
   position: absolute;
   inset: 0;
   background: var(--color-surface-2);
-  border-radius: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background var(--transition), border-color var(--transition);
 }
 
 .slider::before {
@@ -730,15 +945,17 @@
   position: absolute;
   width: 18px;
   height: 18px;
-  left: 3px;
-  top: 3px;
+  left: 2px;
+  top: 2px;
   background: #fff;
-  border-radius: 50%;
-  transition: transform 0.2s;
+  border-radius: var(--radius-circle);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  transition: transform var(--transition);
 }
 
 .toggle input:checked + .slider {
   background: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
 .toggle input:checked + .slider::before {
@@ -753,7 +970,7 @@
 /* ─── Presets ────────────────────────────────────────── */
 
 .presetLabel {
-  font-size: 13px;
+  font-size: var(--text-body);
   color: var(--color-text-muted);
   font-weight: 600;
   margin-bottom: 10px;
@@ -793,12 +1010,13 @@
 }
 
 .timePresetLabel {
-  font-size: 13px;
+  font-size: var(--text-body);
   font-weight: 600;
+  color: var(--color-text);
 }
 
 .timePresetDesc {
-  font-size: 11px;
+  font-size: var(--text-caption);
   color: var(--color-text-muted);
   font-weight: 400;
 }
@@ -821,10 +1039,10 @@
   background: var(--color-surface-2);
   color: var(--color-text);
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--text-body);
   font-weight: 600;
   text-align: center;
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color var(--transition), background var(--transition), color var(--transition);
 }
 
 .presetBtn:hover {
@@ -839,7 +1057,7 @@
 }
 
 .presetDesc {
-  font-size: 11px;
+  font-size: var(--text-caption);
   color: var(--color-text-muted);
   margin-top: 3px;
   font-weight: 400;
@@ -861,15 +1079,15 @@
   bottom: 28px;
   left: 50%;
   transform: translateX(-50%);
-  background: var(--color-success, #4caf50);
+  background: var(--color-pro);
   color: #fff;
   padding: 10px 22px;
-  border-radius: 24px;
-  font-size: 14px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-subtitle);
   font-weight: 600;
   pointer-events: none;
   opacity: 1;
-  transition: opacity 0.4s;
+  transition: opacity var(--transition);
   z-index: 9999;
 }
 
@@ -883,22 +1101,73 @@
   text-align: center;
   padding: 40px;
   color: var(--color-text-muted);
-  font-size: 14px;
+  font-size: var(--text-subtitle);
 }
 
 .emptyMsg {
   text-align: center;
   padding: 40px;
   color: var(--color-text-muted);
-  font-size: 14px;
+  font-size: var(--text-subtitle);
 }
 
 .errorMsg {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: var(--color-con-bg);
+  border: 1px solid var(--color-con);
   border-radius: var(--radius-sm);
   padding: 10px 14px;
-  font-size: 13px;
-  color: #f87171;
+  font-size: var(--text-body);
+  color: var(--color-con);
   margin-bottom: 16px;
+}
+
+.debateSummaryOverlay {
+  background: rgba(30, 28, 46, 0.4) !important;
+}
+
+.debateSummaryModal {
+  max-width: 620px !important;
+  padding: 28px 32px !important;
+  background: rgba(255, 255, 255, 0.62) !important;
+  backdrop-filter: blur(8px) saturate(170%);
+  -webkit-backdrop-filter: blur(8px) saturate(170%);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  border-radius: var(--radius-xl) !important;
+  box-shadow:
+    0 8px 32px rgba(30, 28, 46, 0.12),
+    0 2px 8px rgba(30, 28, 46, 0.08) !important;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.debateSummaryModal::-webkit-scrollbar {
+  width: 8px;
+}
+
+.debateSummaryModal::-webkit-scrollbar-track {
+  margin-block: 18px;
+  background: transparent;
+}
+
+.debateSummaryModal::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border: 2px solid transparent;
+  border-radius: var(--radius-full);
+  background-clip: padding-box;
+}
+
+.debateSummaryList {
+  list-style: disc outside !important;
+}
+
+.debateSummaryList li {
+  display: list-item;
+  padding-left: 2px;
+}
+
+@media (max-width: 640px) {
+  .debateSummaryModal {
+    padding: 24px 20px !important;
+    border-radius: 20px !important;
+  }
 }

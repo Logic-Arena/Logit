@@ -22,6 +22,9 @@ export const PHASE_DURATION_MS = {
   con_a_counter: 10_000,   // AI 자동 생성 후 즉시 진행 (fallback 10초)
   coaching: 10_000,        // 훈수 AI (fallback 10초)
   final_argument: 60_000,  // 1분
+  essay_writing: 300_000,  // 5분
+  essay_feedback: 60_000,  // 1분
+  essay_revision: 240_000, // 4분
   judging: 30_000,         // 30초
   peer_voting: 30_000,     // 동료 평가 투표 (30초)
   ended: 0,                // 종료 페이즈 — 타이머 없음 (phaseEndAt = null)
@@ -41,6 +44,11 @@ const HUMAN_PHASE_SEQUENCE = [
   'pro_p_rebuttal', 'pro_p_defense', 'pro_p_counter',
   'con_p_rebuttal', 'con_p_defense', 'con_p_counter',
   'coaching', 'final_argument', 'judging', 'peer_voting', 'ended',
+];
+
+const SOLO_ESSAY_PHASE_SEQUENCE = [
+  'waiting', 'topic_selection', 'essay_writing',
+  'essay_feedback', 'essay_revision', 'judging', 'ended',
 ];
 
 // 각 페이즈에서 AI가 자동으로 콘텐츠를 생성하는지
@@ -68,14 +76,23 @@ export const PHASE_SUBMIT_KEY = {
   pro_a_defense: { con_player: 'pro_a_defense_player' },
   con_a_defense: { pro_player: 'con_a_defense_player' },
   final_argument: { pro_player: 'pro_final', con_player: 'con_final' },
+  essay_writing: { pro_player: 'pro_argument' },
+  essay_revision: { pro_player: 'essay_final' },
 };
 
 export function getNextPhase(currentPhase, mode = 'ai_debate', coachingEnabled = true) {
-  const sequence = mode === 'human_debate' ? HUMAN_PHASE_SEQUENCE : AI_PHASE_SEQUENCE;
+  let sequence;
+  if (mode === 'solo_essay') {
+    sequence = SOLO_ESSAY_PHASE_SEQUENCE;
+  } else if (mode === 'human_debate') {
+    sequence = HUMAN_PHASE_SEQUENCE;
+  } else {
+    sequence = AI_PHASE_SEQUENCE;
+  }
   const idx = sequence.indexOf(currentPhase);
   if (idx === -1 || idx >= sequence.length - 1) return 'ended';
   const next = sequence[idx + 1];
-  // coaching이 꺼져있으면 coaching phase 건너뜀
+  // coaching이 꺼져있으면 coaching phase 건너뜀 (solo_essay에는 coaching 없음)
   if (next === 'coaching' && !coachingEnabled) {
     return sequence[idx + 2] ?? 'ended';
   }
@@ -108,7 +125,7 @@ export function getPhaseDuration(phase, phaseDurations = null) {
   return customSec * 1_000 + bonus;
 }
 
-export function createRoom({ title, mode = 'ai_debate', topicMode = 'ai_auto', topic = null, password = null, handicap = null, coachingEnabled = true }) {
+export function createRoom({ title, mode = 'ai_debate', topicMode = 'ai_auto', topic = null, password = null, handicap = null, coachingEnabled = true, structuredArgumentEnabled = true }) {
   const defaultHandicap = { enabled: true, vocab: true, evidenceLimit: true, rebuttalLimit: true, phaseDurations: null };
   const resolvedHandicap = (handicap && typeof handicap === 'object') ? handicap : defaultHandicap;
   const id = uuidv4();
@@ -125,6 +142,7 @@ export function createRoom({ title, mode = 'ai_debate', topicMode = 'ai_auto', t
     createdAt: new Date(),
     status: 'pending', // 방장이 아직 입장하지 않은 상태. 방장 입장 시 'active'로 전환
     coachingEnabled: coachingEnabled !== false,
+    structuredArgumentEnabled: structuredArgumentEnabled !== false,
 
     host: null,        // socketId
     proPlayer: null,   // { socketId, userId, username }
@@ -132,6 +150,7 @@ export function createRoom({ title, mode = 'ai_debate', topicMode = 'ai_auto', t
     observers: new Map(), // socketId -> { userId, username }
     sideSelectionAttempts: 0,
     pendingSelections: new Map(), // socketId -> 'pro' | 'con'
+    essaySide: null, // solo_essay 작성자가 선택한 'pro' | 'con'
 
     // 각 페이즈 콘텐츠
     content: {
@@ -159,6 +178,8 @@ export function createRoom({ title, mode = 'ai_debate', topicMode = 'ai_auto', t
       coaching_con: null,
       pro_final: null,
       con_final: null,
+      essay_feedback: null,
+      essay_final: null,
     },
 
     result: null,
@@ -213,7 +234,7 @@ export function addPlayerToRoom(roomId, socketId, { userId, username, password }
     if (room.status === 'pending') {
       room.status = 'active';
     }
-  } else if (!room.conPlayer) {
+  } else if (room.mode !== 'solo_essay' && !room.conPlayer) {
     room.conPlayer = { socketId, userId, username };
     role = 'con_player';
   } else {
@@ -300,10 +321,17 @@ export function getPlayerRole(roomId, socketId) {
 export function selectSide(roomId, socketId, side) {
   const room = rooms.get(roomId);
   if (!room || room.phase !== 'topic_selection') return null;
+  if (side !== 'pro' && side !== 'con') return null;
 
   const isProSlot = room.proPlayer?.socketId === socketId;
   const isConSlot = room.conPlayer?.socketId === socketId;
   if (!isProSlot && !isConSlot) return null;
+
+  if (room.mode === 'solo_essay') {
+    if (!isProSlot) return null;
+    room.essaySide = side;
+    return { status: 'solo_assigned', room: serializeRoom(room) };
+  }
 
   room.pendingSelections.set(socketId, side);
 
@@ -435,8 +463,10 @@ function serializeRoom(room) {
     result: room.result,
     createdAt: room.createdAt,
     sideSelectionAttempts: room.sideSelectionAttempts,
+    essaySide: room.essaySide,
     status: room.status,
     coachingEnabled: room.coachingEnabled,
+    structuredArgumentEnabled: room.structuredArgumentEnabled,
     pendingSelections: Object.fromEntries(room.pendingSelections.entries()),
   };
 }

@@ -285,12 +285,18 @@ router.get('/classes/:classId/summary', requireAuth, requireTeacher, async (req,
 
     const scoreByStudent = {};
     histories.forEach(h => {
-      if (!scoreByStudent[h.user_id]) scoreByStudent[h.user_id] = { name: h.user.name, total: 0, count: 0 };
-      scoreByStudent[h.user_id].total += h.score;
+      if (!scoreByStudent[h.user_id]) scoreByStudent[h.user_id] = { name: h.user.name, scores: [], count: 0 };
+      scoreByStudent[h.user_id].scores.push(h.score);
       scoreByStudent[h.user_id].count++;
     });
     const topStudents = Object.entries(scoreByStudent)
-      .map(([userId, d]) => ({ userId: parseInt(userId), name: d.name, avgScore: Math.round(d.total / d.count), debateCount: d.count }))
+      .map(([userId, d]) => {
+        const recentScores = d.scores.slice(0, 10);
+        const avgScore = recentScores.length > 0
+          ? Math.round(recentScores.reduce((sum, score) => sum + score, 0) / recentScores.length)
+          : 0;
+        return { userId: parseInt(userId), name: d.name, avgScore, debateCount: d.count };
+      })
       .sort((a, b) => b.avgScore - a.avgScore)
       .slice(0, 5);
 

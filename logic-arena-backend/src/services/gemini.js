@@ -223,9 +223,10 @@ export async function judgeDebate({ topic, content }) {
     `채점 기준 (각 0~25점, 합계 100점):\n` +
     `- 논리성: 주장의 논리적 일관성과 구조\n` +
     `- 근거: 사실에 기반한 구체적 근거 제시\n` +
-    `- 설득력: 상대방과 청중을 설득하는 힘\n` +
+    `- 표현 명확성: 주장과 근거를 명확한 문장으로 전달하는 능력, 어휘 선택의 적절성, 청중이 논지를 쉽게 파악할 수 있는 표현력\n` +
     `- 반론: 상대 주장에 대한 효과적인 반박\n\n` +
     `반드시 아래 JSON 형식으로만 답하세요 (설명 없이 JSON만):\n` +
+    `// persuasion: 과거 데이터 호환을 위해 키 유지. 2026-07 이후 채점 기준은 '표현 명확성'\n` +
     `{"winner":"pro또는con또는draw","summary":"전체 토론 총평 2-3문장","scores":[` +
     `{"name":"찬성P","vote":"pro","type":"player","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"total":0,"rank":0,"advice":"조언"},` +
     `{"name":"반대P","vote":"con","type":"player","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"total":0,"rank":0,"advice":"조언"},` +

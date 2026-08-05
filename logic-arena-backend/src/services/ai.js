@@ -16,7 +16,9 @@ export const {
   generateDefense,
   generateCounter,
   generateCoaching,
+  generateSoloFeedback,
   judgeDebate,
+  judgeSoloEssay,
   generateTrainingRecommendation,
   generateTeacherDebateSummary,
 } = service;

@@ -2,7 +2,7 @@ export type PlayerRole = 'pro_player' | 'con_player' | 'observer';
 export type UserRole = 'host' | 'participant' | 'observer' | 'ai';
 export type VoteOption = 'pro' | 'con';
 export type WinnerSide = 'pro' | 'con' | 'draw';
-export type RoomMode = 'ai_debate' | 'human_debate';
+export type RoomMode = 'ai_debate' | 'human_debate' | 'solo_essay';
 export type TopicMode = 'manual' | 'ai_auto';
 export type TopicSource = 'ai' | 'fallback';
 
@@ -24,6 +24,9 @@ export type Phase =
   | 'con_a_counter'
   | 'coaching'
   | 'final_argument'
+  | 'essay_writing'
+  | 'essay_feedback'
+  | 'essay_revision'
   | 'judging'
   | 'peer_voting'
   | 'ended';
@@ -75,6 +78,8 @@ export interface RoomContent {
   coaching_con: string | null;
   pro_final: string | null;
   con_final: string | null;
+  essay_feedback: string | null;
+  essay_final: string | null;
 }
 
 export interface ParticipantScore {
@@ -119,6 +124,8 @@ export interface Room {
   result: DebateResult | null;
   createdAt: string;
   sideSelectionAttempts: number;
+  essaySide: VoteOption | null;
   coachingEnabled: boolean;
+  structuredArgumentEnabled: boolean;
   pendingSelections: Record<string, 'pro' | 'con'>;
 }
