@@ -662,19 +662,20 @@ function DebateChatView({
           background: "var(--color-surface)",
         }}
       >
-        {myKey ? (
-          (phase === "arguing" || phase === "essay_writing") ? (
+        {phase === "essay_feedback" ? (
+          <EssayFeedbackView room={room} />
+        ) : myKey ? (
+          ((phase === "arguing" || phase === "essay_writing") && room.structuredArgumentEnabled) ? (
             <StructuredArgumentPanel
               key={phase}
               roomId={room.id}
+              stance={room.mode === "solo_essay" ? room.essaySide : null}
               alreadySubmitted={alreadySubmitted}
               submittedText={alreadySubmitted ? content[myKey] : null}
               phaseEndAt={room.phaseEndAt}
             />
-          ) : phase === "essay_feedback" ? (
-            <EssayFeedbackView room={room} />
           ) : phase === "essay_revision" ? (
-            <EssayRevisionView room={room} myKey={myKey} alreadySubmitted={alreadySubmitted} />
+            <EssayRevisionView room={room} myKey={myKey} alreadySubmitted={alreadySubmitted} structuredArgumentEnabled={room.structuredArgumentEnabled} />
           ) : (
             <SubmitPanel
               key={phase}
@@ -801,10 +802,12 @@ function EssayRevisionView({
   room,
   myKey,
   alreadySubmitted,
+  structuredArgumentEnabled,
 }: {
   room: Room;
   myKey: keyof RoomContent;
   alreadySubmitted: boolean;
+  structuredArgumentEnabled: boolean;
 }) {
   const originalEssay = room.content.pro_argument ?? "";
   const parsedSections = parseStructuredArgument(originalEssay);
@@ -870,6 +873,19 @@ function EssayRevisionView({
     );
   }
 
+  if (!structuredArgumentEnabled) {
+    return (
+      <SubmitPanel
+        key="essay_revision_freeform"
+        roomId={room.id}
+        label="퇴고 완료"
+        placeholder="AI 피드백을 참고해 논술문을 퇴고하세요."
+        alreadySubmitted={false}
+        phaseEndAt={room.phaseEndAt}
+      />
+    );
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "8px 0" }}>
       {/* 피드백 영역 (접기 가능, 기본 펼침) */}
@@ -900,6 +916,7 @@ function EssayRevisionView({
         <StructuredArgumentPanel
           key="essay_revision"
           roomId={room.id}
+          stance={room.essaySide}
           alreadySubmitted={false}
           phaseEndAt={room.phaseEndAt}
           initialSections={parsedSections}
@@ -935,6 +952,7 @@ function EssayRevisionView({
           <StructuredArgumentPanel
             key="essay_revision_fallback"
             roomId={room.id}
+            stance={room.essaySide}
             alreadySubmitted={false}
             phaseEndAt={room.phaseEndAt}
             submitLabel="퇴고 완료"
@@ -1037,19 +1055,23 @@ function WaitingView({
   mySocketId: string;
 }) {
   const isHost = room.host === mySocketId;
-  const canStart = !!room.proPlayer && !!room.conPlayer;
+  const isSoloEssay = room.mode === "solo_essay";
+  const canStart = !!room.proPlayer && (isSoloEssay || !!room.conPlayer);
+  const playerSlots = isSoloEssay
+    ? [{ label: "논술 작성자", player: room.proPlayer }]
+    : [
+        { label: "플레이어 1 (방장)", player: room.proPlayer },
+        { label: "플레이어 2", player: room.conPlayer },
+      ];
   return (
     <div className="waiting-view-centered" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
       <p style={{ color: "var(--color-text-muted)", fontSize: "13px" }}>
-        찬성P, 반대P 두 명이 모이면 방장이 게임을 시작합니다.
+        {isSoloEssay ? "혼자서 바로 개인 논술을 시작할 수 있습니다." : "찬성P, 반대P 두 명이 모이면 방장이 게임을 시작합니다."}
       </p>
       <div
-        style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}
+        style={{ display: "grid", gridTemplateColumns: isSoloEssay ? "1fr" : "1fr 1fr", gap: "12px" }}
       >
-        {[
-          { label: "플레이어 1 (방장)", player: room.proPlayer },
-          { label: "플레이어 2", player: room.conPlayer },
-        ].map(({ label, player }) => (
+        {playerSlots.map(({ label, player }) => (
           <div
             key={label}
             style={{
@@ -1095,7 +1117,7 @@ function WaitingView({
           onClick={() => socket.emit("start_game", { roomId: room.id })}
           style={{ alignSelf: "flex-start" }}
         >
-          {canStart ? "게임 시작하기" : "플레이어 2명 필요"}
+          {canStart ? (isSoloEssay ? "개인 논술 시작하기" : "게임 시작하기") : "플레이어 2명 필요"}
         </button>
       ) : (
         <NotMyTurnBanner message="방장이 게임을 시작할 때까지 기다려 주세요" />
@@ -1105,7 +1127,7 @@ function WaitingView({
   );
 }
 
-function TopicGeneratingCard({ attempts: _attempts }: { attempts: number }) {
+function TopicGeneratingCard({ attempts: _attempts, isSoloEssay = false }: { attempts: number; isSoloEssay?: boolean }) {
   return (
     <div className="topic-generating-view">
       {/* 타이틀 영역 */}
@@ -1130,21 +1152,23 @@ function TopicGeneratingCard({ attempts: _attempts }: { attempts: number }) {
       {/* 보조 텍스트 */}
       <p className="topic-generating-view__subtitle">AI가 더 흥미로운 쟁점을 고르고 있어요.</p>
 
-      {/* 흰 패널 (ghosted 찬성/반대 프리뷰) */}
+      {/* 주제 생성 안내 */}
       <div className="topic-generating-view__panel">
-        <div className="topic-generating-view__ghosted-choices">
-          {/* 찬성 placeholder */}
-          <div className="topic-generating-view__ghosted-item">
-            <div className="topic-generating-view__ghosted-icon" />
-            <div className="topic-generating-view__ghosted-text" />
+        {!isSoloEssay && (
+          <div className="topic-generating-view__ghosted-choices">
+            <div className="topic-generating-view__ghosted-item">
+              <div className="topic-generating-view__ghosted-icon" />
+              <div className="topic-generating-view__ghosted-text" />
+            </div>
+            <div className="topic-generating-view__ghosted-item">
+              <div className="topic-generating-view__ghosted-icon" />
+              <div className="topic-generating-view__ghosted-text" />
+            </div>
           </div>
-          {/* 반대 placeholder */}
-          <div className="topic-generating-view__ghosted-item">
-            <div className="topic-generating-view__ghosted-icon" />
-            <div className="topic-generating-view__ghosted-text" />
-          </div>
-        </div>
-        <p className="topic-generating-view__panel-footer">주제가 확정되면 진영을 선택할 수 있어요.</p>
+        )}
+        <p className="topic-generating-view__panel-footer">
+          {isSoloEssay ? "주제가 확정되면 내가 작성할 입장을 선택할 수 있어요." : "주제가 확정되면 진영을 선택할 수 있어요."}
+        </p>
       </div>
     </div>
   );
@@ -1253,7 +1277,9 @@ function TopicSelectionView({
   room: Room;
   myRole: PlayerRole | null;
 }) {
-  const [mySelection, setMySelection] = useState<"pro" | "con" | null>(null);
+  const [mySelection, setMySelection] = useState<"pro" | "con" | null>(
+    room.mode === "solo_essay" ? room.essaySide : null,
+  );
   const isPlayer = myRole === "pro_player" || myRole === "con_player";
   const isSoloEssay = room.mode === "solo_essay";
   const attempts = room.sideSelectionAttempts;
@@ -1317,13 +1343,13 @@ function TopicSelectionView({
           </div>
         </div>
       ) : (
-        <TopicGeneratingCard attempts={attempts} />
+        <TopicGeneratingCard attempts={attempts} isSoloEssay={isSoloEssay} />
       )}
-      {isPlayer && !isSoloEssay && !mySelection && !!room.topic && (
+      {isPlayer && !mySelection && !!room.topic && (
         <div className="selection-dual-card-wrapper">
           <p className="selection-dual-card-wrapper__guidance">
-            원하는 진영을 선택하세요
-            {attempts > 0 ? ` (진영 선택 중복 ${attempts}/7회)` : ""}
+            {isSoloEssay ? "논술문에서 전개할 입장을 선택하세요" : "원하는 진영을 선택하세요"}
+            {!isSoloEssay && attempts > 0 ? ` (진영 선택 중복 ${attempts}/7회)` : ""}
           </p>
           <div className="side-selection-container">
             {(["pro", "con"] as const).map((side) => {
@@ -1360,8 +1386,8 @@ function TopicSelectionView({
       {isPlayer && !isSoloEssay && mySelection && (
         <SelectionWaitingCard side={mySelection} room={room} />
       )}
-      {!isPlayer && !isSoloEssay && (
-        <NotMyTurnBanner message="플레이어들이 진영을 선택 중입니다..." />
+      {!isPlayer && (
+        <NotMyTurnBanner message={isSoloEssay ? "논술 작성자가 입장을 선택 중입니다..." : "플레이어들이 진영을 선택 중입니다..."} />
       )}
 
       <div className="watermark-slot topic-selection-watermark-slot" aria-hidden="true" />
@@ -1907,8 +1933,12 @@ function EndedView({
             <tbody>
               {sorted.filter((s) => s.type === "player").map((s) => {
                 const sideColor = s.vote === "pro" ? "var(--color-pro)" : "var(--color-con)";
-                const isMe = (s.vote === "pro" && myRole === "pro_player") || (s.vote === "con" && myRole === "con_player");
-                const displayName = (s.vote === "pro" ? room.proPlayer?.username : room.conPlayer?.username) ?? s.name;
+                const isMe = isSoloEssay
+                  ? myRole === "pro_player"
+                  : (s.vote === "pro" && myRole === "pro_player") || (s.vote === "con" && myRole === "con_player");
+                const displayName = isSoloEssay
+                  ? room.proPlayer?.username ?? s.name
+                  : (s.vote === "pro" ? room.proPlayer?.username : room.conPlayer?.username) ?? s.name;
                 return (
                   <tr
                     key={s.name}
@@ -2140,7 +2170,15 @@ function DebateSidebar({
   const mySide: AlignSide | null =
     myRole === "pro_player" ? "pro" : myRole === "con_player" ? "con" : null;
   const { phase, content } = room;
+  const isSoloEssay = room.mode === "solo_essay";
   const stageIdx = getStageIndex(phase);
+  const soloStages = [
+    { label: "초안 작성", phases: ["essay_writing"] },
+    { label: "AI 피드백", phases: ["essay_feedback"] },
+    { label: "퇴고", phases: ["essay_revision"] },
+    { label: "평가", phases: ["judging", "ended"] },
+  ] as const;
+  const soloStageIdx = soloStages.findIndex((stage) => (stage.phases as readonly string[]).includes(phase));
 
   return (
     <>
@@ -2151,34 +2189,39 @@ function DebateSidebar({
       <div className={`debate-sidebar${sidebarOpen ? " is-open" : ""}`}>
         {/* 토론 주제 + 포지션 */}
         <div className="sidebar-section">
-          <div className="sidebar-section__title">토론 주제</div>
+          <div className="sidebar-section__title">{isSoloEssay ? "논술 주제" : "토론 주제"}</div>
           <p className="sidebar-topic">{room.topic ?? "주제 생성 중..."}</p>
           <div className="sidebar-positions">
-            <span
-              className={`sidebar-badge sidebar-badge--pro${mySide === "pro" ? " sidebar-badge--me" : ""}`}
-            >
-              {mySide === "pro" ? "나" : mySide === "con" ? "상대" : "찬성"}
-              ·찬성
-            </span>
-            <span
-              className={`sidebar-badge sidebar-badge--con${mySide === "con" ? " sidebar-badge--me" : ""}`}
-            >
-              {mySide === "con" ? "나" : mySide === "pro" ? "상대" : "반대"}
-              ·반대
-            </span>
+            {isSoloEssay ? (
+              room.essaySide && (
+                <span className={`sidebar-badge sidebar-badge--${room.essaySide} sidebar-badge--me`}>
+                  내 입장·{room.essaySide === "pro" ? "찬성" : "반대"}
+                </span>
+              )
+            ) : (
+              <>
+                <span className={`sidebar-badge sidebar-badge--pro${mySide === "pro" ? " sidebar-badge--me" : ""}`}>
+                  {mySide === "pro" ? "나" : mySide === "con" ? "상대" : "찬성"}·찬성
+                </span>
+                <span className={`sidebar-badge sidebar-badge--con${mySide === "con" ? " sidebar-badge--me" : ""}`}>
+                  {mySide === "con" ? "나" : mySide === "pro" ? "상대" : "반대"}·반대
+                </span>
+              </>
+            )}
           </div>
         </div>
 
         {/* 진행 단계 */}
         <div className="sidebar-section">
           <div className="sidebar-section__title">진행 단계</div>
-          {DEBATE_STAGES.map((stage, i) => {
+          {(isSoloEssay ? soloStages : DEBATE_STAGES).map((stage, i) => {
+            const activeStageIdx = isSoloEssay ? soloStageIdx : stageIdx;
             const status =
-              stageIdx < 0
+              activeStageIdx < 0
                 ? "upcoming"
-                : i < stageIdx
+                : i < activeStageIdx
                   ? "done"
-                  : i === stageIdx
+                  : i === activeStageIdx
                     ? "active"
                     : "upcoming";
             return (
@@ -2202,14 +2245,14 @@ function DebateSidebar({
 
         {/* 최초 주장 요약 */}
         <div className="sidebar-section">
-          <div className="sidebar-section__title">최초 주장 요약</div>
+          <div className="sidebar-section__title">{isSoloEssay ? "내 논술 초안" : "최초 주장 요약"}</div>
           {content.pro_argument ? (
             <Popover
               width={300}
               content={
                 <div className="popover__claim">
                   <div className="popover__claim-label popover__claim-label--pro">
-                    찬성 측 최초 주장
+                    {isSoloEssay ? "내 논술 초안" : "찬성 측 최초 주장"}
                   </div>
                   <p className="popover__claim-text">
                     {content.pro_argument}
@@ -2218,7 +2261,7 @@ function DebateSidebar({
               }
             >
               <div className="claim-summary claim-summary--pro">
-                <div className="claim-summary__label">찬성 측</div>
+                <div className="claim-summary__label">{isSoloEssay ? "내 초안" : "찬성 측"}</div>
                 <p className="claim-summary__text">
                   {content.pro_argument.length > 90
                     ? content.pro_argument.slice(0, 90) + "..."
@@ -2228,13 +2271,13 @@ function DebateSidebar({
             </Popover>
           ) : (
             <div className="claim-summary claim-summary--pro">
-              <div className="claim-summary__label">찬성 측</div>
+              <div className="claim-summary__label">{isSoloEssay ? "내 초안" : "찬성 측"}</div>
               <p className="claim-summary__text claim-summary__text--empty">
                 제출 전
               </p>
             </div>
           )}
-          {content.con_argument ? (
+          {!isSoloEssay && (content.con_argument ? (
             <Popover
               width={300}
               content={
@@ -2264,7 +2307,7 @@ function DebateSidebar({
                 제출 전
               </p>
             </div>
-          )}
+          ))}
         </div>
       </div>
     </>

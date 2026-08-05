@@ -30,6 +30,7 @@ interface ReportItem {
   dateLabel: string;
   topic: string;
   score: number;
+  result: DebateHistoryItem["result"];
   category: Category;
   position: Position;
   best: string;
@@ -225,19 +226,19 @@ function DetailModal({ item, onClose }: { item: DebateHistoryItem; onClose: () =
   const worst = sorted[sorted.length - 1];
 
   const scoreColor = (v: number) =>
-    v >= 17 ? 'var(--color-pro)' : v >= 13 ? 'var(--color-host,#f5a623)' : v >= 8 ? 'var(--color-text-muted)' : 'var(--color-con-orange)';
+    v >= 17 ? 'var(--color-pro)' : v >= 13 ? 'var(--color-primary)' : v >= 8 ? 'var(--color-text-muted)' : 'var(--color-primary)';
   const scoreLabel = (v: number) =>
     v >= 17 ? '우수' : v >= 13 ? '양호' : v >= 8 ? '보통' : '미흡';
 
-  const totalGradeColor = item.score >= 80 ? 'var(--color-pro)' : item.score >= 60 ? 'var(--color-host,#f5a623)' : item.score >= 40 ? 'var(--color-text-muted)' : 'var(--color-con-orange)';
+  const totalGradeColor = item.score >= 80 ? 'var(--color-pro)' : item.score >= 60 ? 'var(--color-primary)' : item.score >= 40 ? 'var(--color-text-muted)' : 'var(--color-primary)';
   const totalGradeLabel = item.score >= 80 ? '우수' : item.score >= 60 ? '양호' : item.score >= 40 ? '보통' : '미흡';
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.78)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }} onClick={onClose}>
-      <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '18px', padding: '28px 28px 24px', maxWidth: '600px', width: '100%', maxHeight: '92vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '22px' }} onClick={e => e.stopPropagation()}>
+    <div className={styles.historyDetailOverlay} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.78)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }} onClick={onClose}>
+      <div className={styles.historyDetailModal} style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '18px', padding: '28px 28px 24px', maxWidth: '600px', width: '100%', maxHeight: '92vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '22px' }} onClick={e => e.stopPropagation()}>
 
         {/* ── 헤더 ─────────────────────────────────────── */}
-        <div style={{ textAlign: 'center' }}>
+        <div className={styles.historyDetailHeader} style={{ textAlign: 'center' }}>
           <div style={{ fontSize: '42px', marginBottom: '6px' }}>{resultEmoji}</div>
           <div style={{ fontSize: '26px', fontWeight: 800, color: resultColor, letterSpacing: '-0.5px' }}>{resultLabel}</div>
           <div style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginTop: '8px', lineHeight: 1.6, maxWidth: '420px', margin: '8px auto 0' }}>{item.topic}</div>
@@ -248,8 +249,8 @@ function DetailModal({ item, onClose }: { item: DebateHistoryItem; onClose: () =
         </div>
 
         {/* ── 총점 + 레이더 차트 ───────────────────────── */}
-        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-          <div style={{ textAlign: 'center', flexShrink: 0, minWidth: '110px' }}>
+        <div className={styles.historyDetailScoreGrid} style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+          <div className={styles.historyDetailScore} style={{ textAlign: 'center', flexShrink: 0, minWidth: '110px', '--history-score': item.score } as React.CSSProperties}>
             <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600, letterSpacing: '0.5px', marginBottom: '4px' }}>최종 점수</div>
             <div style={{ fontSize: '56px', fontWeight: 900, color: resultColor, lineHeight: 1 }}>{item.score}</div>
             <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '2px' }}>/ 100점</div>
@@ -257,10 +258,10 @@ function DetailModal({ item, onClose }: { item: DebateHistoryItem; onClose: () =
               {totalGradeLabel}
             </div>
           </div>
-          <div style={{ flex: 1, height: '210px' }}>
+          <div className={styles.historyDetailRadar} style={{ flex: 1, height: '210px' }}>
             <ResponsiveContainer width="100%" height="100%">
               <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="72%">
-                <PolarGrid stroke="var(--color-border)" />
+                <PolarGrid stroke="var(--color-text-muted)" strokeOpacity={0.45} />
                 <PolarAngleAxis dataKey="axis" tick={{ fill: 'var(--color-text-muted)', fontSize: 11, fontWeight: 600 }} />
                 <PolarRadiusAxis domain={[0, 20]} tick={false} axisLine={false} />
                 <Radar name="내 점수" dataKey="value" stroke={positionColor} fill={positionColor} fillOpacity={0.22} strokeWidth={2} />
@@ -270,7 +271,7 @@ function DetailModal({ item, onClose }: { item: DebateHistoryItem; onClose: () =
         </div>
 
         {/* ── 항목별 점수 바 ───────────────────────────── */}
-        <div>
+        <div className={styles.historyDetailCriteria}>
           <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px' }}>항목별 점수 (각 20점 만점)</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '9px' }}>
             {criteria.map(({ label, value }) => (
@@ -287,32 +288,32 @@ function DetailModal({ item, onClose }: { item: DebateHistoryItem; onClose: () =
         </div>
 
         {/* ── 강점 / 약점 ─────────────────────────────── */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+        <div className={styles.historyDetailHighlights} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <div style={{ background: 'rgba(99,255,180,0.07)', border: '1px solid var(--color-pro)', borderRadius: '12px', padding: '14px 16px' }}>
             <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-pro)', letterSpacing: '0.5px', marginBottom: '4px' }}>강점</div>
-            <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text)' }}>{best.label}</div>
-            <div style={{ fontSize: '26px', fontWeight: 900, color: 'var(--color-pro)', marginTop: '2px', lineHeight: 1 }}>
-              {best.value}<span style={{ fontSize: '12px', fontWeight: 400, color: 'var(--color-text-muted)' }}>/20</span>
+            <div className={styles.historyDetailHighlightValue}>
+              <span>{best.label}</span>
+              <strong>{best.value}<small>/20</small></strong>
             </div>
           </div>
           <div style={{ background: 'var(--color-con-bg)', border: '1px solid var(--color-con)', borderRadius: '12px', padding: '14px 16px' }}>
             <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-con)', letterSpacing: '0.5px', marginBottom: '4px' }}>보완 필요</div>
-            <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text)' }}>{worst.label}</div>
-            <div style={{ fontSize: '26px', fontWeight: 900, color: 'var(--color-con)', marginTop: '2px', lineHeight: 1 }}>
-              {worst.value}<span style={{ fontSize: '12px', fontWeight: 400, color: 'var(--color-text-muted)' }}>/20</span>
+            <div className={styles.historyDetailHighlightValue}>
+              <span>{worst.label}</span>
+              <strong>{worst.value}<small>/20</small></strong>
             </div>
           </div>
         </div>
 
         {/* ── AI 조언 ──────────────────────────────────── */}
         {item.advice && (
-          <div style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: '12px', padding: '18px 20px' }}>
+          <div className={styles.historyDetailAdvice} style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: '12px', padding: '18px 20px' }}>
             <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>AI 조언</div>
             <p style={{ fontSize: '14px', lineHeight: 1.85, color: 'var(--color-text)', margin: 0, whiteSpace: 'pre-line' }}>{item.advice}</p>
           </div>
         )}
 
-        <button onClick={onClose} style={{ alignSelf: 'center', background: 'none', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '9px 28px', cursor: 'pointer', color: 'var(--color-text-muted)', fontSize: '13px' }}>
+        <button className={`btn btn--ghost ${styles.historyDetailClose}`} onClick={onClose}>
           닫기
         </button>
       </div>
@@ -324,6 +325,42 @@ function ReportCard({ item, onDetail }: { item: ReportItem; onDetail?: () => voi
   const grade = getGrade(item.score);
 
   return (
+    <article
+      className={styles.reportCardNew}
+      onClick={onDetail}
+      style={{
+        "--report-score": item.score,
+        "--report-grade-color": GRADE_COLOR[grade],
+      } as React.CSSProperties}
+    >
+      <div className={styles.reportCardRing} aria-label={`${item.score}점`}>
+        <span>{item.score}</span>
+      </div>
+      <div className={styles.reportCardNewContent}>
+        <h3 className={styles.reportCardNewTitle} title={item.topic}>{item.topic}</h3>
+        <div className={styles.reportCardNewMeta}>
+          <span className={`${styles.reportCardNewChip} ${styles.reportCardNewResult}`}>
+            {item.result === "win" ? "승리" : item.result === "lose" ? "패배" : "무승부"}
+          </span>
+          <span
+            className={styles.reportCardNewChip}
+            style={{
+              background: item.position === "찬성" ? "var(--color-pro-bg)" : "var(--color-con-bg)",
+              color: item.position === "찬성" ? "var(--color-pro)" : "var(--color-con)",
+            }}
+          >
+            {item.position}
+          </span>
+          <span className={`${styles.reportCardNewChip} ${styles.reportCardNewCategory}`}>{item.category}</span>
+        </div>
+      </div>
+      <time className={styles.reportCardNewDate}>{item.dateLabel}</time>
+      <span className={styles.reportCardNewArrow} aria-hidden="true">›</span>
+    </article>
+  );
+
+  if (false) {
+    return (
     <div className={styles.reportCard} onClick={onDetail} style={{ cursor: 'pointer' }}>
       {/* 1. 날짜 + 등급 + 점수 */}
       <div className="flex flex-col gap-2 w-full">
@@ -385,7 +422,8 @@ function ReportCard({ item, onDetail }: { item: ReportItem; onDetail?: () => voi
         </button>
       </div>
     </div>
-  );
+    );
+  }
 }
 
 /* ─── 섹션 컴포넌트 (MyPage 탭에서도 재사용) ─────────────────── */
@@ -662,6 +700,7 @@ function toReportItem(h: DebateHistoryItem): ReportItem {
     dateLabel,
     topic: h.topic,
     score: h.score,
+    result: h.result,
     category: "자유",
     position: h.position === "pro" ? "찬성" : "반대",
     best: h.advice ?? "",
@@ -673,15 +712,12 @@ export function AnalyticsHistorySection() {
   const [searchQuery, setSearchQuery] = useState("");
   const [category, setCategory] = useState<Category>("전체");
   const [sortKey, setSortKey] = useState<SortKey>("최신순");
-  const [reports, setReports] = useState<ReportItem[]>([]);
   const [rawItems, setRawItems] = useState<DebateHistoryItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<DebateHistoryItem | null>(null);
+  const reports = useMemo(() => rawItems.map(toReportItem), [rawItems]);
 
   useEffect(() => {
-    getDebateHistory().then((data) => {
-      setRawItems(data);
-      setReports(data.map(toReportItem));
-    });
+    getDebateHistory().then(setRawItems);
   }, []);
 
   function openDetail(id: number) {
@@ -716,7 +752,9 @@ export function AnalyticsHistorySection() {
             const delta = nextItem ? item.score - nextItem.score : null;
             const pct =
               delta !== null && nextItem
-                ? Math.round((delta / nextItem.score) * 100)
+                ? nextItem.score === 0
+                  ? 0
+                  : Math.round((delta / nextItem.score) * 100)
                 : null;
             return (
               <div key={item.id} className={styles.recentBannerCard}>
@@ -732,13 +770,21 @@ export function AnalyticsHistorySection() {
                     <span className={styles.recentBannerScoreUnit}>점</span>
                   </span>
                   {pct !== null && (
-                    <span
-                      className={
-                        pct >= 0 ? styles.recentDeltaUp : styles.recentDeltaDown
-                      }
-                    >
-                      {pct >= 0 ? `+${pct}%` : `${pct}%`}
-                    </span>
+                    <div className={styles.recentBannerTrend}>
+                      <span
+                        className={
+                          pct > 0
+                            ? styles.recentDeltaUp
+                            : pct < 0
+                              ? styles.recentDeltaDown
+                              : styles.recentDeltaSame
+                        }
+                      >
+                        <span aria-hidden="true">{pct > 0 ? "↗" : pct < 0 ? "↘" : "−"}</span>
+                        {pct > 0 ? `+${pct}%` : `${pct}%`}
+                      </span>
+                      <span className={styles.recentBannerTrendLabel}>직전 토론 대비</span>
+                    </div>
                   )}
                 </div>
 

@@ -38,7 +38,7 @@ const WIN_RP = 20;
 const LOSE_RP = 20;
 
 /**
- * @param {Array<{userId: string, vote: 'pro'|'con'}>} participants
+ * @param {Array<{userId: string, vote: 'pro'|'con', isSolo?: boolean}>} participants
  * @param {'pro'|'con'|'draw'} winner
  */
 export async function saveDebateHistory(participants, result, topic) {
@@ -50,9 +50,13 @@ export async function saveDebateHistory(participants, result, topic) {
   await Promise.all(
     dbParticipants.map(async (p) => {
       const userId = parseInt(p.userId, 10);
-      const isWinner = result.winner !== 'draw' && p.vote === result.winner;
-      const isDraw = result.winner === 'draw';
-      const resultLabel = isDraw ? 'draw' : isWinner ? 'win' : 'lose';
+
+      // solo_essay: position='solo', result='solo', winner 없음
+      // 2인 토론: position='pro'|'con', result='win'|'lose'|'draw'
+      const isSolo = p.isSolo === true;
+      const isWinner = !isSolo && result.winner !== 'draw' && p.vote === result.winner;
+      const isDraw = !isSolo && result.winner === 'draw';
+      const resultLabel = isSolo ? 'solo' : (isDraw ? 'draw' : isWinner ? 'win' : 'lose');
 
       const scoreData = result.scores?.find((s) => s.vote === p.vote && s.type === 'player');
       const score = scoreData?.total ?? 0;
@@ -61,7 +65,7 @@ export async function saveDebateHistory(participants, result, topic) {
         data: {
           user_id: userId,
           topic: safeTopic,
-          position: p.vote,
+          position: isSolo ? 'solo' : p.vote,
           score,
           logic: scoreData?.logic ?? 0,
           evidence: scoreData?.evidence ?? 0,
@@ -80,7 +84,7 @@ export async function saveDebateHistory(participants, result, topic) {
           const summary = await generateTeacherDebateSummary({
             studentName: user?.name ?? '학생',
             topic: safeTopic,
-            position: p.vote,
+            position: isSolo ? 'solo' : p.vote,
             result: resultLabel,
             score,
             logic: scoreData?.logic ?? 0,

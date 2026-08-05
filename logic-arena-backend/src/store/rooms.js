@@ -125,7 +125,7 @@ export function getPhaseDuration(phase, phaseDurations = null) {
   return customSec * 1_000 + bonus;
 }
 
-export function createRoom({ title, mode = 'ai_debate', topicMode = 'ai_auto', topic = null, password = null, handicap = null, coachingEnabled = true }) {
+export function createRoom({ title, mode = 'ai_debate', topicMode = 'ai_auto', topic = null, password = null, handicap = null, coachingEnabled = true, structuredArgumentEnabled = true }) {
   const defaultHandicap = { enabled: true, vocab: true, evidenceLimit: true, rebuttalLimit: true, phaseDurations: null };
   const resolvedHandicap = (handicap && typeof handicap === 'object') ? handicap : defaultHandicap;
   const id = uuidv4();
@@ -142,6 +142,7 @@ export function createRoom({ title, mode = 'ai_debate', topicMode = 'ai_auto', t
     createdAt: new Date(),
     status: 'pending', // 방장이 아직 입장하지 않은 상태. 방장 입장 시 'active'로 전환
     coachingEnabled: coachingEnabled !== false,
+    structuredArgumentEnabled: structuredArgumentEnabled !== false,
 
     host: null,        // socketId
     proPlayer: null,   // { socketId, userId, username }
@@ -149,6 +150,7 @@ export function createRoom({ title, mode = 'ai_debate', topicMode = 'ai_auto', t
     observers: new Map(), // socketId -> { userId, username }
     sideSelectionAttempts: 0,
     pendingSelections: new Map(), // socketId -> 'pro' | 'con'
+    essaySide: null, // solo_essay 작성자가 선택한 'pro' | 'con'
 
     // 각 페이즈 콘텐츠
     content: {
@@ -232,7 +234,7 @@ export function addPlayerToRoom(roomId, socketId, { userId, username, password }
     if (room.status === 'pending') {
       room.status = 'active';
     }
-  } else if (!room.conPlayer) {
+  } else if (room.mode !== 'solo_essay' && !room.conPlayer) {
     room.conPlayer = { socketId, userId, username };
     role = 'con_player';
   } else {
@@ -319,10 +321,17 @@ export function getPlayerRole(roomId, socketId) {
 export function selectSide(roomId, socketId, side) {
   const room = rooms.get(roomId);
   if (!room || room.phase !== 'topic_selection') return null;
+  if (side !== 'pro' && side !== 'con') return null;
 
   const isProSlot = room.proPlayer?.socketId === socketId;
   const isConSlot = room.conPlayer?.socketId === socketId;
   if (!isProSlot && !isConSlot) return null;
+
+  if (room.mode === 'solo_essay') {
+    if (!isProSlot) return null;
+    room.essaySide = side;
+    return { status: 'solo_assigned', room: serializeRoom(room) };
+  }
 
   room.pendingSelections.set(socketId, side);
 
@@ -454,8 +463,10 @@ function serializeRoom(room) {
     result: room.result,
     createdAt: room.createdAt,
     sideSelectionAttempts: room.sideSelectionAttempts,
+    essaySide: room.essaySide,
     status: room.status,
     coachingEnabled: room.coachingEnabled,
+    structuredArgumentEnabled: room.structuredArgumentEnabled,
     pendingSelections: Object.fromEntries(room.pendingSelections.entries()),
   };
 }

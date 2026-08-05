@@ -18,6 +18,7 @@ export function CreateRoomModal({ isOpen, onClose }: Props) {
   const [topic, setTopic] = useState('');
   const [password, setPassword] = useState('');
   const [coachingEnabled, setCoachingEnabled] = useState(true);
+  const [structuredArgumentEnabled, setStructuredArgumentEnabled] = useState(true);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -42,6 +43,8 @@ export function CreateRoomModal({ isOpen, onClose }: Props) {
       setTopicMode('ai_auto');
       setTopic('');
       setPassword('');
+      setCoachingEnabled(true);
+      setStructuredArgumentEnabled(true);
       setError('');
       setLoading(false);
     }
@@ -80,6 +83,7 @@ export function CreateRoomModal({ isOpen, onClose }: Props) {
         password.trim() || undefined,
         handicap,
         coachingEnabled,
+        structuredArgumentEnabled,
       );
       navigate(`/rooms/${room.id}/debate`, { state: { password: password.trim() || undefined } });
     } catch (err) {
@@ -197,6 +201,26 @@ export function CreateRoomModal({ isOpen, onClose }: Props) {
               className={`toggle-switch${coachingEnabled ? ' toggle-switch--on' : ''}`}
               onClick={() => setCoachingEnabled(!coachingEnabled)}
               aria-label="훈수 AI 토글"
+            >
+              <span className="toggle-switch__slider" />
+            </button>
+          </div>
+
+          <div className={`coaching-toggle-section${structuredArgumentEnabled ? ' coaching-toggle-section--on' : ''}`}>
+            <div className="coaching-toggle-section__text">
+              <label className="coaching-toggle-section__label" htmlFor="structuredArgumentToggle">
+                구조화 입론 <span className={`coaching-toggle-badge${structuredArgumentEnabled ? ' coaching-toggle-badge--on' : ''}`}>{structuredArgumentEnabled ? 'ON' : 'OFF'}</span>
+              </label>
+              <p className="coaching-toggle-section__desc">
+                켜면 주장·근거·예시·예상 반론·재반론의 5단계 폼을 사용합니다. 끄면 기존 자유 서술 입력으로 진행합니다.
+              </p>
+            </div>
+            <button
+              type="button"
+              id="structuredArgumentToggle"
+              className={`toggle-switch${structuredArgumentEnabled ? ' toggle-switch--on' : ''}`}
+              onClick={() => setStructuredArgumentEnabled(!structuredArgumentEnabled)}
+              aria-label="구조화 입론 토글"
             >
               <span className="toggle-switch__slider" />
             </button>

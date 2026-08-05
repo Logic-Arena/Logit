@@ -124,6 +124,8 @@ export interface Room {
   result: DebateResult | null;
   createdAt: string;
   sideSelectionAttempts: number;
+  essaySide: VoteOption | null;
   coachingEnabled: boolean;
+  structuredArgumentEnabled: boolean;
   pendingSelections: Record<string, 'pro' | 'con'>;
 }

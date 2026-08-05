@@ -126,6 +126,16 @@ async function ask(prompt) {
   return res.choices[0].message.content.trim();
 }
 
+function logAiFailure(operation, error) {
+  console.error(`[AI] ${operation} failed`, {
+    name: error?.name,
+    message: error?.message,
+    status: error?.status,
+    code: error?.code,
+    cause: error?.cause?.message ?? error?.cause?.code,
+  });
+}
+
 export async function generateTopic(previousTopics = []) {
   for (let attempt = 0; attempt < MAX_TOPIC_GENERATION_ATTEMPTS; attempt++) {
     try {
@@ -133,7 +143,8 @@ export async function generateTopic(previousTopics = []) {
       if (topic && !matchesPreviousTopic(topic, previousTopics)) {
         return { topic, source: 'ai' };
       }
-    } catch {
+    } catch (error) {
+      logAiFailure('topic generation', error);
       break;
     }
   }
@@ -149,8 +160,9 @@ export async function generateArgument({ topic, vote, handicap = null }) {
     buildHandicapPrompt(handicap);
   try {
     return await ask(prompt);
-  } catch {
-    return `[AI ${stance}] ${topic}에 대한 ${stance} 주장을 준비 중입니다.`;
+  } catch (error) {
+    logAiFailure(`${stance} argument generation`, error);
+    return `[AI ${stance}] AI 연결 오류로 주장을 생성하지 못했습니다. 서버 콘솔을 확인해 주세요.`;
   }
 }
 
@@ -166,8 +178,9 @@ export async function generateRebuttal({ topic, vote, opponentArguments, handica
     buildHandicapPrompt(handicap);
   try {
     return await ask(prompt);
-  } catch {
-    return `[AI ${stance}] 상대방 주장에 대한 반론을 준비 중입니다.`;
+  } catch (error) {
+    logAiFailure(`${stance} rebuttal generation`, error);
+    return `[AI ${stance}] AI 연결 오류로 반론을 생성하지 못했습니다. 서버 콘솔을 확인해 주세요.`;
   }
 }
 
@@ -182,8 +195,9 @@ export async function generateDefense({ topic, vote, rebuttalContent, handicap =
     buildHandicapPrompt(handicap);
   try {
     return await ask(prompt);
-  } catch {
-    return `[AI ${stance}] 변론을 준비 중입니다.`;
+  } catch (error) {
+    logAiFailure(`${stance} defense generation`, error);
+    return `[AI ${stance}] AI 연결 오류로 변론을 생성하지 못했습니다. 서버 콘솔을 확인해 주세요.`;
   }
 }
 
@@ -198,8 +212,9 @@ export async function generateCounter({ topic, vote, defenseContent, handicap = 
     buildHandicapPrompt(handicap);
   try {
     return await ask(prompt);
-  } catch {
-    return `[AI ${stance}] 재반론을 준비 중입니다.`;
+  } catch (error) {
+    logAiFailure(`${stance} counterargument generation`, error);
+    return `[AI ${stance}] AI 연결 오류로 재반론을 생성하지 못했습니다. 서버 콘솔을 확인해 주세요.`;
   }
 }
 
@@ -232,14 +247,18 @@ export async function generateCoaching({ topic, content }) {
   try {
     const [pro, con] = await Promise.all([ask(proPrompt), ask(conPrompt)]);
     return { pro, con };
-  } catch {
+  } catch (error) {
+    logAiFailure('coaching generation', error);
     return { pro: 'AI 훈수 분석 중 오류가 발생했습니다.', con: 'AI 훈수 분석 중 오류가 발생했습니다.' };
   }
 }
 
-export async function generateSoloFeedback({ topic, essayText }) {
+export async function generateSoloFeedback({ topic, essaySide, essayText }) {
+  const stance = essaySide === 'con' ? '반대' : '찬성';
   const prompt =
     `논술 주제: "${topic}"\n\n` +
+    `학생이 선택한 입장: ${stance}\n` +
+    `학생의 글을 반드시 ${stance} 입장을 기준으로 읽고, 다른 입장으로 바꾸도록 유도하지 마세요.\n\n` +
     `학생이 작성한 주장문:\n${essayText}\n\n` +
     `이 주장문은 다음 5단계 구조로 작성되었습니다:\n` +
     `【주장】 — 자신의 입장 표명\n` +
@@ -403,14 +422,16 @@ function makeDrawResult(reason, isHumanMode = false) {
 }
 
 // ⚠️ 5축 기준 문구는 judgeDebate/judgeSoloEssay 동기화 유지
-export async function judgeSoloEssay({ topic, playerName, essayText }) {
+export async function judgeSoloEssay({ topic, playerName, essaySide, essayText }) {
+  const vote = essaySide === 'con' ? 'con' : 'pro';
+  const stance = vote === 'con' ? '반대' : '찬성';
   if (!essayText || !essayText.trim()) {
     return {
       winner: null,
       summary: '제출된 논술문이 없어 채점할 수 없습니다.',
       scores: [{
         name: playerName ?? '학생',
-        vote: 'pro',
+        vote,
         type: 'player',
         logic: 0, evidence: 0, persuasion: 0, rebuttal: 0, consistency: 0,
         total: 0, rank: 1,
@@ -421,12 +442,14 @@ export async function judgeSoloEssay({ topic, playerName, essayText }) {
   }
 
   const scoresTemplate =
-    `{"name":"${playerName ?? '학생'}","vote":"pro","type":"player","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"consistency":0,"total":0,"rank":1,"advice":"구체적 조언 3-4문장"}`;
+    `{"name":"${playerName ?? '학생'}","vote":"${vote}","type":"player","logic":0,"evidence":0,"persuasion":0,"rebuttal":0,"consistency":0,"total":0,"rank":1,"advice":"구체적 조언 3-4문장"}`;
 
   const prompt =
     `논술 주제: "${topic}"\n\n` +
+    `학생이 선택한 입장: ${stance}\n` +
     `학생 "${playerName ?? '학생'}"의 제출문:\n${essayText}\n\n` +
     `당신은 논술 평가 전문가입니다. 위 제출문은 【주장】【근거】【예시】【예상 반론】【재반론】 구분자 형식으로 작성되었습니다.\n` +
+    `학생이 선택한 ${stance} 입장을 기준으로 평가하세요. 선택 입장 자체의 옳고 그름이 아니라, ${stance} 입장을 얼마나 논리적이고 일관되게 전개했는지를 채점하세요.\n` +
     `학생 1명을 아래 기준으로 채점하세요.\n\n` +
     `채점 기준 (각 항목 0~20점, 합계 0~100점):\n` +
     `【논리성 0~20점】\n` +
@@ -487,6 +510,7 @@ export async function judgeSoloEssay({ topic, playerName, essayText }) {
     if (!parsed.scores || !Array.isArray(parsed.scores) || parsed.scores.length === 0) throw new Error('scores 없음');
 
     const s = parsed.scores[0];
+    s.vote = vote;
     s.logic = Math.min(Math.max(Math.round(s.logic ?? 0), 0), 20);
     s.evidence = Math.min(Math.max(Math.round(s.evidence ?? 0), 0), 20);
     s.persuasion = Math.min(Math.max(Math.round(s.persuasion ?? 0), 0), 20);
@@ -508,7 +532,7 @@ export async function judgeSoloEssay({ topic, playerName, essayText }) {
       summary: 'AI 평가 중 오류가 발생하여 기본 점수로 처리합니다.',
       scores: [{
         name: playerName ?? '학생',
-        vote: 'pro',
+        vote,
         type: 'player',
         logic: 0, evidence: 0, persuasion: 0, rebuttal: 0, consistency: 0,
         total: 0, rank: 1,
@@ -653,19 +677,29 @@ export async function generateCommunityTopicForSlot(slot) {
 }
 
 export async function generateTeacherDebateSummary({ studentName, topic, position, result, score, logic, evidence, persuasion, rebuttal, consistency, advice }) {
-  const resultLabel = result === 'win' ? '승리' : result === 'lose' ? '패배' : '무승부';
-  const positionLabel = position === 'pro' ? '찬성' : '반대';
+  const isSolo = position === 'solo';
+  const resultLabel = isSolo ? '개인 논술' : (result === 'win' ? '승리' : result === 'lose' ? '패배' : '무승부');
+  const positionLabel = isSolo ? '1인 논술' : (position === 'pro' ? '찬성' : '반대');
+
+  const contextLabel = isSolo
+    ? `아래는 학생 "${studentName}"의 1인 논술 기록입니다:\n`
+    : `아래는 학생 "${studentName}"의 토론 기록입니다:\n`;
+
+  const taskLabel = isSolo
+    ? `교사 관점에서 학생의 논술 작성 능력을 전문적으로 분석하여, 아래 JSON 형식으로만 답하세요 (설명 없이 JSON만):\n` +
+      `{"summary":"해당 학생의 전반적인 논술 수행을 4~5문장으로 평가. 논리 구조, 근거의 질, 표현 명확성, 일관성을 종합적으로 서술. 교사 전문 어투.","strengths":["구체적인 내용을 인용하거나 근거로 들어 서술 (3~4가지)"],"improvements":["구체적인 내용을 근거로 들고 개선 방향도 함께 제시 (3~4가지)"],"coaching":"교사가 학생에게 직접 건네는 따뜻하고 구체적인 코칭 멘트 1~2문장"}`
+    : `교사 관점에서 학생의 토론 수행을 전문적으로 분석하여, 아래 JSON 형식으로만 답하세요 (설명 없이 JSON만):\n` +
+      `{"summary":"해당 학생의 전반적인 토론 수행을 4~5문장으로 평가. 논리 구조, 근거의 질, 표현 명확성, 반론 대응 방식, 일관성을 종합적으로 서술. 교사 전문 어투.","strengths":["구체적인 발언 내용을 인용하거나 근거로 들어 서술 (3~4가지)"],"improvements":["구체적인 발언 내용을 근거로 들고 개선 방향도 함께 제시 (3~4가지)"],"coaching":"교사가 학생에게 직접 건네는 따뜻하고 구체적인 코칭 멘트 1~2문장"}`;
 
   const prompt =
     `당신은 중고등학교 토론 수업을 담당하는 교사의 학생 평가 보조 도구입니다.\n\n` +
-    `아래는 학생 "${studentName}"의 토론 기록입니다:\n` +
+    contextLabel +
     `- 주제: ${topic}\n` +
     `- 포지션: ${positionLabel}\n` +
     `- 결과: ${resultLabel} (최종 ${score}점 / 100점 만점)\n` +
     `- 항목별 점수 (20점 만점): 논리성 ${logic}, 근거 ${evidence}, 표현 명확성 ${persuasion}, 반론 ${rebuttal}, 일관성 ${consistency}\n` +
     `- AI 채점관 상세 총평: ${advice || '없음'}\n\n` +
-    `교사 관점에서 학생의 토론 수행을 전문적으로 분석하여, 아래 JSON 형식으로만 답하세요 (설명 없이 JSON만):\n` +
-    `{"summary":"해당 학생의 전반적인 토론 수행을 4~5문장으로 평가. 논리 구조, 근거의 질, 표현 명확성, 반론 대응 방식, 일관성을 종합적으로 서술. 교사 전문 어투.","strengths":["구체적인 발언 내용을 인용하거나 근거로 들어 서술 (3~4가지)"],"improvements":["구체적인 발언 내용을 근거로 들고 개선 방향도 함께 제시 (3~4가지)"],"coaching":"교사가 학생에게 직접 건네는 따뜻하고 구체적인 코칭 멘트 1~2문장"}`;
+    taskLabel;
 
   try {
     const raw = await ask(prompt);
@@ -676,9 +710,10 @@ export async function generateTeacherDebateSummary({ studentName, topic, positio
     if (!parsed.coaching) parsed.coaching = '꾸준한 연습을 통해 더욱 발전할 수 있을 것입니다.';
     return parsed;
   } catch {
+    const activityLabel = isSolo ? '논술' : '토론';
     return {
-      summary: `${studentName} 학생은 ${topic} 주제로 ${positionLabel} 측에서 토론을 수행하여 ${score}점을 획득했습니다.`,
-      strengths: ['토론에 적극적으로 참여하였습니다.'],
+      summary: `${studentName} 학생은 ${topic} 주제로 ${positionLabel} 측에서 ${activityLabel}을 수행하여 ${score}점을 획득했습니다.`,
+      strengths: [`${activityLabel}에 적극적으로 참여하였습니다.`],
       improvements: ['근거 자료의 다양성을 높이고 논리적 일관성을 강화할 필요가 있습니다.'],
       coaching: '꾸준한 연습을 통해 더욱 발전할 수 있을 것입니다.',
     };
