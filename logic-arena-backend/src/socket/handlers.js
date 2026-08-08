@@ -104,7 +104,8 @@ async function startPhase(io, roomId, phase) {
 
   setPhase(roomId, phase);
   const waitsForAiTopic = phase === 'topic_selection' && room.topicMode === 'ai_auto';
-  if (waitsForAiTopic) {
+  const waitsForAiJudging = phase === 'judging';
+  if (waitsForAiTopic || waitsForAiJudging) {
     pausePhaseTimer(roomId);
   } else {
     startPhaseTimer(io, roomId, phase);
@@ -176,6 +177,11 @@ async function advancePhase(io, roomId) {
 
   if (room.phase === 'peer_voting') {
     await finalizePeerVoting(io, roomId);
+    return;
+  }
+
+  if (room.phase === 'judging' && !room.result) {
+    pausePhaseTimer(roomId);
     return;
   }
 

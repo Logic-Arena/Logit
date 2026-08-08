@@ -1556,6 +1556,15 @@ const SCORE_CRITERIA: {
     { key: "consistency", label: "일관성" },
   ];
 
+const SCORE_TABLE_HEADERS = [
+  "순위",
+  "참가자",
+  ...SCORE_CRITERIA.map(({ label }) => label),
+  "AI점수",
+  "동료평가",
+  "최종",
+];
+
 function ScoreBar({ value }: { value: number }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
@@ -1902,18 +1911,10 @@ function EndedView({
           >
             <thead>
               <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
-                {[
-                  "순위",
-                  "참가자",
-                  "논리성",
-                  "근거",
-                  "표현 명확성",
-                  "반론",
-                  "일관성",
-                  "AI점수",
-                  ...(isSoloEssay ? [] : ["동료평가"]),
-                  "최종",
-                ].map((h) => (
+                {(isSoloEssay
+                  ? SCORE_TABLE_HEADERS.filter((h) => h !== "동료평가")
+                  : SCORE_TABLE_HEADERS
+                ).map((h) => (
                   <th
                     key={h}
                     style={{
