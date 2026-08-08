@@ -1,0 +1,81 @@
+name: Deploy production
+
+"on":
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: logit-production
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    name: Validate application
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            logic-arena-frontend/package-lock.json
+            logic-arena-backend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm --prefix logic-arena-frontend ci
+
+      - name: Build frontend
+        run: npm --prefix logic-arena-frontend run build
+
+      - name: Install backend dependencies
+        run: npm --prefix logic-arena-backend ci
+
+      - name: Check backend syntax
+        run: find logic-arena-backend/src -name '*.js' -print0 | xargs -0 -n1 node --check
+
+      - name: Validate Docker configuration
+        run: ./deploy/test-docker-config.sh
+
+      - name: Validate CI/CD configuration
+        run: ./deploy/test-cicd-config.sh
+
+  deploy:
+    name: Deploy to EC2
+    needs: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      EC2_HOST: ${{ secrets.EC2_HOST }}
+      EC2_USER: ${{ secrets.EC2_USER }}
+      EC2_SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+      EC2_KNOWN_HOSTS: ${{ secrets.EC2_KNOWN_HOSTS }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Configure SSH
+        run: |
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "$EC2_SSH_PRIVATE_KEY" > "$HOME/.ssh/logit-production"
+          printf '%s\n' "$EC2_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/logit-production" "$HOME/.ssh/known_hosts"
+
+      - name: Run production deployment
+        run: |
+          ssh \
+            -i "$HOME/.ssh/logit-production" \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            "$EC2_USER@$EC2_HOST" \
+            'LOGIT_REPO_DIR=/opt/logit LOGIT_HEALTH_BASE_URL=https://logit.woo-zu.com bash -s' \
+            < deploy/ec2/deploy.sh

@@ -22,7 +22,7 @@ The workflow runs on:
 - pushes to `main`
 - manual `workflow_dispatch` runs
 
-Only one production deployment may run at a time. A newer queued deployment cancels an older in-progress run so that an older commit cannot finish after a newer one.
+Only one production deployment may run at a time. Deployments are queued instead of canceling an in-progress deployment so that a migration or container replacement is never interrupted midway. Each deployment fetches the latest `origin/main`, so a queued run converges on the newest main commit.
 
 ## CI Job
 
@@ -63,6 +63,8 @@ On EC2, the deployment script runs with strict shell error handling and performs
 9. Print the final Compose status for the Actions log.
 
 The server's `/opt/logit/.env` remains the only source of production secrets and runtime values. The workflow does not copy, replace, print, or upload that file. The named `postgres_data` volume is preserved.
+
+For local operator access, the Mac SSH configuration defines `Host logit` with the EC2 address, `ubuntu` user, and existing private key. This alias is only a local convenience; the GitHub-hosted runner creates its own temporary SSH configuration from repository secrets.
 
 ## Failure Behavior
 

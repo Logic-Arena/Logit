@@ -64,3 +64,38 @@
 - 루트 및 하위 프로젝트의 `package.json`, `package-lock.json`은 커밋 대상입니다.
 - 의존성 변경 시에는 반드시 `package.json`과 lock 파일 변경을 함께 포함합니다.
 - 로컬 설치물(`node_modules`, 빌드 산출물, 캐시)은 `.gitignore`로 관리합니다.
+
+---
+
+## 5. 운영 배포
+
+- 운영 주소: <https://logit.woo-zu.com>
+- 운영 브랜치: `main`
+- 서버 경로: `/opt/logit`
+- 실행 환경: EC2의 Docker Compose와 호스트 Nginx
+
+`main`에 push하면 `.github/workflows/deploy-production.yml`이 다음 순서로 실행됩니다.
+
+1. 프론트엔드 의존성 설치 및 프로덕션 빌드
+2. 백엔드 의존성 설치 및 JavaScript 문법 검사
+3. Docker 및 CI/CD 구성 검사
+4. EC2에 SSH 접속
+5. `main` fast-forward, Docker 이미지 빌드, Prisma migration, 컨테이너 재생성
+6. 컨테이너와 공개 HTTPS health check
+
+GitHub 저장소에는 다음 Actions Secrets가 필요합니다.
+
+- `EC2_HOST`
+- `EC2_USER`
+- `EC2_SSH_PRIVATE_KEY`
+- `EC2_KNOWN_HOSTS`
+
+GitHub의 Actions 화면에서 `Deploy production`을 선택하면 `workflow_dispatch`로 같은 배포를 수동 실행할 수 있습니다.
+
+로컬에서는 `~/.ssh/config`의 `Host logit` 별칭을 통해 접속합니다.
+
+```bash
+ssh logit
+```
+
+프론트엔드의 기존 lint 오류는 현재 배포 차단 조건이 아닙니다. 별도 수정 후 lint를 CI 필수 단계로 추가합니다.
