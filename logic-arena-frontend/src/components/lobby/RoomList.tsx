@@ -7,7 +7,7 @@ interface Props {
 
 export function RoomList({ rooms }: Props) {
   if (rooms.length === 0) {
-    return <div className="empty-state">현재 열린 토론방이 없습니다</div>;
+    return <div className="empty-state">현재 열려 있는 토론방이 없습니다.</div>;
   }
 
   return (

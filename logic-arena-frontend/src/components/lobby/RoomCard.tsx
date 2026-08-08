@@ -8,20 +8,25 @@ interface Props {
 
 export function RoomCard({ room }: Props) {
   const navigate = useNavigate();
-  const userCount = Object.keys(room.users).length;
-  const modeLabel = ROOM_MODES[room.mode ?? 'free_debate']?.label ?? '자유토론';
+  const playerCount = (room.proPlayer ? 1 : 0) + (room.conPlayer ? 1 : 0);
+  const totalCount = playerCount + room.observers.length;
+  const modeLabel = ROOM_MODES[room.mode ?? 'ai_debate']?.label ?? 'AI 모드';
+  const isInProgress = room.phase !== 'waiting' && room.phase !== 'ended';
 
   return (
-    <div className="room-card" onClick={() => navigate(`/rooms/${room.id}`)}>
+    <div className="room-card" onClick={() => navigate(`/rooms/${room.id}`, { state: { hasPassword: room.hasPassword } })}>
       <div>
         <div className="room-card__title">
+          {room.hasPassword && '🔒 '}
           {room.title}
           <span className="room-card__mode-badge">{modeLabel}</span>
         </div>
-        <div className="room-card__meta">참가자 {userCount}명</div>
+        <div className="room-card__meta">
+          참가자 {playerCount}/2명{totalCount > playerCount ? ` (관전 ${room.observers.length}명)` : ''}
+        </div>
       </div>
-      <span className={`room-card__phase room-card__phase--${room.phase}`}>
-        {room.phase === 'waiting' ? '대기 중' : '토론 중'}
+      <span className={`room-card__phase room-card__phase--${isInProgress ? 'voting' : room.phase}`}>
+        {room.phase === 'waiting' ? '대기 중' : room.phase === 'ended' ? '종료' : '진행 중'}
       </span>
     </div>
   );

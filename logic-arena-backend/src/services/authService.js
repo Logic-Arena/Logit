@@ -1,0 +1,193 @@
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import { prisma } from '../db/prisma.js';
+import { JWT_SECRET } from '../config.js';
+
+function sanitizeUser(user) {
+  if (!user) return user;
+
+  const { password, ...safeUser } = user;
+  return safeUser;
+}
+
+export async function findOrCreateGoogleUser(profile) {
+  const providerUserId = profile.id;
+  const email = profile.emails?.[0]?.value ?? null;
+  const name = profile.displayName ?? 'Google User';
+  const profileImage = profile.photos?.[0]?.value ?? null;
+
+  const existingUser = await prisma.user.findFirst({
+    where: {
+      provider: 'google',
+      provider_user_id: providerUserId,
+    },
+  });
+
+  if (existingUser) {
+    return sanitizeUser(existingUser);
+  }
+
+  const insertedUser = await prisma.user.create({
+    data: {
+      provider: 'google',
+      provider_user_id: providerUserId,
+      email,
+      name,
+      profile_image: profileImage,
+      stats: { create: {} },
+    },
+    include: { stats: true },
+  });
+
+  return sanitizeUser(insertedUser);
+}
+
+export async function findOrCreateKakaoUser(kakaoUser) {
+  const providerUserId = String(kakaoUser.id);
+  const email = kakaoUser.kakao_account?.email ?? null;
+  const name = kakaoUser.properties?.nickname ?? 'Kakao User';
+  const profileImage = kakaoUser.properties?.profile_image ?? null;
+
+  const existingUser = await prisma.user.findFirst({
+    where: {
+      provider: 'kakao',
+      provider_user_id: providerUserId,
+    },
+  });
+
+  if (existingUser) {
+    return sanitizeUser(existingUser);
+  }
+
+  const insertedUser = await prisma.user.create({
+    data: {
+      provider: 'kakao',
+      provider_user_id: providerUserId,
+      email,
+      name,
+      profile_image: profileImage,
+      stats: { create: {} },
+    },
+    include: { stats: true },
+  });
+
+  return sanitizeUser(insertedUser);
+}
+
+export async function signupLocalUser({ username, password, name, email, isTeacher = false }) {
+  const existing = await prisma.user.findUnique({
+    where: { login_id: username },
+  });
+  if (existing) {
+    throw new Error('이미 사용 중인 아이디입니다.');
+  }
+
+  if (email) {
+    const emailExists = await prisma.user.findUnique({
+      where: { email },
+    });
+    if (emailExists) {
+      throw new Error('이미 사용 중인 이메일입니다.');
+    }
+  }
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  const displayName = name?.trim() || username;
+
+  try {
+    const result = await prisma.user.create({
+      data: {
+        provider: 'local',
+        login_id: username,
+        password: passwordHash,
+        name: displayName,
+        email: email ?? null,
+        role: isTeacher ? 'teacher' : 'student',
+        stats: { create: {} },
+        ...(isTeacher ? { teacher_settings: { create: {} } } : {}),
+      },
+      include: { stats: true, teacher_settings: true },
+    });
+    return sanitizeUser(result);
+  } catch (error) {
+    if (error?.code === 'P2002') {
+      throw new Error('이미 사용 중인 아이디 또는 이메일입니다.');
+    }
+    throw error;
+  }
+}
+
+export async function loginLocalUser({ username, password }) {
+  const user = await prisma.user.findFirst({
+    where: {
+      provider: 'local',
+      login_id: username,
+    },
+    include: {
+      stats: true,
+      teacher_settings: true,
+    },
+  });
+
+  if (!user) {
+    throw new Error('존재하지 않는 아이디입니다.');
+  }
+
+  const isMatch = await bcrypt.compare(password, user.password ?? '');
+
+  if (!isMatch) {
+    throw new Error('비밀번호가 올바르지 않습니다.');
+  }
+
+  return sanitizeUser(user);
+}
+
+export function serializeAuthUser(user) {
+  return {
+    id: user.user_id,
+    provider: user.provider,
+    username: user.login_id ?? null,
+    email: user.email ?? null,
+    name: user.name ?? null,
+    profile_image: user.profile_image ?? null,
+    role: user.role ?? 'student',
+    stats: user.stats ?? null,
+    teacher_settings: user.teacher_settings ?? null,
+  };
+}
+
+export async function getUserWithStats(userId) {
+  const user = await prisma.user.findUnique({
+    where: { user_id: userId },
+    include: { stats: true, teacher_settings: true },
+  });
+  return user ? sanitizeUser(user) : null;
+}
+
+export function createPasswordResetToken(userId) {
+  return jwt.sign({ type: 'password_reset', userId }, JWT_SECRET, { expiresIn: '10m' });
+}
+
+export function verifyPasswordResetToken(token) {
+  const payload = jwt.verify(token, JWT_SECRET);
+  if (payload.type !== 'password_reset' || typeof payload.userId !== 'number') {
+    throw new Error('유효하지 않은 인증 토큰입니다.');
+  }
+  return payload.userId;
+}
+
+export function createAccessToken(user, nonce) {
+  return jwt.sign(
+    {
+      id: user.user_id,
+      provider: user.provider,
+      username: user.login_id,
+      email: user.email,
+      name: user.name,
+      role: user.role ?? 'student',
+      ...(nonce ? { nonce } : {}),
+    },
+    JWT_SECRET,
+    { expiresIn: '7d' }
+  );
+}

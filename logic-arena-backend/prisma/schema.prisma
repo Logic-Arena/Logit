@@ -1,0 +1,115 @@
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "library"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  user_id          Int             @id @default(autoincrement())
+  provider         String
+  provider_user_id String?
+  login_id         String?         @unique
+  password         String?
+  email            String?         @unique
+  name             String
+  profile_image    String?
+  role             String          @default("student") // student | teacher
+  created_at       DateTime        @default(now())
+  stats            UserStats?
+  debate_histories DebateHistory[]
+  teacher_settings TeacherSettings?
+  teacher_classes   DebateClass[]          @relation("TeacherClasses")
+  class_memberships DebateClassMember[]
+}
+
+model TeacherSettings {
+  user_id         Int     @id
+  enabled         Boolean @default(true)
+  vocab           Boolean @default(true)
+  evidence_limit  Boolean @default(true)
+  rebuttal_limit  Boolean @default(true)
+  phase_durations Json?   // { arguing, rebuttal, defense, counter, finalArgument, peerVoting } (초 단위)
+  user            User    @relation(fields: [user_id], references: [user_id])
+}
+
+model DebateClass {
+  id          Int                @id @default(autoincrement())
+  name        String
+  class_code  String             @unique
+  teacher_id  Int
+  created_at  DateTime           @default(now())
+  settings    Json?              // 반별 핸디캡 오버라이드 (null = 교사 글로벌 설정 사용)
+  teacher     User               @relation("TeacherClasses", fields: [teacher_id], references: [user_id])
+  members     DebateClassMember[]
+}
+
+model DebateClassMember {
+  class_id  Int
+  user_id   Int
+  joined_at DateTime    @default(now())
+  class     DebateClass @relation(fields: [class_id], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [user_id], references: [user_id])
+  @@id([class_id, user_id])
+}
+
+model UserStats {
+  user_id       Int      @id
+  tier          String   @default("브론즈 5")
+  rank_point    Int      @default(0)
+  score_average Float    @default(0)
+  total_games   Int      @default(0)
+  win_count     Int      @default(0)
+  badges        Json     @default("[]")
+  updated_at    DateTime @updatedAt
+  user          User     @relation(fields: [user_id], references: [user_id])
+}
+
+model DebateHistory {
+  id          Int      @id @default(autoincrement())
+  user_id     Int
+  topic       String
+  position    String
+  score       Int      @default(0)
+  logic       Int      @default(0)
+  evidence    Int      @default(0)
+  persuasion  Int      @default(0)
+  rebuttal    Int      @default(0)
+  consistency Int      @default(0)
+  advice           String?
+  result           String   @default("draw")
+  played_at        DateTime @default(now())
+  teacher_summary  Json?
+
+  user        User     @relation(fields: [user_id], references: [user_id])
+}
+
+model CommunityTopic {
+  id             Int             @id @default(autoincrement())
+  question       String
+  category       String
+  badge          String?
+  pro_votes      Int             @default(0)
+  con_votes      Int             @default(0)
+  expires_at     DateTime
+  created_at     DateTime        @default(now())
+  activated_at   DateTime?       // 주제 활성화 시각 (NEW 배지 계산용)
+  slot           String          @default("A") // A/B/C 슬롯
+  category_fixed String          @default("사회") // 슬롯별 고정 카테고리
+  display_order  Int             @default(0) // 순서
+  status         String          @default("active") // active/pending/closed
+  votes          CommunityVote[]
+}
+
+model CommunityVote {
+  id         Int            @id @default(autoincrement())
+  topic_id   Int
+  user_id    Int
+  vote       String
+  created_at DateTime       @default(now())
+  topic      CommunityTopic @relation(fields: [topic_id], references: [id])
+
+  @@unique([topic_id, user_id])
+}

@@ -1,0 +1,175 @@
+<svg width="1600" height="1000" viewBox="0 0 1600 1000" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Logit Edu business model and product overview</title>
+  <desc id="desc">Education business model overview for an AI debate learning diagnostics platform with student practice, AI scoring, teacher dashboard, and monetization options.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1600" y2="1000" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F8FAFC"/>
+      <stop offset="1" stop-color="#EEF2F7"/>
+    </linearGradient>
+    <linearGradient id="primary" x1="150" y1="110" x2="1440" y2="900" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#245BFE"/>
+      <stop offset="1" stop-color="#18A058"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#0F172A" flood-opacity="0.12"/>
+    </filter>
+    <style>
+      .title { font: 800 48px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0F172A; }
+      .subtitle { font: 500 21px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; }
+      .section-title { font: 800 25px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0F172A; }
+      .label { font: 700 18px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0F172A; }
+      .small-label { font: 700 15px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0F172A; }
+      .body { font: 500 15px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; }
+      .small { font: 500 13px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #64748B; }
+      .white-title { font: 800 22px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: white; }
+      .white-body { font: 600 14px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #EAF2FF; }
+      .pill { font: 700 13px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #245BFE; }
+      .price { font: 800 19px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0F172A; }
+      .muted { fill: #94A3B8; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="1000" fill="url(#bg)"/>
+  <rect x="70" y="60" width="1460" height="880" rx="32" fill="white" filter="url(#shadow)"/>
+  <rect x="70" y="60" width="1460" height="10" fill="url(#primary)"/>
+
+  <text x="120" y="135" class="title">Logit Edu</text>
+  <text x="120" y="178" class="subtitle">AI 토론을 통해 학생의 사고력, 문해력, 어휘력, 공감능력을 진단하고 선생님이 지도할 수 있는 교육용 SaaS</text>
+
+  <rect x="1180" y="105" width="260" height="54" rx="27" fill="#EAF2FF"/>
+  <circle cx="1210" cy="132" r="8" fill="#18A058"/>
+  <text x="1230" y="138" class="pill">교육기관 구독형 BM</text>
+
+  <g transform="translate(120 235)">
+    <rect width="315" height="590" rx="24" fill="#F8FAFC" stroke="#DCE3EE"/>
+    <text x="28" y="46" class="section-title">누가 쓰는가</text>
+    <text x="28" y="74" class="body">토론 게임이 아니라 학습 진단 도구로 포지셔닝</text>
+
+    <g transform="translate(28 118)">
+      <circle cx="31" cy="31" r="31" fill="#DBEAFE"/>
+      <path d="M31 19c7 0 13 6 13 13s-6 13-13 13-13-6-13-13 6-13 13-13Z" fill="#245BFE"/>
+      <text x="82" y="25" class="label">학생</text>
+      <text x="82" y="49" class="body">토론 과제를 수행하고</text>
+      <text x="82" y="70" class="body">AI 피드백으로 반복 훈련</text>
+    </g>
+
+    <g transform="translate(28 230)">
+      <circle cx="31" cy="31" r="31" fill="#DCFCE7"/>
+      <path d="M18 42h26v-6c0-8-6-13-13-13s-13 5-13 13v6Z" fill="#18A058"/>
+      <circle cx="31" cy="20" r="8" fill="#18A058"/>
+      <text x="82" y="25" class="label">선생님</text>
+      <text x="82" y="49" class="body">학급 전체 상태를 보고</text>
+      <text x="82" y="70" class="body">학생별 지도 포인트 확인</text>
+    </g>
+
+    <g transform="translate(28 342)">
+      <circle cx="31" cy="31" r="31" fill="#FEF3C7"/>
+      <rect x="18" y="18" width="26" height="28" rx="5" fill="#D97706"/>
+      <rect x="24" y="24" width="14" height="3" rx="1.5" fill="#FEF3C7"/>
+      <rect x="24" y="32" width="14" height="3" rx="1.5" fill="#FEF3C7"/>
+      <text x="82" y="25" class="label">학교/학원</text>
+      <text x="82" y="49" class="body">반 단위 과제, 평가 기준,</text>
+      <text x="82" y="70" class="body">성과 리포트 관리</text>
+    </g>
+
+    <g transform="translate(28 472)">
+      <rect width="259" height="82" rx="16" fill="white" stroke="#DCE3EE"/>
+      <text x="18" y="29" class="small-label">핵심 구매 이유</text>
+      <text x="18" y="54" class="body">선생님 시간을 줄이면서도</text>
+      <text x="18" y="74" class="body">개별 피드백의 질을 높인다</text>
+    </g>
+  </g>
+
+  <g transform="translate(470 235)">
+    <rect width="450" height="590" rx="24" fill="#F8FAFC" stroke="#DCE3EE"/>
+    <text x="30" y="46" class="section-title">학습 루프</text>
+    <text x="30" y="74" class="body">학생 활동이 곧 데이터가 되고, 데이터가 지도 계획으로 돌아간다</text>
+
+    <g transform="translate(55 128)">
+      <circle cx="165" cy="165" r="150" fill="#EFF6FF" stroke="#BBD2FF" stroke-width="2"/>
+      <path d="M165 18a147 147 0 0 1 127 74" stroke="#245BFE" stroke-width="11" stroke-linecap="round"/>
+      <path d="M312 165a147 147 0 0 1-74 127" stroke="#18A058" stroke-width="11" stroke-linecap="round"/>
+      <path d="M165 312a147 147 0 0 1-127-74" stroke="#D97706" stroke-width="11" stroke-linecap="round"/>
+      <path d="M18 165a147 147 0 0 1 74-127" stroke="#C026D3" stroke-width="11" stroke-linecap="round"/>
+
+      <rect x="109" y="35" width="112" height="64" rx="16" fill="white" stroke="#BBD2FF"/>
+      <text x="133" y="61" class="small-label">1. 과제</text>
+      <text x="126" y="83" class="small">토론/논술</text>
+
+      <rect x="231" y="133" width="112" height="64" rx="16" fill="white" stroke="#BDE7CD"/>
+      <text x="256" y="159" class="small-label">2. 채점</text>
+      <text x="253" y="181" class="small">AI 루브릭</text>
+
+      <rect x="109" y="231" width="112" height="64" rx="16" fill="white" stroke="#F6D389"/>
+      <text x="133" y="257" class="small-label">3. 진단</text>
+      <text x="120" y="279" class="small">역량 프로필</text>
+
+      <rect x="-12" y="133" width="112" height="64" rx="16" fill="white" stroke="#F0B8F6"/>
+      <text x="13" y="159" class="small-label">4. 지도</text>
+      <text x="8" y="181" class="small">개별 처방</text>
+
+      <circle cx="165" cy="165" r="64" fill="url(#primary)"/>
+      <text x="126" y="156" class="white-title">성장</text>
+      <text x="117" y="181" class="white-body">기록 기반 반복</text>
+    </g>
+
+    <g transform="translate(34 478)">
+      <rect width="382" height="72" rx="16" fill="white" stroke="#DCE3EE"/>
+      <text x="18" y="29" class="small-label">평가 축 예시</text>
+      <text x="18" y="55" class="body">문해력 · 어휘력 · 논리력 · 근거력 · 공감능력 · 표현력 · 반박력</text>
+    </g>
+  </g>
+
+  <g transform="translate(955 235)">
+    <rect width="465" height="360" rx="24" fill="#0F172A"/>
+    <text x="30" y="46" class="white-title">선생님 대시보드</text>
+    <text x="30" y="75" class="white-body">전체 현황과 학생별 지도 포인트를 한 화면에서 확인</text>
+
+    <g transform="translate(30 112)">
+      <rect width="190" height="76" rx="16" fill="#1E293B"/>
+      <text x="18" y="29" class="white-body">학급 평균</text>
+      <text x="18" y="59" style="font: 800 28px system-ui; fill: white;">76점</text>
+      <rect x="214" width="190" height="76" rx="16" fill="#1E293B"/>
+      <text x="232" y="29" class="white-body">지도 필요 학생</text>
+      <text x="232" y="59" style="font: 800 28px system-ui; fill: #FBBF24;">6명</text>
+    </g>
+
+    <g transform="translate(30 218)">
+      <rect width="404" height="84" rx="16" fill="#1E293B"/>
+      <text x="18" y="31" class="white-body">역량별 평균</text>
+      <rect x="18" y="48" width="60" height="12" rx="6" fill="#245BFE"/>
+      <rect x="88" y="48" width="42" height="12" rx="6" fill="#18A058"/>
+      <rect x="140" y="48" width="78" height="12" rx="6" fill="#D97706"/>
+      <rect x="228" y="48" width="51" height="12" rx="6" fill="#C026D3"/>
+      <rect x="289" y="48" width="88" height="12" rx="6" fill="#38BDF8"/>
+      <text x="18" y="74" class="small">문해 · 어휘 · 논리 · 공감 · 표현</text>
+    </g>
+  </g>
+
+  <g transform="translate(955 625)">
+    <rect width="465" height="200" rx="24" fill="#F8FAFC" stroke="#DCE3EE"/>
+    <text x="30" y="43" class="section-title">현실적 수익화</text>
+
+    <g transform="translate(30 70)">
+      <rect width="125" height="100" rx="16" fill="white" stroke="#DCE3EE"/>
+      <text x="18" y="28" class="small-label">무료 파일럿</text>
+      <text x="18" y="54" class="small">1개 반</text>
+      <text x="18" y="74" class="small">월 과제 제한</text>
+
+      <rect x="140" width="125" height="100" rx="16" fill="white" stroke="#BBD2FF"/>
+      <text x="158" y="28" class="small-label">클래스 플랜</text>
+      <text x="158" y="57" class="price">월 구독</text>
+      <text x="158" y="78" class="small">학생 seat 기반</text>
+
+      <rect x="280" width="125" height="100" rx="16" fill="white" stroke="#BDE7CD"/>
+      <text x="298" y="28" class="small-label">학교/학원</text>
+      <text x="298" y="57" class="price">기관 계약</text>
+      <text x="298" y="78" class="small">관리자/리포트</text>
+    </g>
+  </g>
+
+  <g transform="translate(120 865)">
+    <rect width="1300" height="42" rx="21" fill="#EEF6FF"/>
+    <text x="26" y="27" class="body">MVP 우선순위: 1인 AI 토론 → 학생별 역량 점수 저장 → 학급/과제 모델 → 선생님 대시보드 → 결제/seat 제한</text>
+  </g>
+</svg>

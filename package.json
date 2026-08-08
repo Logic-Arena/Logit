@@ -3,7 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "concurrently --names \"BACK,FRONT\" --prefix-colors \"blue,green\" \"npm run dev --prefix logic-arena-backend\" \"npm run dev --prefix logic-arena-frontend\""
+    "start": "concurrently --kill-others --names \"BACK,FRONT\" --prefix-colors \"blue,green\" \"cd logic-arena-backend && npm run dev\" \"cd logic-arena-frontend && npm run dev\"",
+    "pi:setup": "bash deploy/raspberry-pi/setup-system.sh",
+    "pi:deploy": "bash deploy/raspberry-pi/deploy-app.sh",
+    "pi:restore-db": "bash deploy/raspberry-pi/restore-render-db.sh"
   },
   "devDependencies": {
     "concurrently": "^9.0.0"
