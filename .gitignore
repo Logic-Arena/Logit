@@ -6,6 +6,7 @@ node_modules/
 dist/
 build/
 .cache/
+.playwright-cli/
 backups/
 
 # Logs
