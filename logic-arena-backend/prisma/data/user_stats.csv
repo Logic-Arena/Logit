@@ -1,0 +1,8 @@
+user_id,tier,rank_point,score_average,total_games,win_count,badges,updated_at
+user_id,tier,rank_point,score_average,total_games,win_count,badges,updated_at
+1,다이아몬드 1,3200,95.5,150,110,"[""TOP_DEBATER"", ""WINNING_STREAK"", ""LOGIC_KING""]",2026-04-05T20:00:00Z
+2,브론즈 5,0,0,0,0,"[]",2026-04-02T11:00:00Z
+3,골드 2,1850,78.2,85,45,"[""PARTICIPANT""]",2026-04-05T19:30:00Z
+4,실버 4,920,62.5,30,12,"[]",2026-04-05T18:00:00Z
+5,플래티넘 3,2450,84.0,110,65,"[""LOGIC_MASTER""]",2026-04-05T21:00:00Z
+6,브론즈 1,750,45.0,50,5,"[""EFFORT_AWARD""]",2026-04-06T11:00:00Z
