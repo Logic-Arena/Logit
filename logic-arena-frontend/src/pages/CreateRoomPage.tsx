@@ -114,7 +114,7 @@ export function CreateRoomModal({ isOpen, onClose }: Props) {
                 onChange={(e) => setTitle(e.target.value)}
                 autoFocus
               />
-              {error && (
+              {error && error !== '주제를 입력해 주세요' && (
                 <span style={{ fontSize: '12px', color: 'var(--color-danger)' }}>{error}</span>
               )}
             </div>
@@ -182,6 +182,9 @@ export function CreateRoomModal({ isOpen, onClose }: Props) {
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
               />
+              {error === '주제를 입력해 주세요' && (
+                <span style={{ fontSize: '12px', color: 'var(--color-danger)' }}>{error}</span>
+              )}
             </div>
           )}
 
