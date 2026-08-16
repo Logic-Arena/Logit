@@ -1,6 +1,14 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getDebateHistory, getTrainingRecommendation, createRoom, type DebateHistoryItem, type TrainingRecommendation } from "../lib/api";
+import {
+  getDebateHistory,
+  getGlobalAnalyticsAverages,
+  getTrainingRecommendation,
+  createRoom,
+  type DebateHistoryItem,
+  type GlobalAnalyticsAverages,
+  type TrainingRecommendation,
+} from "../lib/api";
 import { useUserStore } from "../store/useUserStore";
 import {
   RadarChart,
@@ -22,7 +30,8 @@ import styles from "./AnalyticsPage.module.css";
 type Grade = "A" | "B" | "C";
 type Category = "전체" | "사회" | "과학" | "정치" | "자유";
 type SortKey = "최신순" | "높은 점수순" | "낮은 점수순";
-type Position = "찬성" | "반대";
+type Position = "찬성" | "반대" | "개인 논술";
+type ActivityFilter = "all" | "debate" | "solo";
 
 interface ReportItem {
   id: number;
@@ -35,6 +44,27 @@ interface ReportItem {
   position: Position;
   best: string;
   needsImprovement: string;
+}
+
+function historyResultLabel(result: DebateHistoryItem["result"]): string {
+  if (result === "solo") return "개인 논술";
+  if (result === "win") return "승리";
+  if (result === "lose") return "패배";
+  return "무승부";
+}
+
+function historyPositionLabel(position: DebateHistoryItem["position"]): Position {
+  if (position === "solo") return "개인 논술";
+  return position === "pro" ? "찬성" : "반대";
+}
+
+function historyPositionStyle(position: Position): React.CSSProperties {
+  if (position === "개인 논술") {
+    return { background: "var(--color-primary-soft)", color: "var(--color-primary)" };
+  }
+  return position === "찬성"
+    ? { background: "var(--color-pro-bg)", color: "var(--color-pro)" }
+    : { background: "var(--color-con-bg)", color: "var(--color-con)" };
 }
 
 /* ─── 상수 ─────────────────────────────────────────────────── */
@@ -150,11 +180,22 @@ function RecommendationSection() {
   const [rec, setRec] = useState<TrainingRecommendation | null>(null);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [error, setError] = useState("");
 
-  useEffect(() => {
+  function loadRecommendation() {
+    setLoading(true);
+    setError("");
     getTrainingRecommendation()
       .then(setRec)
+      .catch((err) => {
+        setRec(null);
+        setError(err instanceof Error ? err.message : '추천 훈련을 불러오지 못했습니다.');
+      })
       .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    loadRecommendation();
   }, []);
 
   async function handlePractice() {
@@ -176,11 +217,11 @@ function RecommendationSection() {
         <div className={styles.recommendationHeader}>
           <span className={styles.recommendationBadge}>오늘의 추천 훈련</span>
           <h3 className={styles.chartTitle}>
-            {loading ? '분석 중...' : (rec?.title ?? '훈련을 불러올 수 없습니다')}
+            {loading ? '분석 중...' : error ? '추천 훈련을 불러오지 못했습니다' : (rec?.title ?? '추천 결과가 없습니다')}
           </h3>
         </div>
         <p className={styles.recommendationDesc}>
-          {loading ? '' : (rec?.description ?? '')}
+          {loading ? '' : error ? '네트워크 상태를 확인한 뒤 다시 시도해주세요.' : (rec?.description ?? '')}
         </p>
         {rec?.topic && !loading && (
           <p style={{ fontSize: '12px', color: 'var(--color-primary)', marginTop: '6px', fontWeight: 600 }}>
@@ -190,10 +231,10 @@ function RecommendationSection() {
       </div>
       <button
         className={styles.recommendationBtn}
-        onClick={handlePractice}
+        onClick={error ? loadRecommendation : handlePractice}
         disabled={creating || loading}
       >
-        {creating ? '방 생성 중...' : '연습방 바로가기'}
+        {loading ? '불러오는 중...' : error ? '다시 시도' : creating ? '방 생성 중...' : '연습방 바로가기'}
       </button>
     </div>
   );
@@ -201,11 +242,13 @@ function RecommendationSection() {
 
 
 function DetailModal({ item, onClose }: { item: DebateHistoryItem; onClose: () => void }) {
-  const resultLabel = item.result === 'win' ? '승리' : item.result === 'lose' ? '패배' : '무승부';
-  const resultEmoji = item.result === 'win' ? '🏆' : item.result === 'lose' ? '⚖️' : '🤝';
-  const resultColor = item.result === 'win' ? 'var(--color-primary)' : item.result === 'lose' ? 'var(--color-con-orange)' : 'var(--color-text-muted)';
-  const positionLabel = item.position === 'pro' ? '찬성' : '반대';
-  const positionColor = item.position === 'pro' ? 'var(--color-pro)' : 'var(--color-con)';
+  const isSolo = item.result === 'solo' || item.position === 'solo';
+  const resultLabel = historyResultLabel(item.result);
+  const resultEmoji = isSolo ? '📝' : item.result === 'win' ? '🏆' : item.result === 'lose' ? '⚖️' : '🤝';
+  const resultColor = isSolo ? 'var(--color-primary)' : item.result === 'win' ? 'var(--color-primary)' : item.result === 'lose' ? 'var(--color-con-orange)' : 'var(--color-text-muted)';
+  const positionLabel = historyPositionLabel(item.position);
+  const positionStyle = historyPositionStyle(positionLabel);
+  const positionColor = isSolo ? 'var(--color-primary)' : item.position === 'pro' ? 'var(--color-pro)' : 'var(--color-con)';
 
   const dateStr = new Date(item.played_at).toLocaleString('ko-KR', {
     year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
@@ -243,7 +286,7 @@ function DetailModal({ item, onClose }: { item: DebateHistoryItem; onClose: () =
           <div style={{ fontSize: '26px', fontWeight: 800, color: resultColor, letterSpacing: '-0.5px' }}>{resultLabel}</div>
           <div style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginTop: '8px', lineHeight: 1.6, maxWidth: '420px', margin: '8px auto 0' }}>{item.topic}</div>
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginTop: '12px', flexWrap: 'wrap' }}>
-            <span style={{ padding: '4px 14px', borderRadius: '999px', fontSize: '12px', fontWeight: 700, background: item.position === 'pro' ? 'var(--color-pro-bg)' : 'var(--color-con-bg)', color: positionColor }}>{positionLabel}측</span>
+            <span style={{ padding: '4px 14px', borderRadius: '999px', fontSize: '12px', fontWeight: 700, ...positionStyle }}>{positionLabel}{isSolo ? '' : '측'}</span>
             <span style={{ padding: '4px 14px', borderRadius: '999px', fontSize: '12px', color: 'var(--color-text-muted)', background: 'var(--color-surface-2)', border: '1px solid var(--color-border)' }}>{dateStr}</span>
           </div>
         </div>
@@ -340,14 +383,11 @@ function ReportCard({ item, onDetail }: { item: ReportItem; onDetail?: () => voi
         <h3 className={styles.reportCardNewTitle} title={item.topic}>{item.topic}</h3>
         <div className={styles.reportCardNewMeta}>
           <span className={`${styles.reportCardNewChip} ${styles.reportCardNewResult}`}>
-            {item.result === "win" ? "승리" : item.result === "lose" ? "패배" : "무승부"}
+            {historyResultLabel(item.result)}
           </span>
           <span
             className={styles.reportCardNewChip}
-            style={{
-              background: item.position === "찬성" ? "var(--color-pro-bg)" : "var(--color-con-bg)",
-              color: item.position === "찬성" ? "var(--color-pro)" : "var(--color-con)",
-            }}
+            style={historyPositionStyle(item.position)}
           >
             {item.position}
           </span>
@@ -431,14 +471,34 @@ function ReportCard({ item, onDetail }: { item: ReportItem; onDetail?: () => voi
 export function AnalyticsDashboardSection({ hideKpi = false }: { hideKpi?: boolean } = {}) {
   const user = useUserStore((s) => s.user);
   const [history, setHistory] = useState<DebateHistoryItem[]>([]);
+  const [historyError, setHistoryError] = useState("");
+  const [averages, setAverages] = useState<GlobalAnalyticsAverages | null>(null);
+  const [averagesError, setAveragesError] = useState("");
+  const [activityFilter, setActivityFilter] = useState<ActivityFilter>("all");
 
-  useEffect(() => {
-    getDebateHistory().then(setHistory).catch(() => {});
-  }, []);
+  function loadDashboardData() {
+    setHistoryError("");
+    setAveragesError("");
+    getDebateHistory()
+      .then(setHistory)
+      .catch((err) => setHistoryError(err instanceof Error ? err.message : '이력을 불러오지 못했습니다.'));
+    getGlobalAnalyticsAverages()
+      .then(setAverages)
+      .catch((err) => setAveragesError(err instanceof Error ? err.message : '전체 평균을 불러오지 못했습니다.'));
+  }
+
+  useEffect(() => { loadDashboardData(); }, []);
+
+  const filteredHistory = useMemo(() => history.filter((item) => {
+    const isSolo = item.position === 'solo' || item.result === 'solo';
+    if (activityFilter === 'solo') return isSolo;
+    if (activityFilter === 'debate') return !isSolo;
+    return true;
+  }), [history, activityFilter]);
 
   const lineData = useMemo(() => {
-    if (history.length === 0) return [];
-    return [...history]
+    if (filteredHistory.length === 0) return [];
+    return [...filteredHistory]
       .sort((a, b) => new Date(a.played_at).getTime() - new Date(b.played_at).getTime())
       .slice(-10)
       .map((h, i) => {
@@ -450,26 +510,41 @@ export function AnalyticsDashboardSection({ hideKpi = false }: { hideKpi?: boole
           topic: h.topic,
         };
       });
-  }, [history]);
+  }, [filteredHistory]);
 
   const radarData = useMemo(() => {
-    // 항목당 0~20점 척도, domain [0, 20]으로 직접 표시
+    // 선택한 활동 유형 안에서 사용자 평균과 같은 유형의 전체 평균을 비교한다.
     const avg = (vals: number[]) => Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
-    if (history.length === 0) return [
-      { axis: "근거 제시", userValue: 0, avgValue: 13 },
-      { axis: "반박 능력", userValue: 0, avgValue: 11 },
-      { axis: "논리력",   userValue: 0, avgValue: 12 },
-      { axis: "일관성",   userValue: 0, avgValue: 12 },
-      { axis: "표현 명확성",   userValue: 0, avgValue: 12 },
-    ];
+    const globalAvg = activityFilter === 'debate'
+      ? averages?.debate
+      : activityFilter === 'solo'
+        ? averages?.soloEssay
+        : averages?.all;
+    const rebuttalLabel = activityFilter === 'debate'
+      ? '반박 능력'
+      : activityFilter === 'solo'
+        ? '반론 고려'
+        : '반론 대응';
+    const expressionLabel = activityFilter === 'debate'
+      ? '설득력'
+      : activityFilter === 'solo'
+        ? '표현 명확성'
+        : '표현·설득';
+    if (filteredHistory.length === 0) return [];
     return [
-      { axis: "근거 제시", userValue: avg(history.map((h) => h.evidence ?? 0)),   avgValue: 13 },
-      { axis: "반박 능력", userValue: avg(history.map((h) => h.rebuttal ?? 0)),   avgValue: 11 },
-      { axis: "논리력",   userValue: avg(history.map((h) => h.logic ?? 0)),       avgValue: 12 },
-      { axis: "일관성",   userValue: avg(history.map((h) => h.consistency ?? 0)), avgValue: 12 },
-      { axis: "표현 명확성",   userValue: avg(history.map((h) => h.persuasion ?? 0)),  avgValue: 12 },
+      { axis: "근거 제시", userValue: avg(filteredHistory.map((h) => h.evidence ?? 0)), avgValue: globalAvg?.evidence ?? 0 },
+      { axis: rebuttalLabel, userValue: avg(filteredHistory.map((h) => h.rebuttal ?? 0)), avgValue: globalAvg?.rebuttal ?? 0 },
+      { axis: "논리력", userValue: avg(filteredHistory.map((h) => h.logic ?? 0)), avgValue: globalAvg?.logic ?? 0 },
+      { axis: "일관성", userValue: avg(filteredHistory.map((h) => h.consistency ?? 0)), avgValue: globalAvg?.consistency ?? 0 },
+      { axis: expressionLabel, userValue: avg(filteredHistory.map((h) => h.persuasion ?? 0)), avgValue: globalAvg?.persuasion ?? 0 },
     ];
-  }, [history]);
+  }, [filteredHistory, averages, activityFilter]);
+
+  const comparisonAverageLabel = activityFilter === 'debate'
+    ? '전체 토론 평균'
+    : activityFilter === 'solo'
+      ? '전체 논술 평균'
+      : '전체 평균';
 
   const liveKpi = useMemo(() => {
     const avgScore = history.length > 0
@@ -501,6 +576,27 @@ export function AnalyticsDashboardSection({ hideKpi = false }: { hideKpi?: boole
 
   return (
     <div className={styles.bentoGridWrapper}>
+      {historyError && (
+        <div className={styles.loadError} role="alert">
+          <span>{historyError}</span>
+          <button type="button" onClick={loadDashboardData}>다시 시도</button>
+        </div>
+      )}
+      <div className={styles.activityFilterBar}>
+        <div className={styles.activityFilter} aria-label="활동 유형 선택">
+          {([['all', '전체'], ['debate', '일반 토론'], ['solo', '개인 논술']] as const).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              className={activityFilter === value ? styles.activityFilterActive : ''}
+              onClick={() => setActivityFilter(value)}
+              aria-pressed={activityFilter === value}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
       <div className={styles.bentoGridContainer}>
         {/* KPI Row */}
         {!hideKpi && (
@@ -534,7 +630,13 @@ export function AnalyticsDashboardSection({ hideKpi = false }: { hideKpi?: boole
             <div className={styles.chartCardFlex}>
               {lineData.length === 0 ? (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--color-text-muted)', fontSize: '13px' }}>
-                  토론을 완료하면 점수 추이가 표시됩니다
+                  {historyError
+                    ? '이력을 불러올 수 없습니다'
+                    : activityFilter === 'solo'
+                      ? '완료한 개인 논술이 없습니다'
+                      : activityFilter === 'debate'
+                        ? '완료한 일반 토론이 없습니다'
+                        : '완료한 활동이 없습니다'}
                 </div>
               ) : (
               <ResponsiveContainer width="100%" height="100%" debounce={0}>
@@ -627,11 +729,21 @@ export function AnalyticsDashboardSection({ hideKpi = false }: { hideKpi?: boole
                 </div>
                 <div className={styles.legendItem}>
                   <span className={styles.legendIndicatorAvg}></span>
-                  <span className={styles.legendTextAvg}>전체 평균</span>
+                  <span className={styles.legendTextAvg}>{comparisonAverageLabel}</span>
                 </div>
               </div>
             </div>
+            {averagesError && <div className={styles.inlineError}>전체 평균을 불러오지 못했습니다.</div>}
             <div className={styles.chartCardFlex}>
+              {radarData.length === 0 ? (
+                <div className={styles.chartEmptyState}>
+                  {activityFilter === 'solo'
+                    ? '아직 개인 논술 평가 기록이 없습니다.'
+                    : activityFilter === 'debate'
+                      ? '아직 일반 토론 평가 기록이 없습니다.'
+                      : '아직 완료한 활동이 없습니다.'}
+                </div>
+              ) : (
               <ResponsiveContainer width="100%" height="100%" debounce={0}>
                 <RadarChart
                   data={radarData}
@@ -647,7 +759,7 @@ export function AnalyticsDashboardSection({ hideKpi = false }: { hideKpi?: boole
                     stroke="var(--color-border)"
                   />
                   <Radar
-                    name="전체 평균"
+                    name={comparisonAverageLabel}
                     dataKey="avgValue"
                     stroke="var(--color-text-muted)"
                     fill="var(--color-text-muted)"
@@ -667,6 +779,7 @@ export function AnalyticsDashboardSection({ hideKpi = false }: { hideKpi?: boole
                   />
                 </RadarChart>
               </ResponsiveContainer>
+              )}
             </div>
           </div>
         </div>
@@ -702,7 +815,7 @@ function toReportItem(h: DebateHistoryItem): ReportItem {
     score: h.score,
     result: h.result,
     category: "자유",
-    position: h.position === "pro" ? "찬성" : "반대",
+    position: historyPositionLabel(h.position),
     best: h.advice ?? "",
     needsImprovement: "",
   };
@@ -714,11 +827,20 @@ export function AnalyticsHistorySection() {
   const [sortKey, setSortKey] = useState<SortKey>("최신순");
   const [rawItems, setRawItems] = useState<DebateHistoryItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<DebateHistoryItem | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const reports = useMemo(() => rawItems.map(toReportItem), [rawItems]);
 
-  useEffect(() => {
-    getDebateHistory().then(setRawItems);
-  }, []);
+  function loadHistory() {
+    setLoading(true);
+    setLoadError("");
+    getDebateHistory()
+      .then(setRawItems)
+      .catch((err) => setLoadError(err instanceof Error ? err.message : '이력을 불러오지 못했습니다.'))
+      .finally(() => setLoading(false));
+  }
+
+  useEffect(() => { loadHistory(); }, []);
 
   function openDetail(id: number) {
     const raw = rawItems.find(h => h.id === id);
@@ -739,10 +861,17 @@ export function AnalyticsHistorySection() {
     else list.sort((a, b) => b.date.localeCompare(a.date));
     return list;
   }, [searchQuery, category, sortKey, reports]);
+  const hasActiveSearch = searchQuery.trim().length > 0 || category !== "전체";
 
   return (
     <>
       {selectedItem && <DetailModal item={selectedItem} onClose={() => setSelectedItem(null)} />}
+      {loadError && (
+        <div className={styles.loadError} role="alert">
+          <span>{loadError}</span>
+          <button type="button" onClick={loadHistory}>다시 시도</button>
+        </div>
+      )}
       {/* 최근 3건 성장 요약 */}
       <div className={styles.recentSummary}>
         <p className={styles.recentSummaryTitle}>최근 성장 요약</p>
@@ -800,11 +929,7 @@ export function AnalyticsHistorySection() {
                   </button>
                   <span
                     className={styles.recentBannerPosition}
-                    style={
-                      item.position === "찬성"
-                        ? { background: "var(--color-pro-bg)", color: "var(--color-pro)" }
-                        : { background: "var(--color-con-bg)", color: "var(--color-con)" }
-                    }
+                    style={historyPositionStyle(item.position)}
                   >
                     {item.position}
                   </span>
@@ -903,7 +1028,9 @@ export function AnalyticsHistorySection() {
 
       {/* 리포트 카드 리스트 */}
       <div className={styles.reportGrid}>
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className={styles.emptyState}>이력을 불러오는 중입니다...</div>
+        ) : loadError ? null : filtered.length === 0 ? (
           <div className={styles.emptyState}>
             <div className={styles.emptyIconWrapper}>
               <svg
@@ -920,9 +1047,13 @@ export function AnalyticsHistorySection() {
                 <path d="m21 21-4.3-4.3" />
               </svg>
             </div>
-            <h3 className={styles.emptyTitle}>검색 결과가 없습니다.</h3>
+            <h3 className={styles.emptyTitle}>
+              {hasActiveSearch ? '검색 결과가 없습니다.' : '아직 완료한 활동이 없습니다.'}
+            </h3>
             <p className={styles.emptyDescription}>
-              다른 키워드나 필터로 검색해보세요.
+              {hasActiveSearch
+                ? '다른 키워드나 필터로 검색해보세요.'
+                : '토론이나 개인 논술을 완료하면 이곳에 활동 이력이 표시됩니다.'}
             </p>
           </div>
         ) : (

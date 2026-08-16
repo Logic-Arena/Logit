@@ -170,7 +170,7 @@ function DebateSummaryModal({ debate, token, onClose }: {
           <div style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginBottom: '6px' }}>{dateStr}</div>
           <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-text)', lineHeight: 1.5 }}>{debate.topic}</div>
           <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
-            <span style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '12px', fontWeight: 700, background: debate.position === 'pro' ? 'var(--color-pro-bg)' : 'var(--color-con-bg)', color: positionColor }}>{positionLabel}측</span>
+            <span style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '12px', fontWeight: 700, background: isSolo ? 'var(--color-primary-soft)' : debate.position === 'pro' ? 'var(--color-pro-bg)' : 'var(--color-con-bg)', color: positionColor }}>{positionLabel}{isSolo ? '' : '측'}</span>
             <span style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '12px', fontWeight: 700, background: 'var(--color-surface-2)', color: 'var(--color-text-muted)', border: '1px solid var(--color-border)' }}>{resultLabel}</span>
             <span style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '12px', fontWeight: 700, background: 'var(--color-surface-2)', color: 'var(--color-primary)' }}>{debate.score}점</span>
           </div>
@@ -499,8 +499,16 @@ function ClassSummaryPanel({ summary, className }: { summary: ClassSummary; clas
       <div className={styles.cardTitle}>{className} 학급 현황</div>
       <div className={styles.summaryGrid}>
         <div className={styles.summaryItem}>
-          <div className={styles.summaryVal}>{summary.totalDebates}</div>
-          <div className={styles.summaryKey}>총 토론 수</div>
+          <div className={styles.summaryVal}>{summary.totalActivities}</div>
+          <div className={styles.summaryKey}>총 활동 수</div>
+        </div>
+        <div className={styles.summaryItem}>
+          <div className={styles.summaryVal}>{summary.debateCount}</div>
+          <div className={styles.summaryKey}>일반 토론</div>
+        </div>
+        <div className={styles.summaryItem}>
+          <div className={styles.summaryVal}>{summary.soloEssayCount}</div>
+          <div className={styles.summaryKey}>개인 논술</div>
         </div>
         <div className={styles.summaryItem}>
           <div className={styles.summaryVal}>{summary.avgScore}</div>
@@ -552,7 +560,7 @@ function ClassSummaryPanel({ summary, className }: { summary: ClassSummary; clas
               <span className={styles.topRank}>{i + 1}</span>
               <span className={styles.topName}>{s.name}</span>
               <span className={styles.topScore}>평균 {s.avgScore}점</span>
-              <span className={styles.topGames}>토론 {s.debateCount}회</span>
+              <span className={styles.topGames}>활동 {s.activityCount}회</span>
             </div>
           ))}
         </>
@@ -683,7 +691,7 @@ function StudentDetailView({ student, onBack, token, summary }: {
               style={{ cursor: 'pointer' }}
             >
               <div className={`${styles.resultBadge} ${styles[`result--${d.result}`]}`}>
-                {d.result === "win" ? "승" : d.result === "lose" ? "패" : "무"}
+                {d.result === "solo" || d.position === "solo" ? "논술" : d.result === "win" ? "승" : d.result === "lose" ? "패" : "무"}
               </div>
               <div className={styles.debateTopic}>{d.topic}</div>
               <div className={styles.debateScore}>{d.score}점</div>
@@ -922,22 +930,42 @@ export function TeacherPage() {
   const navigate = useNavigate();
   const token = useUserStore(s => s.token);
   const user = useUserStore(s => s.user);
+  const logout = useUserStore(s => s.logout);
   const [tab, setTab] = useState<Tab>("classes");
   const [classList, setClassList] = useState<{ id: number; name: string }[]>([]);
+  const [classListLoading, setClassListLoading] = useState(false);
+  const [classListError, setClassListError] = useState("");
 
   useEffect(() => {
     if (user && user.role !== "teacher") navigate("/");
   }, [user, navigate]);
 
-  useEffect(() => {
+  const loadClassList = useCallback(async () => {
     if (!token) return;
-    fetch(`${BASE}/teacher/classes`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(r => r.json())
-      .then((data: { id: number; name: string }[]) => setClassList(data.map(c => ({ id: c.id, name: c.name }))))
-      .catch(() => {});
-  }, [token]);
+    setClassListLoading(true);
+    setClassListError("");
+    try {
+      const response = await fetch(`${BASE}/teacher/classes`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.status === 401 || response.status === 403) {
+        logout();
+        navigate('/login');
+        return;
+      }
+      if (!response.ok) throw new Error('학급 목록을 불러오지 못했습니다.');
+      const data = await response.json() as { id: number; name: string }[];
+      setClassList(data.map(c => ({ id: c.id, name: c.name })));
+    } catch (error) {
+      setClassListError(error instanceof Error ? error.message : '학급 목록을 불러오지 못했습니다.');
+    } finally {
+      setClassListLoading(false);
+    }
+  }, [token, logout, navigate]);
+
+  useEffect(() => {
+    void loadClassList();
+  }, [loadClassList]);
 
   if (!token || !user) return null;
 
@@ -967,9 +995,20 @@ export function TeacherPage() {
       </div>
 
       <div className={styles.tabContent}>
+        {tab === "settings" && classListLoading && (
+          <div className={styles.emptyMsg}>학급 목록을 불러오는 중입니다...</div>
+        )}
+        {tab === "settings" && classListError && (
+          <div className={styles.errorMsg} role="alert">
+            {classListError}{' '}
+            <button type="button" className="btn btn--ghost" onClick={() => void loadClassList()}>
+              다시 시도
+            </button>
+          </div>
+        )}
         {tab === "classes" && <ClassesTab token={token} />}
         {tab === "stats" && <StatsTab token={token} />}
-        {tab === "settings" && <SettingsTab token={token} classes={classList} />}
+        {tab === "settings" && !classListLoading && !classListError && <SettingsTab token={token} classes={classList} />}
       </div>
     </div>
   );

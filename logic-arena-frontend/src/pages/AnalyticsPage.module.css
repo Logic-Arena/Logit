@@ -129,6 +129,7 @@
 .bentoGridWrapper {
   width: 100%;
   display: flex;
+  flex-direction: column;
   justify-content: center;
 }
 
@@ -198,9 +199,83 @@
 
 .chartHeader {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   margin-bottom: 24px;
+}
+
+.activityFilter {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+  padding: 3px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface-2);
+}
+
+.activityFilterBar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+
+.chartEmptyState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.activityFilter button {
+  border: 0;
+  border-radius: 999px;
+  padding: 5px 10px;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.activityFilter button.activityFilterActive {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.loadError {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--color-con);
+  border-radius: var(--radius-sm);
+  color: var(--color-con);
+  background: var(--color-con-bg);
+  font-size: 13px;
+}
+
+.loadError button {
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  padding: 5px 10px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.inlineError {
+  margin: -12px 0 8px;
+  color: var(--color-con);
+  font-size: 12px;
 }
 
 .chartHeaderWrap {

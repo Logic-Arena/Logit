@@ -792,8 +792,16 @@ function EssayFeedbackView({ room }: { room: Room }) {
         )}
       </div>
       <div style={{ fontSize: "12px", color: "var(--color-text-muted)", textAlign: "center" }}>
-        다음 단계에서 피드백을 참고하여 글을 다듬어 보세요.
+        피드백을 충분히 읽은 뒤 퇴고를 시작하세요. 남은 시간이 끝나면 자동으로 이동합니다.
       </div>
+      <button
+        type="button"
+        className="btn btn--primary"
+        onClick={() => socket.emit('continue_solo_revision', { roomId: room.id })}
+        style={{ alignSelf: "center", minWidth: "180px" }}
+      >
+        퇴고 시작하기
+      </button>
     </div>
   );
 }
@@ -977,12 +985,13 @@ const DEBATE_TIPS = [
 const JUDGING_ANALYSIS_STEPS = ["논리", "근거", "반박", "설득"];
 
 function JudgingWaitView({
-  room: _room,
+  room,
   myRole: _myRole,
 }: {
   room: Room;
   myRole: PlayerRole | null;
 }) {
+  const isSoloEssay = room.mode === "solo_essay";
   const [tipIdx, setTipIdx] = useState(0);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
 
@@ -1015,8 +1024,12 @@ function JudgingWaitView({
       </section>
 
       <div className="judging-wait__headline">
-        <h2>AI 판정단이 논점을 심문 중</h2>
-        <p>주장, 근거, 반박을 스캔해서 승부를 계산하고 있어요</p>
+        <h2>{isSoloEssay ? "AI가 논술을 평가하는 중" : "AI 판정단이 논점을 심문 중"}</h2>
+        <p>
+          {isSoloEssay
+            ? "논리, 근거, 표현, 반론, 일관성을 분석하고 있어요"
+            : "주장, 근거, 반박을 스캔해서 승부를 계산하고 있어요"}
+        </p>
       </div>
 
       <div className="judging-wait__stepper" aria-label="분석 단계">
@@ -1861,7 +1874,7 @@ function EndedView({
       </div>
       {!isSoloEssay && <TeamCompareBar scores={sorted} />}
       {!isSoloEssay && <DecisiveEdgeBadge scores={sorted} />}
-      <RpChangeCard result={result} myRole={myRole} />
+      {!isSoloEssay && <RpChangeCard result={result} myRole={myRole} />}
       {result.summary && (
         <div
           style={{

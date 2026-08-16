@@ -270,7 +270,16 @@ router.get('/classes/:classId/summary', requireAuth, requireTeacher, async (req,
     const members = await prisma.debateClassMember.findMany({ where: { class_id: classId } });
     const studentIds = members.map(m => m.user_id);
     if (studentIds.length === 0) {
-      return res.json({ totalDebates: 0, avgScore: 0, topStudents: [], avgByCategory: {}, weakestCategory: null, recentDebates: [] });
+      return res.json({
+        totalActivities: 0,
+        debateCount: 0,
+        soloEssayCount: 0,
+        avgScore: 0,
+        topStudents: [],
+        avgByCategory: {},
+        weakestCategory: null,
+        recentDebates: [],
+      });
     }
 
     const histories = await prisma.debateHistory.findMany({
@@ -279,9 +288,11 @@ router.get('/classes/:classId/summary', requireAuth, requireTeacher, async (req,
       orderBy: { played_at: 'desc' },
     });
 
-    const totalDebates = histories.length;
-    const n = totalDebates || 1;
-    const avgScore = totalDebates > 0 ? Math.round(histories.reduce((s, h) => s + h.score, 0) / totalDebates) : 0;
+    const totalActivities = histories.length;
+    const debateCount = histories.filter(h => h.position !== 'solo').length;
+    const soloEssayCount = histories.filter(h => h.position === 'solo').length;
+    const n = totalActivities || 1;
+    const avgScore = totalActivities > 0 ? Math.round(histories.reduce((s, h) => s + h.score, 0) / totalActivities) : 0;
 
     const scoreByStudent = {};
     histories.forEach(h => {
@@ -295,7 +306,7 @@ router.get('/classes/:classId/summary', requireAuth, requireTeacher, async (req,
         const avgScore = recentScores.length > 0
           ? Math.round(recentScores.reduce((sum, score) => sum + score, 0) / recentScores.length)
           : 0;
-        return { userId: parseInt(userId), name: d.name, avgScore, debateCount: d.count };
+        return { userId: parseInt(userId), name: d.name, avgScore, activityCount: d.count };
       })
       .sort((a, b) => b.avgScore - a.avgScore)
       .slice(0, 5);
@@ -311,13 +322,16 @@ router.get('/classes/:classId/summary', requireAuth, requireTeacher, async (req,
     const weakestEntry = Object.entries(avgByCategory).sort((a, b) => a[1] - b[1])[0];
 
     return res.json({
-      totalDebates,
+      totalActivities,
+      debateCount,
+      soloEssayCount,
       avgScore,
       topStudents,
       avgByCategory,
       weakestCategory: { key: weakestEntry[0], avg: weakestEntry[1] },
       recentDebates: histories.slice(0, 10).map(h => ({
         topic: h.topic,
+        position: h.position,
         result: h.result,
         score: h.score,
         studentName: h.user.name,
@@ -338,9 +352,20 @@ router.get('/debate-summary/:historyId', requireAuth, requireTeacher, async (req
     if (!Number.isFinite(historyId)) return res.status(400).json({ error: '잘못된 요청입니다.' });
     const record = await prisma.debateHistory.findUnique({
       where: { id: historyId },
-      select: { teacher_summary: true },
+      select: { teacher_summary: true, user_id: true },
     });
     if (!record) return res.status(404).json({ error: '이력을 찾을 수 없습니다.' });
+
+    const membership = await prisma.debateClassMember.findFirst({
+      where: {
+        user_id: record.user_id,
+        class: { teacher_id: req.user.id },
+      },
+      select: { class_id: true },
+    });
+    if (!membership) {
+      return res.status(403).json({ error: '담당 학급 학생의 이력만 조회할 수 있습니다.' });
+    }
     if (!record.teacher_summary) {
       // 사전 생성 안 된 기록은 즉시 백그라운드 생성 트리거
       const full = await prisma.debateHistory.findUnique({

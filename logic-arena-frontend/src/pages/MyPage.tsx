@@ -1,6 +1,14 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useUserStore } from "../store/useUserStore";
-import { getDebateHistory, updateProfile, joinClass, getMe, type DebateHistoryItem } from "../lib/api";
+import {
+  getActivitySummary,
+  getDebateHistory,
+  updateProfile,
+  joinClass,
+  getMe,
+  type ActivitySummary,
+  type DebateHistoryItem,
+} from "../lib/api";
 import {
   AnalyticsDashboardSection,
   AnalyticsHistorySection,
@@ -91,6 +99,8 @@ export function MyPage() {
   const setUser = useUserStore((s) => s.setUser);
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
   const [history, setHistory] = useState<DebateHistoryItem[]>([]);
+  const [activitySummary, setActivitySummary] = useState<ActivitySummary | null>(null);
+  const [activitySummaryError, setActivitySummaryError] = useState("");
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState('');
   const [savingName, setSavingName] = useState(false);
@@ -98,6 +108,9 @@ export function MyPage() {
 
   useEffect(() => {
     getDebateHistory().then(setHistory).catch(() => {});
+    getActivitySummary()
+      .then(setActivitySummary)
+      .catch((err) => setActivitySummaryError(err instanceof Error ? err.message : '활동 통계를 불러오지 못했습니다.'));
     getMe().then(setUser).catch(() => {});
   }, []);
 
@@ -133,7 +146,9 @@ export function MyPage() {
   const initial = user.name.charAt(0).toUpperCase();
 
   const avgScore = Math.round(user.scoreAverage ?? 0);
-  const totalDebates = user.debateCount ?? 0;
+  const totalActivities = activitySummary?.totalActivities;
+  const totalDebates = activitySummary?.debateCount;
+  const totalSoloEssays = activitySummary?.soloEssayCount;
 
   async function handleSaveName() {
     if (!user || !nameInput.trim() || nameInput.trim() === user.name) {
@@ -244,6 +259,7 @@ export function MyPage() {
         {/* ── 전체 성과 요약 ───────────────────────────────── */}
         <div className={styles.summarySection}>
           <div className={styles.summaryLabel}>전체 성과 요약</div>
+          {activitySummaryError && <div className={styles.summaryError}>{activitySummaryError}</div>}
           <div className={styles.statsGrid}>
             <div className={styles.statCard}>
               <div className={styles.statLabel}>이긴 횟수</div>
@@ -266,9 +282,21 @@ export function MyPage() {
               </div>
             </div>
             <div className={styles.statCard}>
-              <div className={styles.statLabel}>총 토론 횟수</div>
+              <div className={styles.statLabel}>총 활동 횟수</div>
               <div className={styles.statValue}>
-                {totalDebates}<span className={styles.statUnit}>회</span>
+                {totalActivities ?? '—'}<span className={styles.statUnit}>회</span>
+              </div>
+            </div>
+            <div className={styles.statCard}>
+              <div className={styles.statLabel}>일반 토론 횟수</div>
+              <div className={styles.statValue}>
+                {totalDebates ?? '—'}<span className={styles.statUnit}>회</span>
+              </div>
+            </div>
+            <div className={styles.statCard}>
+              <div className={styles.statLabel}>개인 논술 횟수</div>
+              <div className={styles.statValue}>
+                {totalSoloEssays ?? '—'}<span className={styles.statUnit}>회</span>
               </div>
             </div>
             <div className={styles.statCard}>

@@ -172,7 +172,7 @@ export async function signupLocal(payload: {
 export interface DebateHistoryItem {
   id: number;
   topic: string;
-  position: string;
+  position: 'pro' | 'con' | 'solo';
   score: number;
   logic: number;
   evidence: number;
@@ -180,7 +180,7 @@ export interface DebateHistoryItem {
   rebuttal: number;
   consistency: number;
   advice: string | null;
-  result: 'win' | 'lose' | 'draw';
+  result: 'win' | 'lose' | 'draw' | 'solo';
   played_at: string;
 }
 
@@ -188,7 +188,53 @@ export async function getDebateHistory(): Promise<DebateHistoryItem[]> {
   const res = await fetch(`${BASE}/debate-history`, {
     headers: authHeaders(),
   });
-  if (!res.ok) return [];
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error((body as { error?: string }).error ?? '이력을 불러오지 못했습니다.');
+  }
+  return res.json();
+}
+
+export interface AnalyticsAverages {
+  count: number;
+  logic: number;
+  evidence: number;
+  persuasion: number;
+  rebuttal: number;
+  consistency: number;
+}
+
+export interface GlobalAnalyticsAverages {
+  all: AnalyticsAverages;
+  debate: AnalyticsAverages;
+  soloEssay: AnalyticsAverages;
+}
+
+export async function getGlobalAnalyticsAverages(): Promise<GlobalAnalyticsAverages> {
+  const res = await fetch(`${BASE}/debate-history/averages`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error((body as { error?: string }).error ?? '전체 평균을 불러오지 못했습니다.');
+  }
+  return res.json();
+}
+
+export interface ActivitySummary {
+  totalActivities: number;
+  debateCount: number;
+  soloEssayCount: number;
+}
+
+export async function getActivitySummary(): Promise<ActivitySummary> {
+  const res = await fetch(`${BASE}/debate-history/summary`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error((body as { error?: string }).error ?? '활동 통계를 불러오지 못했습니다.');
+  }
   return res.json();
 }
 
@@ -267,9 +313,12 @@ export interface TrainingRecommendation {
   topic: string;
 }
 
-export async function getTrainingRecommendation(): Promise<TrainingRecommendation | null> {
+export async function getTrainingRecommendation(): Promise<TrainingRecommendation> {
   const res = await authedFetch(`${BASE}/training-recommendation`, { headers: authHeaders() });
-  if (!res.ok) return null;
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error((body as { error?: string }).error ?? '추천 훈련을 불러오지 못했습니다.');
+  }
   return res.json();
 }
 
@@ -315,12 +364,14 @@ export interface StudentStat {
 }
 
 export interface ClassSummary {
-  totalDebates: number;
+  totalActivities: number;
+  debateCount: number;
+  soloEssayCount: number;
   avgScore: number;
-  topStudents: { userId: number; name: string; avgScore: number; debateCount: number }[];
+  topStudents: { userId: number; name: string; avgScore: number; activityCount: number }[];
   avgByCategory: { logic: number; evidence: number; persuasion: number; rebuttal: number; consistency: number };
   weakestCategory: { key: string; avg: number } | null;
-  recentDebates: { topic: string; result: string; score: number; studentName: string; playedAt: string }[];
+  recentDebates: { topic: string; position: string; result: string; score: number; studentName: string; playedAt: string }[];
 }
 
 export async function getTeacherClasses(token: string): Promise<ClassInfo[]> {

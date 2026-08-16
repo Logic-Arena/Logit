@@ -730,6 +730,31 @@ export function registerHandlers(io, socket) {
     }
   });
 
+  // ── continue_solo_revision (AI 피드백 확인 후 퇴고로 조기 이동) ──
+  socket.on('continue_solo_revision', async ({ roomId }) => {
+    const room = getRoom(roomId);
+    if (!room) return socket.emit('error', { message: '방을 찾을 수 없습니다' });
+    if (room.mode !== 'solo_essay' || room.phase !== 'essay_feedback') {
+      return socket.emit('error', { message: '지금은 퇴고 단계로 이동할 수 없습니다' });
+    }
+
+    const role = getPlayerRole(roomId, socket.id);
+    if (role !== 'pro_player') {
+      return socket.emit('error', { message: '논술 작성자만 다음 단계로 이동할 수 있습니다' });
+    }
+    if (!room.content.essay_feedback) {
+      return socket.emit('error', { message: 'AI 피드백이 아직 준비 중입니다' });
+    }
+
+    clearPhaseTimer(roomId);
+    try {
+      await advancePhase(io, roomId);
+    } catch (error) {
+      console.error('[continue_solo_revision] 퇴고 단계 이동 실패:', error);
+      socket.emit('error', { message: '퇴고 단계로 이동하지 못했습니다. 다시 시도해 주세요' });
+    }
+  });
+
   // ── submit_content (콘텐츠 제출) ───────────────────────────
   socket.on('submit_content', ({ roomId, text, skip }) => {
 

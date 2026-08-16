@@ -6,6 +6,7 @@ export interface ClientToServerEvents {
   leave_room: () => void;
   start_game: (payload: { roomId: string }) => void;
   select_side: (payload: { roomId: string; side: 'pro' | 'con' }) => void;
+  continue_solo_revision: (payload: { roomId: string }) => void;
   submit_content: (payload: { roomId: string; text: string; skip?: boolean }) => void;
   peer_vote: (payload: { votedFor: 'pro' | 'con' }) => void;
 }

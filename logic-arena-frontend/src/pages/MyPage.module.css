@@ -270,8 +270,13 @@
 
 .statsGrid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 16px;
+}
+
+.summaryError {
+  color: var(--color-con);
+  font-size: 13px;
 }
 
 @media (max-width: 900px) {
