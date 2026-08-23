@@ -70,6 +70,92 @@ jobs:
           printf '%s\n' "$EC2_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
           chmod 600 "$HOME/.ssh/logit-production" "$HOME/.ssh/known_hosts"
 
+      - name: Validate required application secrets
+        env:
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          CORS_ORIGIN: ${{ secrets.CORS_ORIGIN }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+          TEACHER_CODE: ${{ secrets.TEACHER_CODE }}
+        run: |
+          missing=()
+          for name in POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD DATABASE_URL \
+                      CORS_ORIGIN FRONTEND_URL JWT_SECRET SESSION_SECRET TEACHER_CODE; do
+            if [ -z "${!name:-}" ]; then
+              missing+=("$name")
+            fi
+          done
+          if [ "${#missing[@]}" -gt 0 ]; then
+            printf 'Missing required repo secrets, refusing to overwrite EC2 .env: %s\n' "${missing[*]}" >&2
+            exit 1
+          fi
+
+      - name: Write production .env
+        env:
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          CORS_ORIGIN: ${{ secrets.CORS_ORIGIN }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+          TEACHER_CODE: ${{ secrets.TEACHER_CODE }}
+          AI_PROVIDER: ${{ secrets.AI_PROVIDER }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_CALLBACK_URL: ${{ secrets.GOOGLE_CALLBACK_URL }}
+          KAKAO_REST_API_KEY: ${{ secrets.KAKAO_REST_API_KEY }}
+          KAKAO_CLIENT_SECRET: ${{ secrets.KAKAO_CLIENT_SECRET }}
+          KAKAO_CALLBACK_URL: ${{ secrets.KAKAO_CALLBACK_URL }}
+        run: |
+          umask 077
+          {
+            printf 'POSTGRES_DB=%s\n' "$POSTGRES_DB"
+            printf 'POSTGRES_USER=%s\n' "$POSTGRES_USER"
+            printf 'POSTGRES_PASSWORD=%s\n' "$POSTGRES_PASSWORD"
+            printf 'DATABASE_URL=%s\n' "$DATABASE_URL"
+            printf 'CORS_ORIGIN=%s\n' "$CORS_ORIGIN"
+            printf 'FRONTEND_URL=%s\n' "$FRONTEND_URL"
+            printf 'JWT_SECRET=%s\n' "$JWT_SECRET"
+            printf 'SESSION_SECRET=%s\n' "$SESSION_SECRET"
+            printf 'TEACHER_CODE=%s\n' "$TEACHER_CODE"
+            printf 'AI_PROVIDER=%s\n' "$AI_PROVIDER"
+            printf 'OPENAI_API_KEY=%s\n' "$OPENAI_API_KEY"
+            printf 'OPENAI_MODEL=%s\n' "$OPENAI_MODEL"
+            printf 'GEMINI_API_KEY=%s\n' "$GEMINI_API_KEY"
+            printf 'GEMINI_MODEL=%s\n' "$GEMINI_MODEL"
+            printf 'GOOGLE_CLIENT_ID=%s\n' "$GOOGLE_CLIENT_ID"
+            printf 'GOOGLE_CLIENT_SECRET=%s\n' "$GOOGLE_CLIENT_SECRET"
+            printf 'GOOGLE_CALLBACK_URL=%s\n' "$GOOGLE_CALLBACK_URL"
+            printf 'KAKAO_REST_API_KEY=%s\n' "$KAKAO_REST_API_KEY"
+            printf 'KAKAO_CLIENT_SECRET=%s\n' "$KAKAO_CLIENT_SECRET"
+            printf 'KAKAO_CALLBACK_URL=%s\n' "$KAKAO_CALLBACK_URL"
+          } > production.env
+
+      - name: Upload production .env to EC2
+        run: |
+          scp \
+            -i "$HOME/.ssh/logit-production" \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            production.env "$EC2_USER@$EC2_HOST:/opt/logit/.env"
+          rm -f production.env
+          ssh \
+            -i "$HOME/.ssh/logit-production" \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            "$EC2_USER@$EC2_HOST" \
+            'chmod 600 /opt/logit/.env'
+
       - name: Run production deployment
         run: |
           ssh \
