@@ -15,7 +15,7 @@ function parseCorsOrigin(value) {
 }
 
 export const CORS_ORIGIN = parseCorsOrigin(
-  process.env.CORS_ORIGIN ?? 'http://localhost:5173'
+  process.env.CORS_ORIGIN || 'http://localhost:5173'
 );
 
 export const DB_HOST = process.env.DB_HOST ?? 'localhost';
@@ -27,14 +27,14 @@ export const DB_PASSWORD = process.env.DB_PASSWORD ?? '';
 export const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID ?? '';
 export const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET ?? '';
 export const GOOGLE_CALLBACK_URL =
-  process.env.GOOGLE_CALLBACK_URL ?? 'http://localhost:4000/auth/google/callback';
+  process.env.GOOGLE_CALLBACK_URL || 'http://localhost:4000/auth/google/callback';
 
 export const KAKAO_REST_API_KEY = process.env.KAKAO_REST_API_KEY ?? '';
 export const KAKAO_CLIENT_SECRET = process.env.KAKAO_CLIENT_SECRET ?? '';
 export const KAKAO_CALLBACK_URL =
-  process.env.KAKAO_CALLBACK_URL ?? 'http://localhost:4000/auth/kakao/callback';
+  process.env.KAKAO_CALLBACK_URL || 'http://localhost:4000/auth/kakao/callback';
 
 export const JWT_SECRET = process.env.JWT_SECRET ?? 'dev_jwt_secret';
 export const SESSION_SECRET = process.env.SESSION_SECRET ?? 'dev_session_secret';
-export const FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173';
+export const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 export const TEACHER_CODE = process.env.TEACHER_CODE || 'LOGIT_TEACHER_2025';
