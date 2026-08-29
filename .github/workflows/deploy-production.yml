@@ -70,6 +70,70 @@ jobs:
           printf '%s\n' "$EC2_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
           chmod 600 "$HOME/.ssh/logit-production" "$HOME/.ssh/known_hosts"
 
+      - name: Sync environment file
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_CALLBACK_URL: ${{ secrets.GOOGLE_CALLBACK_URL }}
+          KAKAO_REST_API_KEY: ${{ secrets.KAKAO_REST_API_KEY }}
+          KAKAO_CLIENT_SECRET: ${{ secrets.KAKAO_CLIENT_SECRET }}
+          KAKAO_CALLBACK_URL: ${{ secrets.KAKAO_CALLBACK_URL }}
+          CORS_ORIGIN: ${{ secrets.CORS_ORIGIN }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+          TEACHER_CODE: ${{ secrets.TEACHER_CODE }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          AI_PROVIDER: ${{ secrets.AI_PROVIDER }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
+        run: |
+          # 등록된 시크릿만 .env에 반영한다. 미등록 항목은 서버 값을 그대로 둔다.
+          umask 077
+          : > env.incoming
+          for key in \
+            GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET GOOGLE_CALLBACK_URL \
+            KAKAO_REST_API_KEY KAKAO_CLIENT_SECRET KAKAO_CALLBACK_URL \
+            CORS_ORIGIN FRONTEND_URL TEACHER_CODE \
+            JWT_SECRET SESSION_SECRET \
+            POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD DATABASE_URL \
+            AI_PROVIDER OPENAI_API_KEY OPENAI_MODEL GEMINI_API_KEY GEMINI_MODEL; do
+            value="${!key-}"
+            if [[ -z "$value" ]]; then
+              echo "skip $key (secret not set)"
+              continue
+            fi
+            if [[ "$value" == *$'\n'* ]]; then
+              echo "Secret $key contains a newline; single-line values only" >&2
+              exit 1
+            fi
+            printf '%s=%s\n' "$key" "$value" >> env.incoming
+            echo "sync $key"
+          done
+
+          ssh \
+            -i "$HOME/.ssh/logit-production" \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            "$EC2_USER@$EC2_HOST" \
+            'umask 077 && cat > /opt/logit/.env.incoming' \
+            < env.incoming
+
+          rm -f env.incoming
+
+          ssh \
+            -i "$HOME/.ssh/logit-production" \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            "$EC2_USER@$EC2_HOST" \
+            'LOGIT_REPO_DIR=/opt/logit bash -s' \
+            < deploy/ec2/sync-env.sh
+
       - name: Run production deployment
         run: |
           ssh \
