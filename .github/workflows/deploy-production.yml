@@ -59,6 +59,29 @@ jobs:
       EC2_USER: ${{ secrets.EC2_USER }}
       EC2_SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
       EC2_KNOWN_HOSTS: ${{ secrets.EC2_KNOWN_HOSTS }}
+      # Environment variables to sync
+      POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+      POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      CORS_ORIGIN: ${{ secrets.CORS_ORIGIN }}
+      FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+      TEACHER_CODE: ${{ secrets.TEACHER_CODE }}
+      AI_PROVIDER: ${{ secrets.AI_PROVIDER }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
+      GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+      GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+      GOOGLE_CALLBACK_URL: ${{ secrets.GOOGLE_CALLBACK_URL }}
+      KAKAO_REST_API_KEY: ${{ secrets.KAKAO_REST_API_KEY }}
+      KAKAO_CLIENT_SECRET: ${{ secrets.KAKAO_CLIENT_SECRET }}
+      KAKAO_CALLBACK_URL: ${{ secrets.KAKAO_CALLBACK_URL }}
+      HTTP_PORT: ${{ secrets.HTTP_PORT }}
+      VITE_API_URL: ${{ secrets.VITE_API_URL }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -69,6 +92,41 @@ jobs:
           printf '%s\n' "$EC2_SSH_PRIVATE_KEY" > "$HOME/.ssh/logit-production"
           printf '%s\n' "$EC2_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
           chmod 600 "$HOME/.ssh/logit-production" "$HOME/.ssh/known_hosts"
+
+      - name: Sync environment variables
+        run: |
+          ssh \
+            -i "$HOME/.ssh/logit-production" \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            "$EC2_USER@$EC2_HOST" \
+            "$(cat <<'SYNC_SCRIPT'
+export LOGIT_REPO_DIR=/opt/logit
+export POSTGRES_DB='${{ secrets.POSTGRES_DB }}'
+export POSTGRES_USER='${{ secrets.POSTGRES_USER }}'
+export POSTGRES_PASSWORD='${{ secrets.POSTGRES_PASSWORD }}'
+export DATABASE_URL='${{ secrets.DATABASE_URL }}'
+export CORS_ORIGIN='${{ secrets.CORS_ORIGIN }}'
+export FRONTEND_URL='${{ secrets.FRONTEND_URL }}'
+export JWT_SECRET='${{ secrets.JWT_SECRET }}'
+export SESSION_SECRET='${{ secrets.SESSION_SECRET }}'
+export TEACHER_CODE='${{ secrets.TEACHER_CODE }}'
+export AI_PROVIDER='${{ secrets.AI_PROVIDER }}'
+export OPENAI_API_KEY='${{ secrets.OPENAI_API_KEY }}'
+export OPENAI_MODEL='${{ secrets.OPENAI_MODEL }}'
+export GEMINI_API_KEY='${{ secrets.GEMINI_API_KEY }}'
+export GEMINI_MODEL='${{ secrets.GEMINI_MODEL }}'
+export GOOGLE_CLIENT_ID='${{ secrets.GOOGLE_CLIENT_ID }}'
+export GOOGLE_CLIENT_SECRET='${{ secrets.GOOGLE_CLIENT_SECRET }}'
+export GOOGLE_CALLBACK_URL='${{ secrets.GOOGLE_CALLBACK_URL }}'
+export KAKAO_REST_API_KEY='${{ secrets.KAKAO_REST_API_KEY }}'
+export KAKAO_CLIENT_SECRET='${{ secrets.KAKAO_CLIENT_SECRET }}'
+export KAKAO_CALLBACK_URL='${{ secrets.KAKAO_CALLBACK_URL }}'
+export HTTP_PORT='${{ secrets.HTTP_PORT }}'
+export VITE_API_URL='${{ secrets.VITE_API_URL }}'
+bash -s
+SYNC_SCRIPT
+)" < deploy/ec2/sync-env.sh
 
       - name: Run production deployment
         run: |

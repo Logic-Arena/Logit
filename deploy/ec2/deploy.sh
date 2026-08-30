@@ -53,7 +53,7 @@ docker compose build --pull
 docker compose up -d postgres
 wait_for_healthy_service postgres
 
-docker compose run --rm --no-deps backend npx prisma migrate deploy
+docker compose run --rm --no-deps backend npx prisma migrate deploy < /dev/null
 docker compose up -d --remove-orphans
 
 wait_for_healthy_service backend
