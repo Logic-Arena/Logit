@@ -118,10 +118,15 @@ router.post('/signup', async (req, res) => {
       });
     }
 
-    if (teacherCode && teacherCode !== TEACHER_CODE) {
-      return res.status(400).json({ error: '선생님 코드가 올바르지 않습니다.' });
+    // 선생님 코드는 선택 입력값이다. 입력한 경우에만 검증하고, 통과했을 때만 교사 권한을 준다.
+    const submittedTeacherCode = typeof teacherCode === 'string' ? teacherCode.trim() : '';
+    let isTeacher = false;
+    if (submittedTeacherCode) {
+      if (submittedTeacherCode !== TEACHER_CODE) {
+        return res.status(400).json({ error: '선생님 코드가 올바르지 않습니다.' });
+      }
+      isTeacher = true;
     }
-    const isTeacher = Boolean(teacherCode);
     const user = await signupLocalUser({ username, password, name, email, isTeacher });
     const nonce = createSession(user.user_id);
     const token = createAccessToken(user, nonce);
