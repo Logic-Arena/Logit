@@ -68,10 +68,38 @@ assert_called "git merge --ff-only origin/main"
 assert_called "docker compose build --pull"
 assert_called "docker compose up -d postgres"
 assert_called "docker compose run --rm --no-deps backend npx prisma migrate deploy"
-assert_called "docker compose up -d --remove-orphans"
+assert_called "docker compose up -d --remove-orphans --force-recreate backend frontend"
 assert_called "curl -fsS --retry 10 --retry-delay 3 --retry-all-errors https://logit.example.test/healthz"
 assert_called "curl -fsS --retry 10 --retry-delay 3 --retry-all-errors https://logit.example.test/api/health"
 pass "deployment performs update, build, migration, restart, and public health checks"
+
+sync_script="$repo_root/deploy/ec2/sync-env.sh"
+[[ -x "$sync_script" ]] || fail "missing executable deploy/ec2/sync-env.sh"
+
+sync_repo="$test_root/sync-repo"
+mkdir -p "$sync_repo"
+cat >"$sync_repo/.env" <<'EXISTING_ENV'
+# comment stays
+HTTP_PORT=80
+POSTGRES_PASSWORD=keep-me
+GOOGLE_CLIENT_ID=stale
+EXISTING_ENV
+cat >"$sync_repo/.env.incoming" <<'INCOMING_ENV'
+GOOGLE_CLIENT_ID=fresh
+GOOGLE_CLIENT_SECRET=with/slash+plus&amp
+INCOMING_ENV
+
+LOGIT_REPO_DIR="$sync_repo" "$sync_script" >/dev/null
+
+grep -Fxq '# comment stays' "$sync_repo/.env" || fail "env sync dropped comments"
+grep -Fxq 'POSTGRES_PASSWORD=keep-me' "$sync_repo/.env" || fail "env sync dropped unmanaged keys"
+grep -Fxq 'GOOGLE_CLIENT_ID=fresh' "$sync_repo/.env" || fail "env sync did not update managed keys"
+grep -Fxq 'GOOGLE_CLIENT_SECRET=with/slash+plus&amp' "$sync_repo/.env" || fail "env sync mangled special characters"
+grep -Fxq 'GOOGLE_CLIENT_ID=stale' "$sync_repo/.env" && fail "env sync left the stale value behind"
+[[ ! -e "$sync_repo/.env.incoming" ]] || fail "env sync left .env.incoming on the server"
+[[ "$(stat -c '%a' "$sync_repo/.env" 2>/dev/null || stat -f '%Lp' "$sync_repo/.env")" == "600" ]] \
+  || fail "env file must be mode 600"
+pass "environment sync updates managed keys and preserves everything else"
 
 [[ -f "$workflow" ]] || fail "missing .github/workflows/deploy-production.yml"
 
@@ -109,5 +137,12 @@ deploy_yaml = YAML.dump(deploy)
 end
 abort "strict host-key checking is missing" unless deploy_yaml.include?("StrictHostKeyChecking=yes")
 abort "versioned deployment script is not streamed to EC2" unless deploy_yaml.include?("deploy/ec2/deploy.sh")
+abort "environment sync script is not streamed to EC2" unless deploy_yaml.include?("deploy/ec2/sync-env.sh")
+
+step_names = deploy.fetch("steps").map { |step| step["name"] }
+sync_index = step_names.index("Sync environment file")
+deploy_index = step_names.index("Run production deployment")
+abort "environment sync step is missing" if sync_index.nil?
+abort "environment sync must run before deployment" unless sync_index < deploy_index
 RUBY
 pass "workflow triggers, checks, dependencies, and SSH contract are valid"

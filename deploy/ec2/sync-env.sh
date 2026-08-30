@@ -1,83 +1,88 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# GitHub Secrets를 EC2 .env 파일에 동기화하는 스크립트
-# GitHub Actions에서 환경 변수로 전달받아 EC2에 안전하게 작성
+# GitHub Secrets에서 전달된 .env.incoming을 서버의 .env에 병합한다.
+# 전달된 키만 갱신/추가하고, 나머지 기존 항목은 그대로 둔다.
+# 값은 절대 출력하지 않는다 (키 이름만 로그에 남긴다).
 
 repo_dir="${LOGIT_REPO_DIR:-/opt/logit}"
 env_file="$repo_dir/.env"
-backup_file="$repo_dir/.env.backup.$(date +%Y%m%d_%H%M%S)"
+incoming_file="$repo_dir/.env.incoming"
 
-# 현재 .env 백업
-if [[ -f "$env_file" ]]; then
-  echo "Backing up existing .env to $backup_file"
-  cp "$env_file" "$backup_file"
+cleanup() {
+  rm -f "$incoming_file"
+}
+trap cleanup EXIT
+
+if [[ ! -f "$incoming_file" ]]; then
+  echo "Missing $incoming_file; nothing to sync" >&2
+  exit 1
 fi
 
-# 새 .env 파일 생성
-cat > "$env_file" <<'ENV_EOF'
-# ========================================
-# PostgreSQL Configuration
-# ========================================
-POSTGRES_DB=${POSTGRES_DB}
-POSTGRES_USER=${POSTGRES_USER}
-POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-
-# ========================================
-# Backend Configuration
-# ========================================
-DATABASE_URL=${DATABASE_URL}
-CORS_ORIGIN=${CORS_ORIGIN}
-FRONTEND_URL=${FRONTEND_URL}
-
-JWT_SECRET=${JWT_SECRET}
-SESSION_SECRET=${SESSION_SECRET}
-TEACHER_CODE=${TEACHER_CODE}
-
-# ========================================
-# AI Provider
-# ========================================
-AI_PROVIDER=${AI_PROVIDER:-openai}
-OPENAI_API_KEY=${OPENAI_API_KEY:-}
-OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}
-GEMINI_API_KEY=${GEMINI_API_KEY:-}
-GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.0-flash}
-
-# ========================================
-# Social Login
-# ========================================
-GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
-GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
-GOOGLE_CALLBACK_URL=${GOOGLE_CALLBACK_URL}
-
-KAKAO_REST_API_KEY=${KAKAO_REST_API_KEY:-}
-KAKAO_CLIENT_SECRET=${KAKAO_CLIENT_SECRET:-}
-KAKAO_CALLBACK_URL=${KAKAO_CALLBACK_URL}
-
-# ========================================
-# Docker Compose
-# ========================================
-HTTP_PORT=${HTTP_PORT:-80}
-VITE_API_URL=${VITE_API_URL:-/api}
-ENV_EOF
-
-# 환경 변수 치환 (envsubst가 없을 경우 대비)
-if command -v envsubst >/dev/null 2>&1; then
-  envsubst < "$env_file" > "$env_file.tmp"
-  mv "$env_file.tmp" "$env_file"
-else
-  # Manual substitution using sed
-  for var in POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD DATABASE_URL \
-             CORS_ORIGIN FRONTEND_URL JWT_SECRET SESSION_SECRET TEACHER_CODE \
-             AI_PROVIDER OPENAI_API_KEY OPENAI_MODEL GEMINI_API_KEY GEMINI_MODEL \
-             GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET GOOGLE_CALLBACK_URL \
-             KAKAO_REST_API_KEY KAKAO_CLIENT_SECRET KAKAO_CALLBACK_URL \
-             HTTP_PORT VITE_API_URL; do
-    value="${!var:-}"
-    sed -i "s|\${$var}|$value|g" "$env_file"
-  done
+if [[ ! -e "$env_file" ]]; then
+  (umask 077 && : > "$env_file")
 fi
 
+if [[ ! -w "$env_file" ]]; then
+  echo "Cannot write $env_file as $(id -un); run: sudo chown $(id -un) $env_file" >&2
+  exit 1
+fi
+
+merged_file="$(mktemp "$repo_dir/.env.merged.XXXXXX")"
+chmod 600 "$merged_file"
+trap 'rm -f "$incoming_file" "$merged_file"' EXIT
+
+awk '
+  function key_of(line,   pos) {
+    pos = index(line, "=")
+    return pos > 1 ? substr(line, 1, pos - 1) : ""
+  }
+
+  # 첫 번째 파일: 들어온 값
+  NR == FNR {
+    if ($0 ~ /^[A-Za-z_][A-Za-z0-9_]*=/) {
+      k = key_of($0)
+      incoming[k] = $0
+      order[++count] = k
+    }
+    next
+  }
+
+  # 두 번째 파일: 기존 .env. 주석과 빈 줄, 순서를 보존한다.
+  {
+    k = ($0 ~ /^[A-Za-z_][A-Za-z0-9_]*=/) ? key_of($0) : ""
+    if (k != "" && k in incoming) {
+      print incoming[k]
+      replaced[k] = 1
+    } else {
+      print
+    }
+  }
+
+  END {
+    for (i = 1; i <= count; i++) {
+      k = order[i]
+      if (!(k in replaced)) {
+        print incoming[k]
+      }
+    }
+  }
+' "$incoming_file" "$env_file" > "$merged_file"
+
+updated=()
+added=()
+while IFS= read -r key; do
+  if grep -qE "^${key}=" "$env_file"; then
+    updated+=("$key")
+  else
+    added+=("$key")
+  fi
+done < <(sed -n 's/^\([A-Za-z_][A-Za-z0-9_]*\)=.*/\1/p' "$incoming_file")
+
+mv "$merged_file" "$env_file"
 chmod 600 "$env_file"
-echo "Environment variables synchronized successfully"
-echo "Backup saved to: $backup_file"
+trap cleanup EXIT
+
+echo "Updated keys: ${updated[*]:-none}"
+echo "Added keys: ${added[*]:-none}"
+echo "Environment sync completed"
