@@ -362,7 +362,12 @@ async function handleAiAutoPhase(io, roomId, phase) {
     }
     case 'essay_feedback': {
       const essayText = c.pro_argument ?? '';
-      const feedbackResult = await generateSoloFeedback({ topic: room.topic, essaySide: room.essaySide, essayText });
+      const feedbackResult = await generateSoloFeedback({
+        topic: room.topic,
+        essaySide: room.essaySide,
+        essayText,
+        structuredArgumentEnabled: room.structuredArgumentEnabled
+      });
       if (getRoom(roomId)) {
         setContent(roomId, 'essay_feedback', JSON.stringify(feedbackResult));
         io.to(roomId).emit('ai_content', {
@@ -764,6 +769,11 @@ export function registerHandlers(io, socket) {
     const phase = room.phase;
     const phaseKeys = PHASE_SUBMIT_KEY[phase];
     if (!phaseKeys) return socket.emit('error', { message: '지금은 제출할 수 없습니다' });
+
+    // 타이머 검증: phaseEndAt이 있고 이미 지났다면 제출 거부
+    if (room.phaseEndAt && Date.now() > room.phaseEndAt) {
+      return socket.emit('error', { message: '제출 시간이 지났습니다' });
+    }
 
     const role = getPlayerRole(roomId, socket.id);
     const contentKey = phaseKeys[role];

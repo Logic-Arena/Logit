@@ -13,6 +13,9 @@ export function RoomCard({ room }: Props) {
   const modeLabel = ROOM_MODES[room.mode ?? 'ai_debate']?.label ?? 'AI 모드';
   const isInProgress = room.phase !== 'waiting' && room.phase !== 'ended';
 
+  // solo_essay 모드는 정원 1명, 그 외는 2명
+  const maxPlayers = room.mode === 'solo_essay' ? 1 : 2;
+
   return (
     <div className="room-card" onClick={() => navigate(`/rooms/${room.id}`, { state: { hasPassword: room.hasPassword } })}>
       <div>
@@ -22,7 +25,7 @@ export function RoomCard({ room }: Props) {
           <span className="room-card__mode-badge">{modeLabel}</span>
         </div>
         <div className="room-card__meta">
-          참가자 {playerCount}/2명{totalCount > playerCount ? ` (관전 ${room.observers.length}명)` : ''}
+          참가자 {playerCount}/{maxPlayers}명{totalCount > playerCount ? ` (관전 ${room.observers.length}명)` : ''}
         </div>
       </div>
       <span className={`room-card__phase room-card__phase--${isInProgress ? 'voting' : room.phase}`}>

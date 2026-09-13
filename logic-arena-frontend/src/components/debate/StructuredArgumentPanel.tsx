@@ -72,9 +72,11 @@ export function StructuredArgumentPanel({
     }
   );
   const [submitting, setSubmitting] = useState(false);
+  const [timeExpired, setTimeExpired] = useState(false);
   const sectionsRef = useRef(sections);
   sectionsRef.current = sections;
 
+  // 타이머 만료 감지 및 자동 제출
   useEffect(() => {
     if (!phaseEndAt || submitting || alreadySubmitted) return;
     const delay = phaseEndAt - Date.now();
@@ -89,6 +91,7 @@ export function StructuredArgumentPanel({
         });
         setSubmitting(true);
       }
+      setTimeExpired(true); // 타이머 만료 표시
     };
     if (delay <= 0) { fire(); return; }
     const id = setTimeout(fire, delay);
@@ -200,6 +203,7 @@ export function StructuredArgumentPanel({
               </span>
             </label>
             <textarea
+              disabled={submitting || timeExpired}
               style={{
                 background: 'linear-gradient(180deg, rgba(106, 201, 130, 0.15) 0%, rgba(82, 160, 104, 0.2) 100%)',
                 border: `1px solid ${isInvalid ? 'var(--color-con)' : 'rgba(82, 160, 104, 0.3)'}`,
@@ -213,6 +217,8 @@ export function StructuredArgumentPanel({
                 fontSize: '13px',
                 fontFamily: 'inherit',
                 transition: 'border-color var(--transition)',
+                opacity: (submitting || timeExpired) ? 0.6 : 1,
+                cursor: (submitting || timeExpired) ? 'not-allowed' : 'text',
               }}
               placeholder={resolvedPlaceholder}
               value={sections[key]}
@@ -242,15 +248,15 @@ export function StructuredArgumentPanel({
         </div>
         <button
           className="btn btn--primary"
-          disabled={!isValid || submitting}
+          disabled={!isValid || submitting || timeExpired}
           onClick={handleSubmit}
           style={{
             alignSelf: 'flex-end',
-            opacity: isValid ? 1 : 0.5,
-            cursor: isValid ? 'pointer' : 'not-allowed',
+            opacity: (isValid && !timeExpired) ? 1 : 0.5,
+            cursor: (isValid && !timeExpired) ? 'pointer' : 'not-allowed',
           }}
         >
-          {submitting ? '제출 확인 중...' : submitLabel}
+          {submitting ? '제출 확인 중...' : timeExpired ? '시간 종료' : submitLabel}
         </button>
       </div>
     </div>
