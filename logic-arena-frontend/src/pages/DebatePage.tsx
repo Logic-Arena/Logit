@@ -504,6 +504,10 @@ function DebateChatView({
     if (isHumanMode && item.variant === "ai" && item.key !== "coaching_pro" && item.key !== "coaching_con") {
       return [];
     }
+    // essay_revision 단계에서는 AI 피드백을 채팅에서 숨김 (Split View에서 표시)
+    if (phase === "essay_revision" && item.key === "essay_feedback") {
+      return [];
+    }
     if (phase === "arguing") {
       const both = !!(content.pro_argument && content.con_argument);
       if (!both) {
@@ -837,6 +841,7 @@ function EssayRevisionView({
   alreadySubmitted: boolean;
   structuredArgumentEnabled: boolean;
 }) {
+  const [showOriginal, setShowOriginal] = useState(true);
   const originalEssay = room.content.pro_argument ?? "";
   const parsedSections = parseStructuredArgument(originalEssay);
   const feedbackRaw = room.content.essay_feedback;
@@ -921,9 +926,41 @@ function EssayRevisionView({
   }
 
   return (
-    <div style={{ display: "flex", gap: "20px", padding: "8px 0", flexWrap: "wrap" }}>
-      {/* 좌측: AI 피드백 */}
-      <div style={{ flex: "1 1 300px", minWidth: "300px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "8px 0" }}>
+      {/* 초안 보기 */}
+      {originalEssay && (
+        <div style={{ background: "var(--color-surface-2)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", overflow: "hidden" }}>
+          <button
+            onClick={() => setShowOriginal(!showOriginal)}
+            style={{
+              width: "100%",
+              padding: "12px 16px",
+              background: "transparent",
+              border: "none",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              cursor: "pointer",
+              fontSize: "13px",
+              fontWeight: 700,
+              color: "var(--color-text)",
+            }}
+          >
+            <span>📝 내가 작성한 초안</span>
+            <span style={{ fontSize: "12px" }}>{showOriginal ? "▲ 접기" : "▼ 펼치기"}</span>
+          </button>
+          {showOriginal && (
+            <div style={{ padding: "0 16px 16px", fontSize: "13px", lineHeight: 1.6, color: "var(--color-text)", whiteSpace: "pre-wrap" }}>
+              {originalEssay}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Split View: AI 피드백 + 퇴고 폼 */}
+      <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
+        {/* 좌측: AI 피드백 */}
+        <div style={{ flex: "1 1 300px", minWidth: "300px" }}>
         {feedbackState === 'loading' ? (
           <div
             style={{
@@ -1027,6 +1064,7 @@ function EssayRevisionView({
             />
           </div>
         )}
+      </div>
       </div>
     </div>
   );
