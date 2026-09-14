@@ -32,6 +32,7 @@ model TeacherSettings {
   evidence_limit  Boolean @default(true)
   rebuttal_limit  Boolean @default(true)
   phase_durations Json?   // { arguing, rebuttal, defense, counter, finalArgument, peerVoting } (초 단위)
+  subject         String? // 담당 교과 (세특 문체 조정에 사용)
   user            User    @relation(fields: [user_id], references: [user_id])
 }
 

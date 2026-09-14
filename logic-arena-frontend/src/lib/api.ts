@@ -440,6 +440,59 @@ export async function getStoredDebateSummary(
   return res.json();
 }
 
+export type RecordType = '교과세특' | '자율활동' | '동아리활동' | '진로활동';
+
+export interface SaedeukFlag {
+  category: string;
+  matched: string;
+}
+
+export interface SaedeukCandidate {
+  text: string;
+  flags: SaedeukFlag[];
+}
+
+export interface SaedeukDraftResponse {
+  recordType: RecordType;
+  charLimit: number;
+  disclaimer: string;
+  candidates: SaedeukCandidate[];
+}
+
+export async function getSaedeukDraft(
+  token: string,
+  studentId: number,
+  recordType: RecordType
+): Promise<SaedeukDraftResponse> {
+  const res = await fetch(`${BASE}/teacher/students/${studentId}/saedeuk-draft`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ recordType }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error ?? '세특 초안 생성에 실패했습니다.');
+  }
+  return res.json();
+}
+
+export async function fitSaedeukLength(
+  token: string,
+  text: string,
+  recordType: RecordType
+): Promise<{ text: string; flags: SaedeukFlag[]; charLimit: number }> {
+  const res = await fetch(`${BASE}/teacher/saedeuk/fit-length`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, recordType }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error ?? '글자수 조정에 실패했습니다.');
+  }
+  return res.json();
+}
+
 export async function joinClass(token: string, classCode: string): Promise<{ ok: boolean; alreadyJoined: boolean; className: string }> {
   const res = await fetch(`${BASE}/teacher/join`, {
     method: 'POST',
