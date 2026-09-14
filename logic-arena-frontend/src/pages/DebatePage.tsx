@@ -504,8 +504,8 @@ function DebateChatView({
     if (isHumanMode && item.variant === "ai" && item.key !== "coaching_pro" && item.key !== "coaching_con") {
       return [];
     }
-    // essay_revision 단계에서는 AI 피드백을 채팅에서 숨김 (Split View에서 표시)
-    if (phase === "essay_revision" && item.key === "essay_feedback") {
+    // essay_revision 단계에서는 AI 피드백과 초안을 채팅에서 숨김 (Split View에서 표시)
+    if (phase === "essay_revision" && (item.key === "essay_feedback" || item.key === "pro_argument")) {
       return [];
     }
     if (phase === "arguing") {
@@ -578,23 +578,28 @@ function DebateChatView({
           </div>
         )}
 
-        {messages.length === 0 && (
-          <div
-            style={{
-              textAlign: "center",
-              color: isAutoPhase ? "var(--color-ai)" : "var(--color-text-muted)",
-              padding: "40px 0",
-              fontSize: "13px",
-              fontStyle: "italic",
-            }}
-          >
-            {isAutoPhase
-              ? "AI가 자동으로 생성 중입니다... 잠시 기다려 주세요"
-              : "아직 작성된 내용이 없습니다."}
-          </div>
-        )}
+        {/* essay_revision 단계: 채팅 영역에 Split View 표시 */}
+        {phase === "essay_revision" && myKey ? (
+          <EssayRevisionView room={room} myKey={myKey} alreadySubmitted={alreadySubmitted} structuredArgumentEnabled={room.structuredArgumentEnabled} />
+        ) : (
+          <>
+            {messages.length === 0 && (
+              <div
+                style={{
+                  textAlign: "center",
+                  color: isAutoPhase ? "var(--color-ai)" : "var(--color-text-muted)",
+                  padding: "40px 0",
+                  fontSize: "13px",
+                  fontStyle: "italic",
+                }}
+              >
+                {isAutoPhase
+                  ? "AI가 자동으로 생성 중입니다... 잠시 기다려 주세요"
+                  : "아직 작성된 내용이 없습니다."}
+              </div>
+            )}
 
-        {messages.map((item) => {
+            {messages.map((item) => {
           const isOnMySide = mySide === item.align;
           const avatarChar =
             item.variant === "ai"
@@ -663,6 +668,8 @@ function DebateChatView({
             </div>
           );
         })}
+          </>
+        )}
       </div>
 
       {/* 하단 입력 패널 */}
@@ -676,6 +683,8 @@ function DebateChatView({
       >
         {phase === "essay_feedback" ? (
           <EssayFeedbackView room={room} />
+        ) : phase === "essay_revision" ? (
+          null
         ) : myKey ? (
           ((phase === "arguing" || phase === "essay_writing") && room.structuredArgumentEnabled) ? (
             <StructuredArgumentPanel
@@ -686,8 +695,6 @@ function DebateChatView({
               submittedText={alreadySubmitted ? content[myKey] : null}
               phaseEndAt={room.phaseEndAt}
             />
-          ) : phase === "essay_revision" ? (
-            <EssayRevisionView room={room} myKey={myKey} alreadySubmitted={alreadySubmitted} structuredArgumentEnabled={room.structuredArgumentEnabled} />
           ) : (
             <SubmitPanel
               key={phase}
