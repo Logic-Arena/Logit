@@ -739,7 +739,7 @@ function EssayFeedbackView({ room }: { room: Room }) {
     );
   }
 
-  const isStructured = room.structuredArgumentEnabled !== false;
+  const isStructured = room.structuredArgumentEnabled ?? true;
 
   // 구조화 모드: 5개 섹션별 헤더 + 박스 구분
   if (isStructured) {

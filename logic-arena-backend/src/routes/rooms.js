@@ -29,8 +29,8 @@ router.post('/', (req, res) => {
     topic: resolvedTopicMode === 'manual' ? topic.trim() : null,
     password: password && typeof password === 'string' ? password.trim() || null : null,
     handicap: handicap && typeof handicap === 'object' ? handicap : null,
-    coachingEnabled: coachingEnabled !== false,
-    structuredArgumentEnabled: structuredArgumentEnabled !== false,
+    coachingEnabled: coachingEnabled ?? true,
+    structuredArgumentEnabled: structuredArgumentEnabled ?? true,
   });
   const io = req.app.locals.io;
   io.emit('room_list', getAllRooms());

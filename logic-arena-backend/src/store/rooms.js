@@ -141,8 +141,8 @@ export function createRoom({ title, mode = 'ai_debate', topicMode = 'ai_auto', t
     phaseEndAt: null,
     createdAt: new Date(),
     status: 'pending', // 방장이 아직 입장하지 않은 상태. 방장 입장 시 'active'로 전환
-    coachingEnabled: coachingEnabled !== false,
-    structuredArgumentEnabled: structuredArgumentEnabled !== false,
+    coachingEnabled: coachingEnabled ?? true,
+    structuredArgumentEnabled: structuredArgumentEnabled ?? true,
 
     host: null,        // socketId
     proPlayer: null,   // { socketId, userId, username }
