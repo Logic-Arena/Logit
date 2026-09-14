@@ -11,8 +11,6 @@ import type {
   StudentStat,
   ClassSummary,
   TeacherDebateSummary,
-  RecordType,
-  SaedeukDraftResponse,
   SetukDraft,
 } from "../lib/api";
 import {
@@ -22,8 +20,6 @@ import {
   getClassStudents,
   getClassSummary,
   getStoredDebateSummary,
-  getSaedeukDraft,
-  fitSaedeukLength,
   generateSetukDraft,
   summarizeSetuk,
 } from "../lib/api";
@@ -67,11 +63,6 @@ const DEFAULT_HANDICAP: Handicap = {
   rebuttalLimit: true,
   phaseDurations: null,
 };
-
-const TEACHER_SUBJECTS = [
-  '국어', '영어', '수학', '사회', '역사', '도덕',
-  '과학', '기술가정', '정보', '체육', '음악', '미술', '기타',
-];
 
 const PRESETS = [
   { label: "쉬움", desc: "모든 제약 ON", value: { enabled: true, vocab: true, evidenceLimit: true, rebuttalLimit: true } },
@@ -352,205 +343,6 @@ function DebateSummaryModal({ debate, token, onClose }: {
               <div style={{ background: 'rgba(59,130,246,0.06)', borderRadius: '12px', padding: '16px 18px', border: '1px solid rgba(59,130,246,0.3)' }}>
                 <div style={{ fontSize: '12px', fontWeight: 700, color: '#3b82f6', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: '8px' }}>다음 토론을 위한 한마디</div>
                 <p style={{ fontSize: '14px', lineHeight: 1.8, color: 'var(--color-text)', margin: 0, fontStyle: 'italic' }}>{data.coaching}</p>
-              </div>
-            )}
-          </>
-        )}
-
-        <button
-          onClick={onClose}
-          style={{ alignSelf: 'center', background: 'none', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '8px 28px', cursor: 'pointer', color: 'var(--color-text-muted)', fontSize: '13px' }}
-        >
-          닫기
-        </button>
-      </div>
-    </div>
-  );
-}
-
-const RECORD_TYPE_OPTIONS: RecordType[] = ['교과세특', '자율활동', '동아리활동', '진로활동'];
-
-function SaedeukDraftModal({ studentId, studentName, token, onClose }: {
-  studentId: number;
-  studentName: string;
-  token: string;
-  onClose: () => void;
-}) {
-  const [recordType, setRecordType] = useState<RecordType>('교과세특');
-  const [draft, setDraft] = useState<SaedeukDraftResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
-  const [editText, setEditText] = useState('');
-  const [originalText, setOriginalText] = useState('');
-  const [fitting, setFitting] = useState(false);
-  const [confirmingCopy, setConfirmingCopy] = useState(false);
-  const [copied, setCopied] = useState(false);
-
-  const load = useCallback((type: RecordType) => {
-    setLoading(true);
-    setError('');
-    setSelectedIdx(null);
-    setEditText('');
-    setOriginalText('');
-    getSaedeukDraft(token, studentId, type)
-      .then(setDraft)
-      .catch((e) => setError(e instanceof Error ? e.message : '초안 생성에 실패했습니다.'))
-      .finally(() => setLoading(false));
-  }, [token, studentId]);
-
-  useEffect(() => { load(recordType); }, [load, recordType]);
-
-  const selectCandidate = (idx: number) => {
-    if (!draft) return;
-    setSelectedIdx(idx);
-    setEditText(draft.candidates[idx].text);
-    setOriginalText(draft.candidates[idx].text);
-    setCopied(false);
-  };
-
-  const handleFitLength = async () => {
-    if (!draft) return;
-    setFitting(true);
-    try {
-      const res = await fitSaedeukLength(token, editText, recordType);
-      setEditText(res.text);
-    } catch {
-      // ignore
-    } finally {
-      setFitting(false);
-    }
-  };
-
-  const hasEdited = selectedIdx !== null && editText.trim() !== '' && editText !== originalText;
-  const charLimit = draft?.charLimit ?? 500;
-  const overLimit = editText.length > charLimit;
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(editText);
-      setCopied(true);
-      setConfirmingCopy(false);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // ignore
-    }
-  };
-
-  return (
-    <div
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
-      onClick={onClose}
-    >
-      <div
-        style={{ background: 'var(--color-surface)', borderRadius: '20px', padding: '28px', maxWidth: '640px', width: '100%', maxHeight: '88vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 24px 60px rgba(0,0,0,0.3)' }}
-        onClick={e => e.stopPropagation()}
-      >
-        <div>
-          <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-text)' }}>{studentName} 학생 세특 초안</div>
-          <div style={{ fontSize: '12px', color: 'var(--color-con-orange)', marginTop: '6px', lineHeight: 1.6 }}>
-            ⚠ {draft?.disclaimer ?? 'AI가 생성한 초안 후보입니다. 교사가 직접 관찰한 내용을 반드시 추가·수정한 후 사용하세요.'}
-          </div>
-        </div>
-
-        {/* 기록 유형 선택 */}
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {RECORD_TYPE_OPTIONS.map(t => (
-            <button
-              key={t}
-              type="button"
-              className={`${styles.presetBtn} ${recordType === t ? styles["presetBtn--active"] : ""}`}
-              onClick={() => setRecordType(t)}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-
-        {loading && (
-          <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--color-text-muted)' }}>불러오는 중...</div>
-        )}
-        {error && !loading && (
-          <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--color-con-orange)', fontSize: '14px' }}>{error}</div>
-        )}
-
-        {draft && !loading && (
-          <>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text-muted)' }}>초안 후보 (클릭해서 편집)</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {draft.candidates.map((c, i) => (
-                <div
-                  key={i}
-                  onClick={() => selectCandidate(i)}
-                  style={{
-                    padding: '12px 14px',
-                    borderRadius: '10px',
-                    border: selectedIdx === i ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
-                    background: 'var(--color-surface-2)',
-                    cursor: 'pointer',
-                    fontSize: '13px',
-                    lineHeight: 1.6,
-                    color: 'var(--color-text)',
-                  }}
-                >
-                  {c.text}
-                  {c.flags.length > 0 && (
-                    <div style={{ marginTop: '6px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                      {c.flags.map((f, fi) => (
-                        <span key={fi} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '999px', background: 'rgba(251,146,60,0.15)', color: '#fb923c' }}>
-                          ⚠ {f.category} 일반화됨
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {selectedIdx !== null && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid var(--color-border)', paddingTop: '14px' }}>
-                <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text-muted)' }}>
-                  직접 관찰 내용을 추가·수정해서 완성하세요
-                </div>
-                <textarea
-                  value={editText}
-                  onChange={e => setEditText(e.target.value)}
-                  rows={5}
-                  style={{ width: '100%', resize: 'vertical', borderRadius: '10px', border: '1px solid var(--color-border)', padding: '10px 12px', fontSize: '13px', lineHeight: 1.6, background: 'var(--color-surface)', color: 'var(--color-text)', boxSizing: 'border-box' }}
-                />
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '12px', color: overLimit ? 'var(--color-con-orange)' : 'var(--color-text-muted)' }}>
-                    {editText.length} / {charLimit}자
-                  </span>
-                  <button
-                    className="btn btn--ghost"
-                    onClick={handleFitLength}
-                    disabled={fitting || !editText.trim()}
-                    style={{ fontSize: '12px', padding: '4px 12px' }}
-                  >
-                    {fitting ? '조정 중...' : '글자수 맞춤'}
-                  </button>
-                </div>
-
-                {!confirmingCopy ? (
-                  <button
-                    className="btn btn--primary"
-                    disabled={!hasEdited}
-                    onClick={() => setConfirmingCopy(true)}
-                    title={hasEdited ? undefined : '내용을 직접 수정한 후 복사할 수 있습니다'}
-                  >
-                    복사하기
-                  </button>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: 'var(--color-surface-2)', borderRadius: '10px', padding: '12px' }}>
-                    <span style={{ fontSize: '13px', color: 'var(--color-text)' }}>AI 생성 초안을 수정한 내용입니다. 복사하시겠습니까?</span>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button className="btn btn--primary" onClick={handleCopy}>복사</button>
-                      <button className="btn btn--ghost" onClick={() => setConfirmingCopy(false)}>취소</button>
-                    </div>
-                  </div>
-                )}
-                {copied && <span style={{ fontSize: '12px', color: 'var(--color-pro)' }}>복사되었습니다.</span>}
               </div>
             )}
           </>
@@ -896,7 +688,6 @@ function StudentDetailView({ student, onBack, token, summary }: {
   summary: ClassSummary | null;
 }) {
   const [selectedDebate, setSelectedDebate] = useState<DebateRow | null>(null);
-  const [showSaedeukDraft, setShowSaedeukDraft] = useState(false);
 
   const [setukDrafts, setSetukDrafts] = useState<SetukDraft[] | null>(null);
   const [setukLoading, setSetukLoading] = useState(false);
@@ -1013,15 +804,6 @@ function StudentDetailView({ student, onBack, token, summary }: {
         />
       )}
 
-      {showSaedeukDraft && (
-        <SaedeukDraftModal
-          studentId={student.userId}
-          studentName={student.name}
-          token={token}
-          onClose={() => setShowSaedeukDraft(false)}
-        />
-      )}
-
       <button className={styles.backBtn} onClick={onBack}>← 목록으로</button>
 
       <div className={styles.card}>
@@ -1035,14 +817,6 @@ function StudentDetailView({ student, onBack, token, summary }: {
             <div className={styles.studentDetailScoreKey}>평균 점수</div>
           </div>
         </div>
-
-        <button
-          className="btn btn--primary"
-          style={{ marginTop: '12px' }}
-          onClick={() => setShowSaedeukDraft(true)}
-        >
-          세특 초안 보기
-        </button>
 
         <hr className={styles.divider} />
 
@@ -1282,7 +1056,6 @@ function PhaseDurationEditor({
 function SettingsTab({ token, classes }: { token: string; classes: { id: number; name: string }[] }) {
   const [selectedClassId, setSelectedClassId] = useState<number | "global">("global");
   const [handicap, setHandicap] = useState<Handicap>(DEFAULT_HANDICAP);
-  const [subject, setSubject] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showToast, setShowToast] = useState(false);
@@ -1297,7 +1070,6 @@ function SettingsTab({ token, classes }: { token: string; classes: { id: number;
       .then(d => {
         const raw = classId === "global" ? d : (d.settings ?? null);
         setHandicap(raw ? { ...DEFAULT_HANDICAP, ...raw } : DEFAULT_HANDICAP);
-        if (classId === "global") setSubject(d.subject ?? null);
       })
       .catch(() => setHandicap(DEFAULT_HANDICAP))
       .finally(() => setLoading(false));
@@ -1324,12 +1096,11 @@ function SettingsTab({ token, classes }: { token: string; classes: { id: number;
         const res = await fetch(`${BASE}/teacher/settings`, {
           method: "PUT",
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ ...handicap, subject }),
+          body: JSON.stringify(handicap),
         });
         if (!res.ok) throw new Error();
         const saved = await res.json();
         setHandicap({ ...DEFAULT_HANDICAP, ...saved });
-        setSubject(saved.subject ?? null);
       } else {
         const res = await fetch(`${BASE}/teacher/classes/${selectedClassId}/settings`, {
           method: "PUT",
@@ -1372,31 +1143,6 @@ function SettingsTab({ token, classes }: { token: string; classes: { id: number;
           ? "모든 반에 적용되는 기본값입니다. 반별 설정이 없을 때 이 값이 사용됩니다."
           : "이 반에만 적용되는 설정입니다. 저장하면 전체 기본값보다 우선 적용됩니다."}
       </div>
-
-      {/* 담당 교과 (전체 기본값에서만 설정, 세특 초안 문체에 사용) */}
-      {selectedClassId === "global" && (
-        <div className={styles.card}>
-          <div className={styles.masterRow}>
-            <div>
-              <div className={styles.masterLabel}>담당 교과</div>
-              <div className={styles.masterDesc}>세특 초안 생성 시 교과 관점에 맞는 문체로 반영됩니다</div>
-            </div>
-          </div>
-          <hr className={styles.divider} />
-          <div className={styles.presets}>
-            {TEACHER_SUBJECTS.map(s => (
-              <button
-                key={s}
-                type="button"
-                className={`${styles.presetBtn} ${subject === s ? styles["presetBtn--active"] : ""}`}
-                onClick={() => setSubject(s)}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* AI 핸디캡 */}
       <div className={styles.card}>

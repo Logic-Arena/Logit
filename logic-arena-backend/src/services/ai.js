@@ -21,8 +21,6 @@ export const {
   judgeSoloEssay,
   generateTrainingRecommendation,
   generateTeacherDebateSummary,
-  generateSaedeukDraft,
-  fitTextToLength,
   generateSetukDraft,
   summarizeSetuk,
 } = service;

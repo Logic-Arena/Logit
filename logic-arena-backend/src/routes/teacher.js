@@ -1,9 +1,7 @@
 import express from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { prisma } from '../db/prisma.js';
-import { generateTeacherDebateSummary, generateSaedeukDraft, fitTextToLength, generateSetukDraft, summarizeSetuk } from '../services/ai.js';
-import { filterBannedContent } from '../services/saedeukFilter.js';
-import { TEACHER_SUBJECTS, RECORD_TYPES } from '../saedeuk.js';
+import { generateTeacherDebateSummary, generateSetukDraft, summarizeSetuk } from '../services/ai.js';
 
 const router = express.Router();
 
@@ -34,7 +32,6 @@ router.get('/settings', requireAuth, requireTeacher, async (req, res) => {
       evidenceLimit: settings.evidence_limit,
       rebuttalLimit: settings.rebuttal_limit,
       phaseDurations: settings.phase_durations ?? null,
-      subject: settings.subject ?? null,
     });
   } catch {
     return res.status(500).json({ error: '설정을 불러오지 못했습니다.' });
@@ -61,14 +58,9 @@ function validatePhaseDurations(pd) {
 router.put('/settings', requireAuth, requireTeacher, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { enabled, vocab, evidenceLimit, rebuttalLimit, phaseDurations: rawPhaseDurations, subject: rawSubject } = req.body;
+    const { enabled, vocab, evidenceLimit, rebuttalLimit, phaseDurations: rawPhaseDurations } = req.body;
     const phaseDurations = validatePhaseDurations(rawPhaseDurations);
     if (phaseDurations === undefined) return res.status(400).json({ error: '단계별 시간 설정 값이 올바르지 않습니다.' });
-    let subject = null;
-    if (rawSubject !== undefined && rawSubject !== null) {
-      if (!TEACHER_SUBJECTS.includes(rawSubject)) return res.status(400).json({ error: '올바르지 않은 과목입니다.' });
-      subject = rawSubject;
-    }
     const settings = await prisma.teacherSettings.upsert({
       where: { user_id: userId },
       update: {
@@ -77,7 +69,6 @@ router.put('/settings', requireAuth, requireTeacher, async (req, res) => {
         evidence_limit: Boolean(evidenceLimit),
         rebuttal_limit: Boolean(rebuttalLimit),
         phase_durations: phaseDurations ?? null,
-        subject,
       },
       create: {
         user_id: userId,
@@ -86,7 +77,6 @@ router.put('/settings', requireAuth, requireTeacher, async (req, res) => {
         evidence_limit: Boolean(evidenceLimit),
         rebuttal_limit: Boolean(rebuttalLimit),
         phase_durations: phaseDurations ?? null,
-        subject,
       },
     });
     return res.json({
@@ -95,7 +85,6 @@ router.put('/settings', requireAuth, requireTeacher, async (req, res) => {
       evidenceLimit: settings.evidence_limit,
       rebuttalLimit: settings.rebuttal_limit,
       phaseDurations: settings.phase_durations ?? null,
-      subject: settings.subject ?? null,
     });
   } catch {
     return res.status(500).json({ error: '설정 저장에 실패했습니다.' });
@@ -411,59 +400,6 @@ router.get('/debate-summary/:historyId', requireAuth, requireTeacher, async (req
   }
 });
 
-// ─── 교사: 세특(생기부) 초안 생성 ─────────────────────────────────
-
-const SAEDEUK_DISCLAIMER = 'AI가 생성한 초안 후보입니다. 교사가 직접 관찰한 내용을 반드시 추가·수정한 후 사용하세요.';
-
-router.post('/students/:studentId/saedeuk-draft', requireAuth, requireTeacher, async (req, res) => {
-  try {
-    const studentId = parseInt(req.params.studentId, 10);
-    if (!Number.isFinite(studentId)) return res.status(400).json({ error: '잘못된 요청입니다.' });
-
-    const recordType = req.body?.recordType;
-    if (!Object.keys(RECORD_TYPES).includes(recordType)) {
-      return res.status(400).json({ error: '올바르지 않은 기록 유형입니다.' });
-    }
-
-    const membership = await prisma.debateClassMember.findFirst({
-      where: { user_id: studentId, class: { teacher_id: req.user.id } },
-    });
-    if (!membership) return res.status(403).json({ error: '담당 학급 학생만 조회할 수 있습니다.' });
-
-    const [student, teacherSettings, historyItems] = await Promise.all([
-      prisma.user.findUnique({ where: { user_id: studentId }, select: { name: true } }),
-      prisma.teacherSettings.findUnique({ where: { user_id: req.user.id } }),
-      prisma.debateHistory.findMany({
-        where: { user_id: studentId },
-        orderBy: { played_at: 'desc' },
-        take: 10,
-        select: { topic: true, position: true, score: true, advice: true },
-      }),
-    ]);
-
-    const candidates = await generateSaedeukDraft({
-      studentName: student?.name ?? '학생',
-      subject: teacherSettings?.subject ?? '기타',
-      recordType,
-      historyItems,
-    });
-
-    const charLimit = RECORD_TYPES[recordType];
-    return res.json({
-      recordType,
-      charLimit,
-      disclaimer: SAEDEUK_DISCLAIMER,
-      candidates: candidates.map((text) => {
-        const { text: filtered, flags } = filterBannedContent(text);
-        return { text: filtered, flags };
-      }),
-    });
-  } catch (e) {
-    console.error('[saedeuk-draft]', e);
-    return res.status(500).json({ error: '세특 초안 생성에 실패했습니다.' });
-  }
-});
-
 // ─── 교사: 세특(세부능력 및 특기사항) 작성 보조 ───────────────────────
 
 const CATEGORY_LABELS = { logic: '논리성', evidence: '근거', persuasion: '표현 명확성', rebuttal: '반론', consistency: '일관성' };
@@ -536,23 +472,6 @@ router.post('/students/:userId/setuk-draft', requireAuth, requireTeacher, async 
   } catch (e) {
     console.error('[setuk-draft]', e);
     return res.status(500).json({ error: '세특 초안 생성에 실패했습니다.' });
-  }
-});
-
-router.post('/saedeuk/fit-length', requireAuth, requireTeacher, async (req, res) => {
-  try {
-    const { text, recordType } = req.body ?? {};
-    if (typeof text !== 'string' || !text.trim()) return res.status(400).json({ error: '문장을 입력해주세요.' });
-    if (!Object.keys(RECORD_TYPES).includes(recordType)) {
-      return res.status(400).json({ error: '올바르지 않은 기록 유형입니다.' });
-    }
-    const limit = RECORD_TYPES[recordType];
-    const fitted = await fitTextToLength({ text, limit });
-    const { text: filtered, flags } = filterBannedContent(fitted);
-    return res.json({ text: filtered, flags, charLimit: limit });
-  } catch (e) {
-    console.error('[saedeuk-fit-length]', e);
-    return res.status(500).json({ error: '글자수 조정에 실패했습니다.' });
   }
 });
 

@@ -1,5 +1,4 @@
 import OpenAI from 'openai';
-import { RECORD_TYPES, SUBJECT_STYLE_HINTS } from '../saedeuk.js';
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
@@ -751,60 +750,6 @@ export async function generateTeacherDebateSummary({ studentName, topic, positio
       improvements: ['근거 자료의 다양성을 높이고 논리적 일관성을 강화할 필요가 있습니다.'],
       coaching: '꾸준한 연습을 통해 더욱 발전할 수 있을 것입니다.',
     };
-  }
-}
-
-export async function generateSaedeukDraft({ studentName, subject, recordType, historyItems }) {
-  const styleHint = SUBJECT_STYLE_HINTS[subject] ?? SUBJECT_STYLE_HINTS['기타'];
-  const charLimit = RECORD_TYPES[recordType] ?? RECORD_TYPES['교과세특'];
-
-  const activityLines = historyItems
-    .map((h) => {
-      const label = h.position === 'solo' ? '개인 논술' : (h.position === 'pro' ? '찬성 토론' : '반대 토론');
-      return `- ${label} | 주제: ${h.topic} | 점수: ${h.score}점 | 총평: ${h.advice ?? '없음'}`;
-    })
-    .join('\n');
-
-  const prompt =
-    `당신은 중고등학교 "${subject}" 교과 담당 교사의 세특(세부능력 및 특기사항) 작성 보조 도구입니다.\n\n` +
-    `학생 "${studentName}"의 최근 토론·논술 활동 기록:\n${activityLines || '기록 없음'}\n\n` +
-    `위 기록을 바탕으로 세특 관찰 문장 "후보" 3~5개를 생성하세요.\n` +
-    `조건:\n` +
-    `- 반드시 "~함", "~보임", "~드러남" 등 명사형 종결 어미로 작성 (학교생활기록부 문체)\n` +
-    `- 각 문장은 ${charLimit}자를 넘지 않게 작성\n` +
-    `- "${subject}" 교과 관점에서 ${styleHint}를 드러내는 내용을 우선\n` +
-    `- 위에 제시된 실제 활동 내용(주제, 점수, 총평)에 근거해서만 작성하고, 근거 없는 내용은 지어내지 말 것\n` +
-    `- 기관명, 학원명, 자격증/인증명, 해외활동, 부모의 직업이나 재산, 수상·대회명은 절대 언급하지 말 것\n` +
-    `- 아래 JSON 형식으로만 답하세요 (설명 없이 JSON만): {"candidates":["문장1","문장2","문장3"]}`;
-
-  try {
-    const raw = await ask(prompt);
-    const jsonMatch = raw.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error('JSON 파싱 실패');
-    const parsed = JSON.parse(jsonMatch[0]);
-    if (!Array.isArray(parsed.candidates) || parsed.candidates.length === 0) throw new Error('응답 구조 오류');
-    return parsed.candidates.filter((c) => typeof c === 'string' && c.trim()).map((c) => c.trim());
-  } catch (error) {
-    logAiFailure('saedeuk draft generation', error);
-    return [`${studentName} 학생은 토론·논술 활동에 꾸준히 참여하며 성장하는 모습을 보임. (AI 초안 생성 실패로 인한 기본 문구이며, 교사가 직접 관찰한 내용으로 대체해야 함)`];
-  }
-}
-
-export async function fitTextToLength({ text, limit }) {
-  const trimmed = text.trim();
-  if (trimmed.length <= limit) return trimmed;
-
-  const prompt =
-    `다음은 학교생활기록부 세특 문장입니다. 의미와 "~함/~보임" 명사형 어미 문체는 유지하면서, ` +
-    `공백 포함 ${limit}자 이내로 자연스럽게 줄여주세요. 결과 문장만 답하세요.\n\n"${trimmed}"`;
-
-  try {
-    const raw = await ask(prompt);
-    const cleaned = cleanTopicResponse(raw);
-    return cleaned.length <= limit ? cleaned : cleaned.slice(0, limit);
-  } catch (error) {
-    logAiFailure('saedeuk length fit', error);
-    return trimmed.slice(0, limit);
   }
 }
 
