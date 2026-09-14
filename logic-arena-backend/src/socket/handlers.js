@@ -105,7 +105,8 @@ async function startPhase(io, roomId, phase) {
   setPhase(roomId, phase);
   const waitsForAiTopic = phase === 'topic_selection' && room.topicMode === 'ai_auto';
   const waitsForAiJudging = phase === 'judging';
-  if (waitsForAiTopic || waitsForAiJudging) {
+  const waitsForUserAction = phase === 'essay_feedback'; // AI 피드백 확인 후 수동으로 퇴고 시작
+  if (waitsForAiTopic || waitsForAiJudging || waitsForUserAction) {
     pausePhaseTimer(roomId);
   } else {
     startPhaseTimer(io, roomId, phase);

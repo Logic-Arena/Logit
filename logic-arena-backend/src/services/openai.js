@@ -256,6 +256,8 @@ export async function generateCoaching({ topic, content }) {
 export async function generateSoloFeedback({ topic, essaySide, essayText, structuredArgumentEnabled = true }) {
   const stance = essaySide === 'con' ? '반대' : '찬성';
 
+  console.log('[generateSoloFeedback] structuredArgumentEnabled:', structuredArgumentEnabled);
+
   let prompt;
 
   if (structuredArgumentEnabled) {
