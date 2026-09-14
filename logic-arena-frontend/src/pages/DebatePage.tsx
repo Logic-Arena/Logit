@@ -799,22 +799,8 @@ function EssayFeedbackBubble({ feedbackRaw, structuredArgumentEnabled }: { feedb
 
 function EssayFeedbackView({ room }: { room: Room }) {
   const feedbackRaw = room.content.essay_feedback;
-  let feedback: {
-    claim?: string;
-    evidence?: string;
-    example?: string;
-    counterArgument?: string;
-    rebuttal?: string;
-    overall?: string;
-  } | null = null;
 
-  try {
-    feedback = feedbackRaw ? JSON.parse(feedbackRaw) : null;
-  } catch {
-    // 파싱 실패 시 null 유지
-  }
-
-  if (!feedback) {
+  if (!feedbackRaw) {
     return (
       <div style={{ padding: "20px", textAlign: "center", color: "var(--color-text-muted)" }}>
         AI가 피드백을 준비 중입니다...
@@ -822,138 +808,11 @@ function EssayFeedbackView({ room }: { room: Room }) {
     );
   }
 
-  const isStructured = room.structuredArgumentEnabled ?? true;
-
-  // 구조화 모드: 5개 섹션별 헤더 + 박스 구분
-  if (isStructured) {
-    const sections = [
-      { label: "① 주장", key: "claim" as const },
-      { label: "② 근거", key: "evidence" as const },
-      { label: "③ 예시", key: "example" as const },
-      { label: "④ 예상 반론", key: "counterArgument" as const },
-      { label: "⑤ 재반론", key: "rebuttal" as const },
-    ];
-
-    return (
-      <div style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "16px 0" }}>
-        <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--color-text)" }}>
-          AI 피드백
-        </div>
-        <div
-          style={{
-            background: "var(--color-surface-2)",
-            border: "1px solid var(--color-border)",
-            borderRadius: "var(--radius-md)",
-            padding: "16px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "14px",
-          }}
-        >
-          {sections.map(({ label, key }) => (
-            <div key={key} style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-              <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--color-text-muted)" }}>
-                {label}
-              </div>
-              <div style={{ fontSize: "13px", lineHeight: 1.6, color: "var(--color-text)" }}>
-                {feedback?.[key] || "피드백이 없습니다."}
-              </div>
-            </div>
-          ))}
-          {feedback.overall && (
-            <div
-              style={{
-                marginTop: "8px",
-                paddingTop: "14px",
-                borderTop: "1px solid var(--color-border)",
-                display: "flex",
-                flexDirection: "column",
-                gap: "4px",
-              }}
-            >
-              <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--color-text-muted)" }}>
-                총평
-              </div>
-              <div style={{ fontSize: "13px", lineHeight: 1.6, color: "var(--color-text)" }}>
-                {feedback.overall}
-              </div>
-            </div>
-          )}
-        </div>
-        <div style={{ fontSize: "12px", color: "var(--color-text-muted)", textAlign: "center" }}>
-          피드백을 충분히 읽은 뒤 퇴고를 시작하세요. 남은 시간이 끝나면 자동으로 이동합니다.
-        </div>
-        <button
-          type="button"
-          className="btn btn--primary"
-          onClick={() => socket.emit('continue_solo_revision', { roomId: room.id })}
-          style={{ alignSelf: "center", minWidth: "180px" }}
-        >
-          퇴고 시작하기
-        </button>
-      </div>
-    );
-  }
-
-  // 자유 서술형 모드: 헤더 없이 이어지는 문단 형태
-  const feedbackParts = [
-    feedback.claim,
-    feedback.evidence,
-    feedback.example,
-    feedback.counterArgument,
-    feedback.rebuttal,
-  ].filter(Boolean); // 빈 값 제거
-
+  // AI 피드백은 채팅 영역에 말풍선으로 표시되므로, 여기서는 버튼만 표시
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "16px 0" }}>
-      <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--color-text)" }}>
-        AI 피드백
-      </div>
-      <div
-        style={{
-          background: "var(--color-surface-2)",
-          border: "1px solid var(--color-border)",
-          borderRadius: "var(--radius-md)",
-          padding: "16px",
-          display: "flex",
-          flexDirection: "column",
-          gap: "12px",
-        }}
-      >
-        {feedbackParts.map((text, index) => (
-          <div
-            key={index}
-            style={{
-              fontSize: "13px",
-              lineHeight: 1.6,
-              color: "var(--color-text)",
-            }}
-          >
-            {text}
-          </div>
-        ))}
-        {feedback.overall && (
-          <div
-            style={{
-              marginTop: "8px",
-              paddingTop: "14px",
-              borderTop: "1px solid var(--color-border)",
-              display: "flex",
-              flexDirection: "column",
-              gap: "4px",
-            }}
-          >
-            <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--color-text-muted)" }}>
-              총평
-            </div>
-            <div style={{ fontSize: "13px", lineHeight: 1.6, color: "var(--color-text)" }}>
-              {feedback.overall}
-            </div>
-          </div>
-        )}
-      </div>
       <div style={{ fontSize: "12px", color: "var(--color-text-muted)", textAlign: "center" }}>
-        피드백을 충분히 읽은 뒤 퇴고를 시작하세요. 남은 시간이 끝나면 자동으로 이동합니다.
+        피드백을 충분히 읽은 뒤 퇴고를 시작하세요.
       </div>
       <button
         type="button"
