@@ -921,109 +921,113 @@ function EssayRevisionView({
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "8px 0" }}>
-      {/* 피드백 영역 (접기 가능, 기본 펼침) */}
-      {feedbackState === 'loading' ? (
-        <div
-          style={{
-            background: "var(--color-surface-2)",
-            border: "1px solid var(--color-border)",
-            borderRadius: "var(--radius-md)",
-            padding: "20px",
-            textAlign: "center",
-            color: "var(--color-text-muted)",
-            fontSize: "13px",
-          }}
-        >
-          AI 피드백을 불러오는 중입니다...
-        </div>
-      ) : feedbackState === 'error' ? (
-        <div
-          style={{
-            background: "var(--color-surface-2)",
-            border: "1px solid var(--color-border)",
-            borderRadius: "var(--radius-md)",
-            padding: "20px",
-            textAlign: "center",
-            color: "var(--color-con)",
-            fontSize: "13px",
-          }}
-        >
-          ⚠️ 피드백을 불러오지 못했습니다.
-          <div style={{ marginTop: "8px", fontSize: "12px", color: "var(--color-text-muted)" }}>
-            잠시 후 다시 시도하거나 페이지를 새로고침해보세요.
-          </div>
-        </div>
-      ) : feedback ? (
-        <details open style={{ background: "var(--color-surface-2)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", padding: "12px 14px" }}>
-          <summary style={{ cursor: "pointer", fontSize: "13px", fontWeight: 700, color: "var(--color-text)", userSelect: "none" }}>
-            AI 피드백 (클릭하여 접기/펼치기)
-          </summary>
-          <div style={{ marginTop: "12px", display: "flex", flexDirection: "column", gap: "10px" }}>
-            {sections.map(({ label, key }) => (
-              <div key={key} style={{ fontSize: "12px", lineHeight: 1.6 }}>
-                <span style={{ fontWeight: 600, color: "var(--color-text-muted)" }}>{label}:</span>{" "}
-                <span style={{ color: "var(--color-text)" }}>{feedback[key]}</span>
-              </div>
-            ))}
-            {feedback.overall && (
-              <div style={{ fontSize: "12px", lineHeight: 1.6, marginTop: "4px", paddingTop: "8px", borderTop: "1px solid var(--color-border)" }}>
-                <span style={{ fontWeight: 600, color: "var(--color-text-muted)" }}>총평:</span>{" "}
-                <span style={{ color: "var(--color-text)" }}>{feedback.overall}</span>
-              </div>
-            )}
-          </div>
-        </details>
-      ) : null}
-
-      {/* 퇴고 폼 */}
-      {parsedSections ? (
-        <StructuredArgumentPanel
-          key="essay_revision"
-          roomId={room.id}
-          stance={room.essaySide}
-          alreadySubmitted={false}
-          phaseEndAt={room.phaseEndAt}
-          initialSections={parsedSections}
-          submitLabel="퇴고 완료"
-        />
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+    <div style={{ display: "flex", gap: "20px", padding: "8px 0", flexWrap: "wrap" }}>
+      {/* 좌측: AI 피드백 */}
+      <div style={{ flex: "1 1 300px", minWidth: "300px" }}>
+        {feedbackState === 'loading' ? (
           <div
             style={{
-              padding: "12px 16px",
               background: "var(--color-surface-2)",
               border: "1px solid var(--color-border)",
               borderRadius: "var(--radius-md)",
-              fontSize: "13px",
+              padding: "20px",
+              textAlign: "center",
               color: "var(--color-text-muted)",
+              fontSize: "13px",
             }}
           >
-            이전 제출문의 형식을 인식할 수 없어 새로 작성해야 합니다. 아래 참고:
-            <pre
-              style={{
-                marginTop: "8px",
-                fontSize: "12px",
-                whiteSpace: "pre-wrap",
-                wordBreak: "break-word",
-                background: "var(--color-surface)",
-                padding: "8px",
-                borderRadius: "4px",
-              }}
-            >
-              {originalEssay || "(제출문 없음)"}
-            </pre>
+            AI 피드백을 불러오는 중입니다...
           </div>
+        ) : feedbackState === 'error' ? (
+          <div
+            style={{
+              background: "var(--color-surface-2)",
+              border: "1px solid var(--color-border)",
+              borderRadius: "var(--radius-md)",
+              padding: "20px",
+              textAlign: "center",
+              color: "var(--color-con)",
+              fontSize: "13px",
+            }}
+          >
+            ⚠️ 피드백을 불러오지 못했습니다.
+            <div style={{ marginTop: "8px", fontSize: "12px", color: "var(--color-text-muted)" }}>
+              잠시 후 다시 시도하거나 페이지를 새로고침해보세요.
+            </div>
+          </div>
+        ) : feedback ? (
+          <div style={{ background: "var(--color-surface-2)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", padding: "16px" }}>
+            <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--color-text)", marginBottom: "12px" }}>
+              💡 AI 피드백
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {sections.map(({ label, key }) => (
+                <div key={key} style={{ fontSize: "13px", lineHeight: 1.6 }}>
+                  <div style={{ fontWeight: 700, color: "var(--color-text)", marginBottom: "4px" }}>{label}</div>
+                  <div style={{ color: "var(--color-text-muted)" }}>{feedback[key]}</div>
+                </div>
+              ))}
+              {feedback.overall && (
+                <div style={{ fontSize: "13px", lineHeight: 1.6, marginTop: "8px", paddingTop: "12px", borderTop: "1px solid var(--color-border)" }}>
+                  <div style={{ fontWeight: 700, color: "var(--color-text)", marginBottom: "4px" }}>총평</div>
+                  <div style={{ color: "var(--color-text-muted)" }}>{feedback.overall}</div>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      {/* 우측: 퇴고 폼 */}
+      <div style={{ flex: "1 1 400px", minWidth: "300px" }}>
+        {parsedSections ? (
           <StructuredArgumentPanel
-            key="essay_revision_fallback"
+            key="essay_revision"
             roomId={room.id}
             stance={room.essaySide}
             alreadySubmitted={false}
             phaseEndAt={room.phaseEndAt}
+            initialSections={parsedSections}
             submitLabel="퇴고 완료"
           />
-        </div>
-      )}
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <div
+              style={{
+                padding: "12px 16px",
+                background: "var(--color-surface-2)",
+                border: "1px solid var(--color-border)",
+                borderRadius: "var(--radius-md)",
+                fontSize: "13px",
+                color: "var(--color-text-muted)",
+              }}
+            >
+              이전 제출문의 형식을 인식할 수 없어 새로 작성해야 합니다. 아래 참고:
+              <pre
+                style={{
+                  marginTop: "8px",
+                  fontSize: "12px",
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-word",
+                  background: "var(--color-surface)",
+                  padding: "8px",
+                  borderRadius: "4px",
+                }}
+              >
+                {originalEssay || "(제출문 없음)"}
+              </pre>
+            </div>
+            <StructuredArgumentPanel
+              key="essay_revision_fallback"
+              roomId={room.id}
+              stance={room.essaySide}
+              alreadySubmitted={false}
+              phaseEndAt={room.phaseEndAt}
+              submitLabel="퇴고 완료"
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
