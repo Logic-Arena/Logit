@@ -214,6 +214,12 @@ const CONTENT_FLOW: Array<{
       align: "con",
       variant: "player",
     },
+    {
+      key: "essay_feedback",
+      author: "AI 피드백",
+      align: "con",
+      variant: "ai",
+    },
   ];
 
 const CONTENT_LABELS: Partial<Record<keyof RoomContent, string>> = {
@@ -636,7 +642,9 @@ function DebateChatView({
                   className={`debate-bubble debate-bubble--${item.align}-${item.variant}`}
                 >
                   <div className="debate-bubble__body">
-                    {item.variant === "ai" ? (
+                    {item.key === "essay_feedback" ? (
+                      <EssayFeedbackBubble feedbackRaw={item.text} structuredArgumentEnabled={room.structuredArgumentEnabled} />
+                    ) : item.variant === "ai" ? (
                       <TypewriterText
                         key={`${item.key}:${item.text}`}
                         text={item.text}
@@ -713,6 +721,81 @@ function DebateChatView({
 }
 
 // ─── Phase 별 뷰 (특수 케이스) ──────────────────────────────────
+
+function EssayFeedbackBubble({ feedbackRaw, structuredArgumentEnabled }: { feedbackRaw: string; structuredArgumentEnabled: boolean }) {
+  let feedback: {
+    claim?: string;
+    evidence?: string;
+    example?: string;
+    counterArgument?: string;
+    rebuttal?: string;
+    overall?: string;
+  } | null = null;
+
+  try {
+    feedback = feedbackRaw ? JSON.parse(feedbackRaw) : null;
+  } catch {
+    return <div>피드백을 불러올 수 없습니다.</div>;
+  }
+
+  if (!feedback) {
+    return <div>피드백이 준비 중입니다...</div>;
+  }
+
+  const isStructured = structuredArgumentEnabled ?? true;
+
+  if (isStructured) {
+    const sections = [
+      { label: "① 주장", key: "claim" as const },
+      { label: "② 근거", key: "evidence" as const },
+      { label: "③ 예시", key: "example" as const },
+      { label: "④ 예상 반론", key: "counterArgument" as const },
+      { label: "⑤ 재반론", key: "rebuttal" as const },
+    ];
+
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+        {sections.map(({ label, key }) => (
+          <div key={key} style={{ fontSize: "13px", lineHeight: 1.6 }}>
+            <span style={{ fontWeight: 600, color: "var(--color-text-muted)" }}>{label}:</span>{" "}
+            <span>{feedback?.[key] || "피드백이 없습니다."}</span>
+          </div>
+        ))}
+        {feedback.overall && (
+          <div style={{ fontSize: "13px", lineHeight: 1.6, marginTop: "4px", paddingTop: "8px", borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+            <span style={{ fontWeight: 600, color: "var(--color-text-muted)" }}>총평:</span>{" "}
+            <span>{feedback.overall}</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // 자유 서술형
+  const feedbackParts = [
+    feedback.claim,
+    feedback.evidence,
+    feedback.example,
+    feedback.counterArgument,
+    feedback.rebuttal,
+  ].filter(Boolean);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+      {feedbackParts.map((text, index) => (
+        <div key={index} style={{ fontSize: "13px", lineHeight: 1.6 }}>
+          {text}
+        </div>
+      ))}
+      {feedback.overall && (
+        <div style={{ fontSize: "13px", lineHeight: 1.6, marginTop: "4px", paddingTop: "8px", borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+          <span style={{ fontWeight: 600, color: "var(--color-text-muted)" }}>총평:</span>{" "}
+          <span>{feedback.overall}</span>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function EssayFeedbackView({ room }: { room: Room }) {
   const feedbackRaw = room.content.essay_feedback;

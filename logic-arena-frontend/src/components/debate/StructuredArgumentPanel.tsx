@@ -82,15 +82,13 @@ export function StructuredArgumentPanel({
     const delay = phaseEndAt - Date.now();
     const fire = () => {
       const combined = combineSections(sectionsRef.current);
-      if (combined.trim()) {
-        socket.emit('submit_content', {
-          roomId,
-          text: combined,
-          // 향후 백엔드 스키마 확장 시 구조화 데이터 전송
-          // structured: sectionsRef.current,
-        });
-        setSubmitting(true);
-      }
+      // 내용이 있으면 제출, 없으면 skip으로 제출 (빈 제출도 허용)
+      socket.emit('submit_content', {
+        roomId,
+        text: combined.trim() || '',
+        skip: !combined.trim(), // 내용이 없으면 skip=true
+      });
+      setSubmitting(true);
       setTimeExpired(true); // 타이머 만료 표시
     };
     if (delay <= 0) { fire(); return; }
