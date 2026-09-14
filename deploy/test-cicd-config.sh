@@ -41,6 +41,10 @@ if [[ "$*" == "compose ps -q "* ]]; then
   printf 'container-%s\n' "${*: -1}"
 elif [[ "$*" == "inspect -f "* ]]; then
   printf 'healthy\n'
+elif [[ "$*" == "compose run "* ]]; then
+  # Model a child consuming the SSH stream, even if interactive mode is disabled.
+  cat >/dev/null
+  exit "${TEST_MIGRATION_EXIT_CODE:-0}"
 fi
 FAKE_DOCKER
 
@@ -56,7 +60,7 @@ PATH="$fake_bin:$PATH" \
 TEST_CALL_LOG="$call_log" \
 LOGIT_REPO_DIR="$fake_repo" \
 LOGIT_HEALTH_BASE_URL="https://logit.example.test" \
-"$deploy_script"
+bash -s <"$deploy_script" >"$test_root/deploy-output.log"
 
 assert_called() {
   local expected="$1"
@@ -67,11 +71,32 @@ assert_called "git fetch origin main"
 assert_called "git merge --ff-only origin/main"
 assert_called "docker compose build --pull"
 assert_called "docker compose up -d postgres"
-assert_called "docker compose run --rm --no-deps backend npx prisma migrate deploy"
+assert_called "docker compose run --rm --no-deps -T --interactive=false backend npx prisma migrate deploy"
 assert_called "docker compose up -d --remove-orphans --force-recreate backend frontend"
 assert_called "curl -fsS --retry 10 --retry-delay 3 --retry-all-errors https://logit.example.test/healthz"
 assert_called "curl -fsS --retry 10 --retry-delay 3 --retry-all-errors https://logit.example.test/api/health"
+grep -Fxq 'Deployment completed successfully' "$test_root/deploy-output.log" \
+  || fail "streamed deployment did not reach completion"
 pass "deployment performs update, build, migration, restart, and public health checks"
+
+: >"$call_log"
+if PATH="$fake_bin:$PATH" \
+  TEST_CALL_LOG="$call_log" \
+  TEST_MIGRATION_EXIT_CODE=42 \
+  LOGIT_REPO_DIR="$fake_repo" \
+  bash -s <"$deploy_script" >"$test_root/failed-deploy-output.log" 2>&1; then
+  fail "deployment must fail when migration fails"
+else
+  migration_status=$?
+fi
+[[ "$migration_status" == 42 ]] || fail "migration exit status was not preserved"
+if grep -Fq 'docker compose up -d --remove-orphans' "$call_log"; then
+  fail "deployment restarted services after a failed migration"
+fi
+if grep -Fq 'Deployment completed successfully' "$test_root/failed-deploy-output.log"; then
+  fail "failed deployment reported success"
+fi
+pass "streamed deployment stops and preserves migration failures"
 
 sync_script="$repo_root/deploy/ec2/sync-env.sh"
 [[ -x "$sync_script" ]] || fail "missing executable deploy/ec2/sync-env.sh"
