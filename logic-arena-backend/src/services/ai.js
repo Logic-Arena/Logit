@@ -23,4 +23,6 @@ export const {
   generateTeacherDebateSummary,
   generateSaedeukDraft,
   fitTextToLength,
+  generateSetukDraft,
+  summarizeSetuk,
 } = service;

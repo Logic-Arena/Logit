@@ -808,6 +808,98 @@ export async function fitTextToLength({ text, limit }) {
   }
 }
 
+const SETUK_VERSIONS = [
+  { version: 'A', label: '논리성·근거 중심', focus: '논리적 사고력과 근거 활용 능력을 중심으로, 실제 토론에서 드러난 논증 구조와 근거 제시 방식을 구체적으로 서술' },
+  { version: 'B', label: '성장·발전 중심', focus: '활동을 거듭하며 나타난 성장 추이와 역량 향상 과정을 중심으로, 초기와 최근의 변화를 대비해 서술' },
+  { version: 'C', label: '태도·참여 중심', focus: '토론 활동에 임하는 태도, 적극성, 협업 및 경청 자세를 중심으로 서술' },
+];
+
+function formatTopicSummary(topicSummary) {
+  if (Array.isArray(topicSummary)) return topicSummary.filter(Boolean).join(', ') || '없음';
+  return topicSummary || '없음';
+}
+
+function buildSetukPrompt({
+  studentName, totalGames, avgScore, avgLogic, avgEvidence, avgPersuasion, avgRebuttal, avgConsistency,
+  strongestCategory, weakestCategory, growthRate, topicSummary,
+}) {
+  const categoryLine = `논리성 ${avgLogic}, 근거 ${avgEvidence}, 표현 명확성 ${avgPersuasion}, 반론 ${avgRebuttal}, 일관성 ${avgConsistency} (각 20점 만점)`;
+  const versionLines = SETUK_VERSIONS.map((v) => `- ${v.version} (${v.label}): ${v.focus}`).join('\n');
+
+  return (
+    `당신은 중고등학교 담당 교사가 학교생활기록부의 '세부능력 및 특기사항(세특)'을 작성할 때 참고할 초안을 작성하는 보조 도구입니다.\n\n` +
+    `학생 활동 데이터:\n` +
+    `- 이름: ${studentName}\n` +
+    `- 총 활동 수: ${totalGames}회\n` +
+    `- 평균 점수: ${avgScore}점 (100점 만점)\n` +
+    `- 항목별 평균: ${categoryLine}\n` +
+    `- 가장 강한 영역: ${strongestCategory || '없음'}\n` +
+    `- 개선이 필요한 영역: ${weakestCategory || '없음'}\n` +
+    `- 성장률: ${growthRate}%\n` +
+    `- 주요 토론/논술 주제: ${formatTopicSummary(topicSummary)}\n\n` +
+    `아래 3가지 버전으로 세특 문장 초안을 각각 1개씩 작성하세요:\n${versionLines}\n\n` +
+    `작성 규칙 (반드시 준수):\n` +
+    `1. 모든 문장은 명사형으로 종결할 것 (예: ~함, ~음, ~임). "~했다", "~하였습니다" 등 서술형 종결 금지\n` +
+    `2. 각 버전은 200자 이내로 작성\n` +
+    `3. 특정 기업명, 학원명, 교외 대회/수상명, 공인 어학시험명 등 학교생활기록부 기재 금지 항목은 절대 포함하지 말 것\n` +
+    `4. 실제 데이터(점수, 성장률, 주제 등)를 근거로 구체적으로 서술하고, 막연한 미사여구는 피할 것\n` +
+    `5. 학생 이름은 문장에 직접 쓰지 말 것 (세특은 이름 없이 서술하는 관행을 따름)\n` +
+    `6. 이 초안은 AI가 생성한 것으로, 교사의 검토·수정을 전제로 한 참고용임을 감안하여 과장된 단정 표현은 피할 것\n\n` +
+    `반드시 아래 JSON 형식으로만 답하세요 (설명 없이 JSON만):\n` +
+    `{"drafts":[{"version":"A","text":"..."},{"version":"B","text":"..."},{"version":"C","text":"..."}]}`
+  );
+}
+
+function makeSetukFallbackText(versionDef, { totalGames, avgScore } = {}) {
+  const base = `토론 및 논술 활동에 총 ${totalGames ?? 0}회 참여하여 평균 ${avgScore ?? 0}점을 기록함`;
+  return `${base}. (${versionDef.label} 초안 자동 생성에 실패하여 기본 문구가 표시됨. 직접 검토 및 수정이 필요함)`;
+}
+
+export async function generateSetukDraft(params) {
+  try {
+    const raw = await ask(buildSetukPrompt(params));
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('JSON 파싱 실패');
+    const parsed = JSON.parse(jsonMatch[0]);
+    if (!Array.isArray(parsed.drafts) || parsed.drafts.length === 0) throw new Error('drafts 없음');
+
+    return SETUK_VERSIONS.map((v) => {
+      const found = parsed.drafts.find((d) => d.version === v.version);
+      const text = typeof found?.text === 'string' && found.text.trim() ? found.text.trim() : null;
+      return { version: v.version, label: v.label, text: text ?? makeSetukFallbackText(v, params) };
+    });
+  } catch (error) {
+    logAiFailure('setuk draft generation', error);
+    return SETUK_VERSIONS.map((v) => ({ version: v.version, label: v.label, text: makeSetukFallbackText(v, params) }));
+  }
+}
+
+export async function summarizeSetuk({ text, maxLength = 500 }) {
+  const trimmedInput = (text || '').trim();
+  if (!trimmedInput) return '';
+  if (trimmedInput.length <= maxLength) return trimmedInput;
+
+  const prompt =
+    `아래는 학교생활기록부 세부능력 및 특기사항(세특) 문장입니다. 이 문장을 ${maxLength}자 이내로 축약해주세요.\n\n` +
+    `원문:\n${trimmedInput}\n\n` +
+    `축약 규칙 (반드시 준수):\n` +
+    `1. 반드시 ${maxLength}자 이내로 작성 (공백 포함)\n` +
+    `2. 명사형 어미 종결을 유지할 것 (예: ~함, ~음, ~임)\n` +
+    `3. 핵심 내용(구체적 활동, 역량, 성과)은 최대한 보존하고 부수적인 수식어나 중복 표현만 줄일 것\n` +
+    `4. 문장이 어색하게 끊기지 않도록 자연스럽게 마무리할 것\n\n` +
+    `축약된 문장만 출력하세요. 설명이나 따옴표를 추가하지 마세요.`;
+
+  try {
+    const raw = await ask(prompt);
+    let result = cleanTopicResponse(raw);
+    if (result.length > maxLength) result = result.slice(0, maxLength);
+    return result || trimmedInput.slice(0, maxLength);
+  } catch (error) {
+    logAiFailure('setuk summarization', error);
+    return trimmedInput.slice(0, maxLength);
+  }
+}
+
 // Legacy - kept for compatibility
 export async function generateAiResponse({ topic, vote, chatHistory, triggerMessage }) {
   const stance = vote === 'pro' ? '찬성' : '반대';

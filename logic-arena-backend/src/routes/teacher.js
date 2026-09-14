@@ -1,7 +1,7 @@
 import express from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { prisma } from '../db/prisma.js';
-import { generateTeacherDebateSummary, generateSaedeukDraft, fitTextToLength } from '../services/ai.js';
+import { generateTeacherDebateSummary, generateSaedeukDraft, fitTextToLength, generateSetukDraft, summarizeSetuk } from '../services/ai.js';
 import { filterBannedContent } from '../services/saedeukFilter.js';
 import { TEACHER_SUBJECTS, RECORD_TYPES } from '../saedeuk.js';
 
@@ -464,6 +464,81 @@ router.post('/students/:studentId/saedeuk-draft', requireAuth, requireTeacher, a
   }
 });
 
+// ─── 교사: 세특(세부능력 및 특기사항) 작성 보조 ───────────────────────
+
+const CATEGORY_LABELS = { logic: '논리성', evidence: '근거', persuasion: '표현 명확성', rebuttal: '반론', consistency: '일관성' };
+
+async function requireOwnStudent(req, res, userId) {
+  const membership = await prisma.debateClassMember.findFirst({
+    where: { user_id: userId, class: { teacher_id: req.user.id } },
+    select: { class_id: true },
+  });
+  if (!membership) {
+    res.status(403).json({ error: '담당 학급 학생만 조회할 수 있습니다.' });
+    return false;
+  }
+  return true;
+}
+
+router.post('/students/:userId/setuk-draft', requireAuth, requireTeacher, async (req, res) => {
+  try {
+    const userId = parseInt(req.params.userId, 10);
+    if (!Number.isFinite(userId)) return res.status(400).json({ error: '잘못된 요청입니다.' });
+    if (!(await requireOwnStudent(req, res, userId))) return;
+
+    const user = await prisma.user.findUnique({ where: { user_id: userId }, select: { name: true } });
+    if (!user) return res.status(404).json({ error: '학생을 찾을 수 없습니다.' });
+
+    const stats = await prisma.userStats.findUnique({ where: { user_id: userId }, select: { total_games: true } });
+
+    const histories = await prisma.debateHistory.findMany({
+      where: { user_id: userId },
+      orderBy: { played_at: 'desc' },
+      take: 10,
+    });
+    if (histories.length === 0) {
+      return res.status(400).json({ error: '세특 초안을 생성할 활동 기록이 없습니다.' });
+    }
+
+    const avg = (key) => Math.round(histories.reduce((s, h) => s + h[key], 0) / histories.length);
+    const avgScore = avg('score');
+    const avgLogic = avg('logic');
+    const avgEvidence = avg('evidence');
+    const avgPersuasion = avg('persuasion');
+    const avgRebuttal = avg('rebuttal');
+    const avgConsistency = avg('consistency');
+
+    const categoryAverages = { logic: avgLogic, evidence: avgEvidence, persuasion: avgPersuasion, rebuttal: avgRebuttal, consistency: avgConsistency };
+    const sortedCategories = Object.entries(categoryAverages).sort((a, b) => b[1] - a[1]);
+    const strongestCategory = CATEGORY_LABELS[sortedCategories[0][0]];
+    const weakestCategory = CATEGORY_LABELS[sortedCategories[sortedCategories.length - 1][0]];
+
+    let growthRate = 0;
+    if (histories.length >= 6) {
+      // histories는 최신순(desc) 정렬 → 앞 3개가 최근, 그다음 3개가 이전
+      const recentAvg = histories.slice(0, 3).reduce((s, h) => s + h.score, 0) / 3;
+      const priorAvg = histories.slice(3, 6).reduce((s, h) => s + h.score, 0) / 3;
+      growthRate = priorAvg > 0 ? Math.round(((recentAvg - priorAvg) / priorAvg) * 100) : 0;
+    }
+
+    const topicSummary = histories.length > 1
+      ? `${histories[0].topic} 외 ${histories.length - 1}건`
+      : histories[0].topic;
+
+    const drafts = await generateSetukDraft({
+      studentName: user.name,
+      totalGames: stats?.total_games ?? histories.length,
+      avgScore, avgLogic, avgEvidence, avgPersuasion, avgRebuttal, avgConsistency,
+      strongestCategory, weakestCategory, growthRate, topicSummary,
+    });
+
+    return res.json({ drafts });
+  } catch (e) {
+    console.error('[setuk-draft]', e);
+    return res.status(500).json({ error: '세특 초안 생성에 실패했습니다.' });
+  }
+});
+
 router.post('/saedeuk/fit-length', requireAuth, requireTeacher, async (req, res) => {
   try {
     const { text, recordType } = req.body ?? {};
@@ -478,6 +553,25 @@ router.post('/saedeuk/fit-length', requireAuth, requireTeacher, async (req, res)
   } catch (e) {
     console.error('[saedeuk-fit-length]', e);
     return res.status(500).json({ error: '글자수 조정에 실패했습니다.' });
+  }
+});
+
+router.post('/students/:userId/setuk-summarize', requireAuth, requireTeacher, async (req, res) => {
+  try {
+    const userId = parseInt(req.params.userId, 10);
+    if (!Number.isFinite(userId)) return res.status(400).json({ error: '잘못된 요청입니다.' });
+    if (!(await requireOwnStudent(req, res, userId))) return;
+
+    const { text } = req.body;
+    if (!text || typeof text !== 'string' || !text.trim()) {
+      return res.status(400).json({ error: '축약할 텍스트를 입력해주세요.' });
+    }
+
+    const summarized = await summarizeSetuk({ text });
+    return res.json({ summarized });
+  } catch (e) {
+    console.error('[setuk-summarize]', e);
+    return res.status(500).json({ error: '세특 축약에 실패했습니다.' });
   }
 });
 
