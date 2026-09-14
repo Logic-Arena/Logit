@@ -701,7 +701,9 @@ function DebateChatView({
               ? "AI가 자동으로 내용을 생성하고 있습니다."
               : hasSubmitRole
                 ? (PHASE_ACTIVE_ROLE[phase] ??
-                  "현재는 다른 참가자의 입력 차례입니다.")
+                  (mySide === null && room.mode === "solo_essay"
+                    ? "참가자가 작성 중입니다."
+                    : "현재는 다른 참가자의 입력 차례입니다."))
                 : "잠시 기다려 주세요."}
           </div>
         )}
@@ -737,13 +739,87 @@ function EssayFeedbackView({ room }: { room: Room }) {
     );
   }
 
-  const sections = [
-    { label: "① 주장", key: "claim" as const },
-    { label: "② 근거", key: "evidence" as const },
-    { label: "③ 예시", key: "example" as const },
-    { label: "④ 예상 반론", key: "counterArgument" as const },
-    { label: "⑤ 재반론", key: "rebuttal" as const },
-  ];
+  const isStructured = room.structuredArgumentEnabled !== false;
+
+  // 구조화 모드: 5개 섹션별 헤더 + 박스 구분
+  if (isStructured) {
+    const sections = [
+      { label: "① 주장", key: "claim" as const },
+      { label: "② 근거", key: "evidence" as const },
+      { label: "③ 예시", key: "example" as const },
+      { label: "④ 예상 반론", key: "counterArgument" as const },
+      { label: "⑤ 재반론", key: "rebuttal" as const },
+    ];
+
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "16px 0" }}>
+        <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--color-text)" }}>
+          AI 피드백
+        </div>
+        <div
+          style={{
+            background: "var(--color-surface-2)",
+            border: "1px solid var(--color-border)",
+            borderRadius: "var(--radius-md)",
+            padding: "16px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "14px",
+          }}
+        >
+          {sections.map(({ label, key }) => (
+            <div key={key} style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--color-text-muted)" }}>
+                {label}
+              </div>
+              <div style={{ fontSize: "13px", lineHeight: 1.6, color: "var(--color-text)" }}>
+                {feedback?.[key] || "피드백이 없습니다."}
+              </div>
+            </div>
+          ))}
+          {feedback.overall && (
+            <div
+              style={{
+                marginTop: "8px",
+                paddingTop: "14px",
+                borderTop: "1px solid var(--color-border)",
+                display: "flex",
+                flexDirection: "column",
+                gap: "4px",
+              }}
+            >
+              <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--color-text-muted)" }}>
+                총평
+              </div>
+              <div style={{ fontSize: "13px", lineHeight: 1.6, color: "var(--color-text)" }}>
+                {feedback.overall}
+              </div>
+            </div>
+          )}
+        </div>
+        <div style={{ fontSize: "12px", color: "var(--color-text-muted)", textAlign: "center" }}>
+          피드백을 충분히 읽은 뒤 퇴고를 시작하세요. 남은 시간이 끝나면 자동으로 이동합니다.
+        </div>
+        <button
+          type="button"
+          className="btn btn--primary"
+          onClick={() => socket.emit('continue_solo_revision', { roomId: room.id })}
+          style={{ alignSelf: "center", minWidth: "180px" }}
+        >
+          퇴고 시작하기
+        </button>
+      </div>
+    );
+  }
+
+  // 자유 서술형 모드: 헤더 없이 이어지는 문단 형태
+  const feedbackParts = [
+    feedback.claim,
+    feedback.evidence,
+    feedback.example,
+    feedback.counterArgument,
+    feedback.rebuttal,
+  ].filter(Boolean); // 빈 값 제거
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "16px 0" }}>
@@ -758,17 +834,19 @@ function EssayFeedbackView({ room }: { room: Room }) {
           padding: "16px",
           display: "flex",
           flexDirection: "column",
-          gap: "14px",
+          gap: "12px",
         }}
       >
-        {sections.map(({ label, key }) => (
-          <div key={key} style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-            <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--color-text-muted)" }}>
-              {label}
-            </div>
-            <div style={{ fontSize: "13px", lineHeight: 1.6, color: "var(--color-text)" }}>
-              {feedback?.[key] || "피드백이 없습니다."}
-            </div>
+        {feedbackParts.map((text, index) => (
+          <div
+            key={index}
+            style={{
+              fontSize: "13px",
+              lineHeight: 1.6,
+              color: "var(--color-text)",
+            }}
+          >
+            {text}
           </div>
         ))}
         {feedback.overall && (
@@ -829,11 +907,17 @@ function EssayRevisionView({
     rebuttal?: string;
     overall?: string;
   } | null = null;
+  let feedbackState: 'loading' | 'error' | 'success' = 'loading';
 
-  try {
-    feedback = feedbackRaw ? JSON.parse(feedbackRaw) : null;
-  } catch {
-    // 파싱 실패 시 null
+  if (feedbackRaw) {
+    try {
+      feedback = JSON.parse(feedbackRaw);
+      feedbackState = 'success';
+    } catch (error) {
+      // 파싱 실패 시 에러 로그
+      console.error('[EssayRevisionView] 피드백 파싱 실패:', feedbackRaw, error);
+      feedbackState = 'error';
+    }
   }
 
   const sections = [
@@ -897,7 +981,38 @@ function EssayRevisionView({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "8px 0" }}>
       {/* 피드백 영역 (접기 가능, 기본 펼침) */}
-      {feedback && (
+      {feedbackState === 'loading' ? (
+        <div
+          style={{
+            background: "var(--color-surface-2)",
+            border: "1px solid var(--color-border)",
+            borderRadius: "var(--radius-md)",
+            padding: "20px",
+            textAlign: "center",
+            color: "var(--color-text-muted)",
+            fontSize: "13px",
+          }}
+        >
+          AI 피드백을 불러오는 중입니다...
+        </div>
+      ) : feedbackState === 'error' ? (
+        <div
+          style={{
+            background: "var(--color-surface-2)",
+            border: "1px solid var(--color-border)",
+            borderRadius: "var(--radius-md)",
+            padding: "20px",
+            textAlign: "center",
+            color: "var(--color-con)",
+            fontSize: "13px",
+          }}
+        >
+          ⚠️ 피드백을 불러오지 못했습니다.
+          <div style={{ marginTop: "8px", fontSize: "12px", color: "var(--color-text-muted)" }}>
+            잠시 후 다시 시도하거나 페이지를 새로고침해보세요.
+          </div>
+        </div>
+      ) : feedback ? (
         <details open style={{ background: "var(--color-surface-2)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", padding: "12px 14px" }}>
           <summary style={{ cursor: "pointer", fontSize: "13px", fontWeight: 700, color: "var(--color-text)", userSelect: "none" }}>
             AI 피드백 (클릭하여 접기/펼치기)
@@ -917,7 +1032,7 @@ function EssayRevisionView({
             )}
           </div>
         </details>
-      )}
+      ) : null}
 
       {/* 퇴고 폼 */}
       {parsedSections ? (
@@ -2209,7 +2324,7 @@ function DebateSidebar({
             {isSoloEssay ? (
               room.essaySide && (
                 <span className={`sidebar-badge sidebar-badge--${room.essaySide} sidebar-badge--me`}>
-                  내 입장·{room.essaySide === "pro" ? "찬성" : "반대"}
+                  {mySide === null ? "" : "내 입장·"}{room.essaySide === "pro" ? "찬성" : "반대"}
                 </span>
               )
             ) : (
@@ -2259,14 +2374,14 @@ function DebateSidebar({
 
         {/* 최초 주장 요약 */}
         <div className="sidebar-section">
-          <div className="sidebar-section__title">{isSoloEssay ? "내 논술 초안" : "최초 주장 요약"}</div>
+          <div className="sidebar-section__title">{isSoloEssay ? (mySide === null ? "논술 초안" : "내 논술 초안") : "최초 주장 요약"}</div>
           {content.pro_argument ? (
             <Popover
               width={300}
               content={
                 <div className="popover__claim">
                   <div className="popover__claim-label popover__claim-label--pro">
-                    {isSoloEssay ? "내 논술 초안" : "찬성 측 최초 주장"}
+                    {isSoloEssay ? (mySide === null ? "논술 초안" : "내 논술 초안") : "찬성 측 최초 주장"}
                   </div>
                   <p className="popover__claim-text">
                     {content.pro_argument}
@@ -2275,7 +2390,7 @@ function DebateSidebar({
               }
             >
               <div className="claim-summary claim-summary--pro">
-                <div className="claim-summary__label">{isSoloEssay ? "내 초안" : "찬성 측"}</div>
+                <div className="claim-summary__label">{isSoloEssay ? (mySide === null ? "초안" : "내 초안") : "찬성 측"}</div>
                 <p className="claim-summary__text">
                   {content.pro_argument.length > 90
                     ? content.pro_argument.slice(0, 90) + "..."
