@@ -11,6 +11,7 @@ import type {
   StudentStat,
   ClassSummary,
   TeacherDebateSummary,
+  SetukDraft,
 } from "../lib/api";
 import {
   getTeacherClasses,
@@ -19,6 +20,8 @@ import {
   getClassStudents,
   getClassSummary,
   getStoredDebateSummary,
+  generateSetukDraft,
+  summarizeSetuk,
 } from "../lib/api";
 
 const BASE = import.meta.env.VITE_API_URL ?? "/api";
@@ -79,6 +82,115 @@ const PHASE_CONFIG: { key: keyof PhaseDurations; label: string; min: number; max
 const CATEGORY_LABELS: Record<string, string> = {
   logic: "논리성", evidence: "근거", persuasion: "표현 명확성", rebuttal: "반론", consistency: "일관성",
 };
+
+// ─── 세특 작성 보조: 금지어 / 명사형 어미 규칙 ──────────────────────
+
+interface ForbiddenCategory {
+  category: string;
+  terms: string[];
+  replacement: string;
+}
+
+const FORBIDDEN_CATEGORIES: ForbiddenCategory[] = [
+  {
+    category: "기업명",
+    terms: ["삼성전자", "삼성", "현대자동차", "현대", "LG전자", "LG", "SK하이닉스", "SK", "롯데", "카카오", "네이버", "한화", "포스코", "두산", "CJ", "GS"],
+    replacement: "국내 기업",
+  },
+  {
+    category: "공인어학시험",
+    terms: ["토익", "토플", "TOEIC", "TOEFL", "HSK", "JLPT", "텝스", "TEPS", "OPIc", "JPT", "IELTS"],
+    replacement: "공인어학시험",
+  },
+  {
+    category: "교외 수상",
+    terms: ["금상", "은상", "동상", "대상", "최우수상", "우수상", "장려상"],
+    replacement: "우수한 평가",
+  },
+  {
+    category: "자격증",
+    terms: ["정보처리기사", "컴퓨터활용능력", "한국사능력검정시험", "한자능력검정시험", "워드프로세서"],
+    replacement: "관련 자격증",
+  },
+];
+
+const ACADEMY_PATTERN = /[가-힣A-Za-z0-9]{1,10}학원/g;
+
+function checkForbidden(text: string): string[] {
+  const found = new Set<string>();
+  FORBIDDEN_CATEGORIES.forEach(({ terms }) => {
+    terms.forEach((term) => {
+      if (text.includes(term)) found.add(term);
+    });
+  });
+  const academyMatches = text.match(ACADEMY_PATTERN);
+  academyMatches?.forEach((m) => found.add(m));
+  return Array.from(found);
+}
+
+function applyForbiddenFilter(text: string): { result: string; log: string[] } {
+  let result = text;
+  const log: string[] = [];
+  FORBIDDEN_CATEGORIES.forEach(({ terms, replacement }) => {
+    terms.forEach((term) => {
+      if (result.includes(term)) {
+        result = result.split(term).join(replacement);
+        log.push(`"${term}" → "${replacement}"`);
+      }
+    });
+  });
+  result = result.replace(ACADEMY_PATTERN, (m) => {
+    log.push(`"${m}" → "사교육기관"`);
+    return "사교육기관";
+  });
+  return { result, log };
+}
+
+const NOMINAL_ENDING_MAP: [RegExp, string][] = [
+  [/하였습니다$/, "하였음"],
+  [/했습니다$/, "했음"],
+  [/합니다$/, "함"],
+  [/입니다$/, "임"],
+  [/하였다$/, "하였음"],
+  [/했다$/, "했음"],
+  [/한다$/, "함"],
+  [/이다$/, "임"],
+  [/있다$/, "있음"],
+  [/없다$/, "없음"],
+  [/보여준다$/, "보여줌"],
+  [/드러난다$/, "드러남"],
+  [/나타난다$/, "나타남"],
+  [/보인다$/, "보임"],
+  [/된다$/, "됨"],
+  [/진다$/, "짐"],
+];
+
+const SENTENCE_SPLIT_PATTERN = /([.!?]+\s*|\n)/;
+
+function convertSentenceCore(core: string): string {
+  const trailingWsMatch = core.match(/\s*$/);
+  const trailingWs = trailingWsMatch ? trailingWsMatch[0] : "";
+  const trimmed = trailingWs ? core.slice(0, -trailingWs.length) : core;
+  for (const [pattern, replacement] of NOMINAL_ENDING_MAP) {
+    if (pattern.test(trimmed)) return trimmed.replace(pattern, replacement) + trailingWs;
+  }
+  if (/다$/.test(trimmed)) return trimmed.slice(0, -1) + "음" + trailingWs;
+  return core;
+}
+
+function hasNonNominalEnding(text: string): boolean {
+  return text
+    .split(SENTENCE_SPLIT_PATTERN)
+    .filter((_, i) => i % 2 === 0)
+    .some((sentence) => sentence.trim() !== "" && /다$/.test(sentence.trim()));
+}
+
+function convertToNominal(text: string): string {
+  return text
+    .split(SENTENCE_SPLIT_PATTERN)
+    .map((part, i) => (i % 2 === 0 ? convertSentenceCore(part) : part))
+    .join("");
+}
 
 // ─── 공용 컴포넌트 ────────────────────────────────────────────────
 
@@ -577,6 +689,95 @@ function StudentDetailView({ student, onBack, token, summary }: {
 }) {
   const [selectedDebate, setSelectedDebate] = useState<DebateRow | null>(null);
 
+  const [setukDrafts, setSetukDrafts] = useState<SetukDraft[] | null>(null);
+  const [setukLoading, setSetukLoading] = useState(false);
+  const [setukError, setSetukError] = useState("");
+  const [selectedDraft, setSelectedDraft] = useState<SetukDraft | null>(null);
+  const [editText, setEditText] = useState("");
+  const [setukCopied, setSetukCopied] = useState(false);
+  const [filterLog, setFilterLog] = useState<string[]>([]);
+  const [forbiddenDetected, setForbiddenDetected] = useState<string[]>([]);
+  const [nominalWarning, setNominalWarning] = useState(false);
+  const [summarizeLoading, setSummarizeLoading] = useState(false);
+
+  const handleGenerateSetuk = async () => {
+    setSetukLoading(true);
+    setSetukError("");
+    try {
+      const { drafts } = await generateSetukDraft(token, student.userId);
+      setSetukDrafts(drafts);
+    } catch (e) {
+      setSetukError(e instanceof Error ? e.message : "세특 초안 생성에 실패했습니다.");
+    } finally {
+      setSetukLoading(false);
+    }
+  };
+
+  const handleSelectDraft = (draft: SetukDraft) => {
+    setSelectedDraft(draft);
+    setEditText(draft.text);
+    setSetukCopied(false);
+    setFilterLog([]);
+    setForbiddenDetected(checkForbidden(draft.text));
+    setNominalWarning(hasNonNominalEnding(draft.text));
+  };
+
+  const handleBackToDraftList = () => {
+    setSelectedDraft(null);
+    setEditText("");
+    setFilterLog([]);
+    setForbiddenDetected([]);
+    setNominalWarning(false);
+    setSetukCopied(false);
+  };
+
+  const handleEditTextChange = (value: string) => {
+    setEditText(value);
+    setSetukCopied(false);
+    setForbiddenDetected(checkForbidden(value));
+    setNominalWarning(hasNonNominalEnding(value));
+  };
+
+  const handleApplyForbiddenFilter = () => {
+    const { result, log } = applyForbiddenFilter(editText);
+    setEditText(result);
+    setFilterLog(log);
+    setForbiddenDetected(checkForbidden(result));
+    setNominalWarning(hasNonNominalEnding(result));
+  };
+
+  const handleConvertNominal = () => {
+    const result = convertToNominal(editText);
+    setEditText(result);
+    setNominalWarning(hasNonNominalEnding(result));
+  };
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(editText);
+      setSetukCopied(true);
+      setTimeout(() => setSetukCopied(false), 2000);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleSummarize = async () => {
+    setSummarizeLoading(true);
+    setSetukError("");
+    try {
+      const { summarized } = await summarizeSetuk(token, student.userId, editText);
+      setEditText(summarized);
+      setSetukCopied(false);
+      setForbiddenDetected(checkForbidden(summarized));
+      setNominalWarning(hasNonNominalEnding(summarized));
+    } catch (e) {
+      setSetukError(e instanceof Error ? e.message : "세특 축약에 실패했습니다.");
+    } finally {
+      setSummarizeLoading(false);
+    }
+  };
+
   const categories = [
     { key: 'avgLogic' as const, label: '논리성', classKey: 'logic' as const },
     { key: 'avgEvidence' as const, label: '근거', classKey: 'evidence' as const },
@@ -700,6 +901,108 @@ function StudentDetailView({ student, onBack, token, summary }: {
           ))}
         </div>
       )}
+
+      <div className={styles.card}>
+        <div className={styles.cardTitle}>세특 작성 보조</div>
+
+        <div className={styles.setukWarningBanner}>
+          ⚠️ AI 생성 초안입니다. 교사가 직접 관찰한 내용을 추가·수정하여 사용하세요. 생성된 문장을 그대로 입력하는 것은 교육부 기재요령에 위반될 수 있습니다.
+        </div>
+
+        {!setukDrafts && !setukLoading && (
+          <button className="btn btn--primary" onClick={handleGenerateSetuk}>
+            세특 초안 보기
+          </button>
+        )}
+
+        {setukLoading && (
+          <div className={styles.loadingMsg}>AI가 초안을 생성 중입니다...</div>
+        )}
+
+        {setukError && !setukLoading && (
+          <div className={styles.errorMsg}>{setukError}</div>
+        )}
+
+        {setukDrafts && !selectedDraft && !setukLoading && (
+          <div className={styles.setukDraftGrid}>
+            {setukDrafts.map((draft) => (
+              <div key={draft.version} className={styles.setukDraftCard}>
+                <div className={styles.setukDraftHeader}>
+                  <span className={styles.setukDraftVersion}>{draft.version}</span>
+                  <span className={styles.setukDraftLabel}>{draft.label}</span>
+                </div>
+                <p className={styles.setukDraftText}>{draft.text}</p>
+                <button className="btn btn--primary" onClick={() => handleSelectDraft(draft)}>
+                  선택 →
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {selectedDraft && (
+          <div className={styles.setukEditor}>
+            <div className={styles.setukEditorHeader}>
+              <span className={styles.setukDraftVersion}>{selectedDraft.version}</span>
+              <span className={styles.setukDraftLabel}>{selectedDraft.label}</span>
+              <button className={`${styles.backBtn} ${styles.setukBackBtn}`} onClick={handleBackToDraftList}>
+                다시 선택
+              </button>
+            </div>
+
+            <textarea
+              className={styles.setukTextarea}
+              value={editText}
+              onChange={(e) => handleEditTextChange(e.target.value)}
+              rows={6}
+            />
+
+            {forbiddenDetected.length > 0 && (
+              <div className={styles.setukForbiddenBox}>
+                <span>⚠️ 기재 금지 항목이 감지되었습니다: {forbiddenDetected.join(", ")}</span>
+                <button className={styles.setukInlineBtn} onClick={handleApplyForbiddenFilter}>일반화</button>
+              </div>
+            )}
+
+            {filterLog.length > 0 && forbiddenDetected.length === 0 && (
+              <div className={styles.setukSuccessBox}>
+                ✓ 일반화 완료: {filterLog.join(" · ")}
+              </div>
+            )}
+
+            {nominalWarning && (
+              <div className={styles.setukNominalBox}>
+                <span>비명사형 어미가 감지되었습니다. 세특 문장은 명사형(~함, ~음, ~임)으로 종결해야 합니다.</span>
+                <button className={styles.setukInlineBtn} onClick={handleConvertNominal}>변환</button>
+              </div>
+            )}
+
+            <div className={styles.setukCounterRow}>
+              <span className={editText.length > 500 ? styles.setukCounterOver : styles.setukCounter}>
+                {editText.length} / 500자
+              </span>
+              {editText.length > 500 && (
+                <button className={styles.setukInlineBtn} onClick={handleSummarize} disabled={summarizeLoading}>
+                  {summarizeLoading ? "축약 중..." : "축약하기"}
+                </button>
+              )}
+            </div>
+
+            <div className={styles.setukCopyRow}>
+              <button
+                className="btn btn--primary"
+                onClick={handleCopy}
+                disabled={editText === selectedDraft.text}
+              >
+                {setukCopied ? "복사됨 ✓" : "복사"}
+              </button>
+              <div className={styles.setukFooterHint}>
+                이 내용은 AI 생성 초안입니다. 직접 관찰한 내용을 보완 후 NEIS에 입력하세요.
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -21,4 +21,6 @@ export const {
   judgeSoloEssay,
   generateTrainingRecommendation,
   generateTeacherDebateSummary,
+  generateSetukDraft,
+  summarizeSetuk,
 } = service;
