@@ -812,7 +812,7 @@ function EssayFeedbackView({ room }: { room: Room }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "16px 0" }}>
       <div style={{ fontSize: "12px", color: "var(--color-text-muted)", textAlign: "center" }}>
-        피드백을 충분히 읽은 뒤 퇴고를 시작하세요.
+        AI 피드백을 충분히 읽은 뒤, 준비가 되면 아래 버튼을 눌러 퇴고를 시작하세요.
       </div>
       <button
         type="button"
