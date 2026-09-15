@@ -2,6 +2,7 @@ import express from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { prisma } from '../db/prisma.js';
 import { generateTeacherDebateSummary, generateSetukDraft, summarizeSetuk } from '../services/ai.js';
+import { TEACHER_SUBJECTS } from '../saedeuk.js';
 
 const router = express.Router();
 
@@ -32,6 +33,7 @@ router.get('/settings', requireAuth, requireTeacher, async (req, res) => {
       evidenceLimit: settings.evidence_limit,
       rebuttalLimit: settings.rebuttal_limit,
       phaseDurations: settings.phase_durations ?? null,
+      subject: settings.subject ?? null,
     });
   } catch {
     return res.status(500).json({ error: '설정을 불러오지 못했습니다.' });
@@ -58,25 +60,27 @@ function validatePhaseDurations(pd) {
 router.put('/settings', requireAuth, requireTeacher, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { enabled, vocab, evidenceLimit, rebuttalLimit, phaseDurations: rawPhaseDurations } = req.body;
+    const { enabled, vocab, evidenceLimit, rebuttalLimit, phaseDurations: rawPhaseDurations, subject: rawSubject } = req.body;
     const phaseDurations = validatePhaseDurations(rawPhaseDurations);
     if (phaseDurations === undefined) return res.status(400).json({ error: '단계별 시간 설정 값이 올바르지 않습니다.' });
+    const subject = typeof rawSubject === 'string' ? rawSubject.trim() || null : rawSubject;
+    if (subject !== undefined && subject !== null && !TEACHER_SUBJECTS.includes(subject)) {
+      return res.status(400).json({ error: '담당 과목 값이 올바르지 않습니다.' });
+    }
+    const data = {
+      ...(enabled !== undefined && { enabled: Boolean(enabled) }),
+      ...(vocab !== undefined && { vocab: Boolean(vocab) }),
+      ...(evidenceLimit !== undefined && { evidence_limit: Boolean(evidenceLimit) }),
+      ...(rebuttalLimit !== undefined && { rebuttal_limit: Boolean(rebuttalLimit) }),
+      ...(rawPhaseDurations !== undefined && { phase_durations: phaseDurations }),
+      ...(subject !== undefined && { subject }),
+    };
     const settings = await prisma.teacherSettings.upsert({
       where: { user_id: userId },
-      update: {
-        enabled: Boolean(enabled),
-        vocab: Boolean(vocab),
-        evidence_limit: Boolean(evidenceLimit),
-        rebuttal_limit: Boolean(rebuttalLimit),
-        phase_durations: phaseDurations ?? null,
-      },
+      update: data,
       create: {
         user_id: userId,
-        enabled: Boolean(enabled),
-        vocab: Boolean(vocab),
-        evidence_limit: Boolean(evidenceLimit),
-        rebuttal_limit: Boolean(rebuttalLimit),
-        phase_durations: phaseDurations ?? null,
+        ...data,
       },
     });
     return res.json({
@@ -85,6 +89,7 @@ router.put('/settings', requireAuth, requireTeacher, async (req, res) => {
       evidenceLimit: settings.evidence_limit,
       rebuttalLimit: settings.rebuttal_limit,
       phaseDurations: settings.phase_durations ?? null,
+      subject: settings.subject ?? null,
     });
   } catch {
     return res.status(500).json({ error: '설정 저장에 실패했습니다.' });

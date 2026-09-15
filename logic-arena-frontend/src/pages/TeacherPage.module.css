@@ -1361,6 +1361,19 @@
   color: var(--color-text-muted);
 }
 
+.subjectSelect {
+  display: block;
+  width: 100%;
+  max-width: 320px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+}
+
 @media (max-width: 760px) {
   .setukDraftGrid {
     grid-template-columns: 1fr;

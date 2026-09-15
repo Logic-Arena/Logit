@@ -1,3 +1,4 @@
+import { analyzeForbidden, applyForbiddenFilter, analyzeNominal, convertToNominal } from "../lib/setukText";
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUserStore } from "../store/useUserStore";
@@ -25,6 +26,10 @@ import {
 } from "../lib/api";
 
 const BASE = import.meta.env.VITE_API_URL ?? "/api";
+const TEACHER_SUBJECTS = [
+  "국어", "영어", "수학", "사회", "역사", "도덕", "과학",
+  "기술가정", "정보", "체육", "음악", "미술", "기타",
+];
 
 type Tab = "classes" | "stats" | "settings";
 
@@ -82,115 +87,6 @@ const PHASE_CONFIG: { key: keyof PhaseDurations; label: string; min: number; max
 const CATEGORY_LABELS: Record<string, string> = {
   logic: "논리성", evidence: "근거", persuasion: "표현 명확성", rebuttal: "반론", consistency: "일관성",
 };
-
-// ─── 세특 작성 보조: 금지어 / 명사형 어미 규칙 ──────────────────────
-
-interface ForbiddenCategory {
-  category: string;
-  terms: string[];
-  replacement: string;
-}
-
-const FORBIDDEN_CATEGORIES: ForbiddenCategory[] = [
-  {
-    category: "기업명",
-    terms: ["삼성전자", "삼성", "현대자동차", "현대", "LG전자", "LG", "SK하이닉스", "SK", "롯데", "카카오", "네이버", "한화", "포스코", "두산", "CJ", "GS"],
-    replacement: "국내 기업",
-  },
-  {
-    category: "공인어학시험",
-    terms: ["토익", "토플", "TOEIC", "TOEFL", "HSK", "JLPT", "텝스", "TEPS", "OPIc", "JPT", "IELTS"],
-    replacement: "공인어학시험",
-  },
-  {
-    category: "교외 수상",
-    terms: ["금상", "은상", "동상", "대상", "최우수상", "우수상", "장려상"],
-    replacement: "우수한 평가",
-  },
-  {
-    category: "자격증",
-    terms: ["정보처리기사", "컴퓨터활용능력", "한국사능력검정시험", "한자능력검정시험", "워드프로세서"],
-    replacement: "관련 자격증",
-  },
-];
-
-const ACADEMY_PATTERN = /[가-힣A-Za-z0-9]{1,10}학원/g;
-
-function checkForbidden(text: string): string[] {
-  const found = new Set<string>();
-  FORBIDDEN_CATEGORIES.forEach(({ terms }) => {
-    terms.forEach((term) => {
-      if (text.includes(term)) found.add(term);
-    });
-  });
-  const academyMatches = text.match(ACADEMY_PATTERN);
-  academyMatches?.forEach((m) => found.add(m));
-  return Array.from(found);
-}
-
-function applyForbiddenFilter(text: string): { result: string; log: string[] } {
-  let result = text;
-  const log: string[] = [];
-  FORBIDDEN_CATEGORIES.forEach(({ terms, replacement }) => {
-    terms.forEach((term) => {
-      if (result.includes(term)) {
-        result = result.split(term).join(replacement);
-        log.push(`"${term}" → "${replacement}"`);
-      }
-    });
-  });
-  result = result.replace(ACADEMY_PATTERN, (m) => {
-    log.push(`"${m}" → "사교육기관"`);
-    return "사교육기관";
-  });
-  return { result, log };
-}
-
-const NOMINAL_ENDING_MAP: [RegExp, string][] = [
-  [/하였습니다$/, "하였음"],
-  [/했습니다$/, "했음"],
-  [/합니다$/, "함"],
-  [/입니다$/, "임"],
-  [/하였다$/, "하였음"],
-  [/했다$/, "했음"],
-  [/한다$/, "함"],
-  [/이다$/, "임"],
-  [/있다$/, "있음"],
-  [/없다$/, "없음"],
-  [/보여준다$/, "보여줌"],
-  [/드러난다$/, "드러남"],
-  [/나타난다$/, "나타남"],
-  [/보인다$/, "보임"],
-  [/된다$/, "됨"],
-  [/진다$/, "짐"],
-];
-
-const SENTENCE_SPLIT_PATTERN = /([.!?]+\s*|\n)/;
-
-function convertSentenceCore(core: string): string {
-  const trailingWsMatch = core.match(/\s*$/);
-  const trailingWs = trailingWsMatch ? trailingWsMatch[0] : "";
-  const trimmed = trailingWs ? core.slice(0, -trailingWs.length) : core;
-  for (const [pattern, replacement] of NOMINAL_ENDING_MAP) {
-    if (pattern.test(trimmed)) return trimmed.replace(pattern, replacement) + trailingWs;
-  }
-  if (/다$/.test(trimmed)) return trimmed.slice(0, -1) + "음" + trailingWs;
-  return core;
-}
-
-function hasNonNominalEnding(text: string): boolean {
-  return text
-    .split(SENTENCE_SPLIT_PATTERN)
-    .filter((_, i) => i % 2 === 0)
-    .some((sentence) => sentence.trim() !== "" && /다$/.test(sentence.trim()));
-}
-
-function convertToNominal(text: string): string {
-  return text
-    .split(SENTENCE_SPLIT_PATTERN)
-    .map((part, i) => (i % 2 === 0 ? convertSentenceCore(part) : part))
-    .join("");
-}
 
 // ─── 공용 컴포넌트 ────────────────────────────────────────────────
 
@@ -696,8 +592,14 @@ function StudentDetailView({ student, onBack, token, summary }: {
   const [editText, setEditText] = useState("");
   const [setukCopied, setSetukCopied] = useState(false);
   const [filterLog, setFilterLog] = useState<string[]>([]);
-  const [forbiddenDetected, setForbiddenDetected] = useState<string[]>([]);
-  const [nominalWarning, setNominalWarning] = useState(false);
+  const forbiddenFindings = analyzeForbidden(editText);
+  const forbiddenDetected = [...new Set(forbiddenFindings.map(item => item.label))];
+  const autoFilterCount = forbiddenFindings.filter(item => item.replacement !== null).length;
+  const manualFilterItems = forbiddenFindings.filter(item => item.replacement === null);
+  const nominalFindings = analyzeNominal(editText);
+  const nominalWarning = nominalFindings.length > 0;
+  const autoNominalCount = nominalFindings.filter(item => item.replacement !== null).length;
+  const manualNominalItems = nominalFindings.filter(item => item.replacement === null);
   const [summarizeLoading, setSummarizeLoading] = useState(false);
 
   const handleGenerateSetuk = async () => {
@@ -718,38 +620,29 @@ function StudentDetailView({ student, onBack, token, summary }: {
     setEditText(draft.text);
     setSetukCopied(false);
     setFilterLog([]);
-    setForbiddenDetected(checkForbidden(draft.text));
-    setNominalWarning(hasNonNominalEnding(draft.text));
   };
 
   const handleBackToDraftList = () => {
     setSelectedDraft(null);
     setEditText("");
     setFilterLog([]);
-    setForbiddenDetected([]);
-    setNominalWarning(false);
     setSetukCopied(false);
   };
 
   const handleEditTextChange = (value: string) => {
     setEditText(value);
     setSetukCopied(false);
-    setForbiddenDetected(checkForbidden(value));
-    setNominalWarning(hasNonNominalEnding(value));
   };
 
   const handleApplyForbiddenFilter = () => {
     const { result, log } = applyForbiddenFilter(editText);
     setEditText(result);
     setFilterLog(log);
-    setForbiddenDetected(checkForbidden(result));
-    setNominalWarning(hasNonNominalEnding(result));
   };
 
   const handleConvertNominal = () => {
     const result = convertToNominal(editText);
     setEditText(result);
-    setNominalWarning(hasNonNominalEnding(result));
   };
 
   const handleCopy = async () => {
@@ -769,8 +662,6 @@ function StudentDetailView({ student, onBack, token, summary }: {
       const { summarized } = await summarizeSetuk(token, student.userId, editText);
       setEditText(summarized);
       setSetukCopied(false);
-      setForbiddenDetected(checkForbidden(summarized));
-      setNominalWarning(hasNonNominalEnding(summarized));
     } catch (e) {
       setSetukError(e instanceof Error ? e.message : "세특 축약에 실패했습니다.");
     } finally {
@@ -959,21 +850,27 @@ function StudentDetailView({ student, onBack, token, summary }: {
 
             {forbiddenDetected.length > 0 && (
               <div className={styles.setukForbiddenBox}>
-                <span>⚠️ 기재 금지 항목이 감지되었습니다: {forbiddenDetected.join(", ")}</span>
-                <button className={styles.setukInlineBtn} onClick={handleApplyForbiddenFilter}>일반화</button>
+                <span>
+                  검토할 표현: {forbiddenDetected.join(", ")}
+                  {manualFilterItems.length > 0 && <><br />직접 검토: {manualFilterItems.map(item => `${item.label} (${item.reason})`).join(" · ")}</>}
+                </span>
+                {autoFilterCount > 0 && <button className={styles.setukInlineBtn} onClick={handleApplyForbiddenFilter}>이름 일반화</button>}
               </div>
             )}
 
-            {filterLog.length > 0 && forbiddenDetected.length === 0 && (
+            {filterLog.length > 0 && (
               <div className={styles.setukSuccessBox}>
-                ✓ 일반화 완료: {filterLog.join(" · ")}
+                수정한 표현: {filterLog.join(" · ")}
               </div>
             )}
 
             {nominalWarning && (
               <div className={styles.setukNominalBox}>
-                <span>비명사형 어미가 감지되었습니다. 세특 문장은 명사형(~함, ~음, ~임)으로 종결해야 합니다.</span>
-                <button className={styles.setukInlineBtn} onClick={handleConvertNominal}>변환</button>
+                <span>
+                  명사형으로 검토할 문장 어미가 있습니다.
+                  {manualNominalItems.length > 0 && <><br />문맥 확인 후 직접 수정: {manualNominalItems.map(item => item.text).join(", ")}</>}
+                </span>
+                {autoNominalCount > 0 && <button className={styles.setukInlineBtn} onClick={handleConvertNominal}>변환 가능한 어미 적용</button>}
               </div>
             )}
 
@@ -1056,18 +953,22 @@ function PhaseDurationEditor({
 function SettingsTab({ token, classes }: { token: string; classes: { id: number; name: string }[] }) {
   const [selectedClassId, setSelectedClassId] = useState<number | "global">("global");
   const [handicap, setHandicap] = useState<Handicap>(DEFAULT_HANDICAP);
+  const [subject, setSubject] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
   const loadSettings = (classId: number | "global") => {
     setLoading(true);
+    setSaveError("");
     const url = classId === "global"
       ? `${BASE}/teacher/settings`
       : `${BASE}/teacher/classes/${classId}/settings`;
     fetch(url, { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } })
       .then(r => r.json())
       .then(d => {
+        if (classId === "global") setSubject(d.subject ?? null);
         const raw = classId === "global" ? d : (d.settings ?? null);
         setHandicap(raw ? { ...DEFAULT_HANDICAP, ...raw } : DEFAULT_HANDICAP);
       })
@@ -1091,15 +992,17 @@ function SettingsTab({ token, classes }: { token: string; classes: { id: number;
 
   const handleSave = async () => {
     setSaving(true);
+    setSaveError("");
     try {
       if (selectedClassId === "global") {
         const res = await fetch(`${BASE}/teacher/settings`, {
           method: "PUT",
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-          body: JSON.stringify(handicap),
+          body: JSON.stringify({ ...handicap, subject }),
         });
         if (!res.ok) throw new Error();
         const saved = await res.json();
+        setSubject(saved.subject ?? null);
         setHandicap({ ...DEFAULT_HANDICAP, ...saved });
       } else {
         const res = await fetch(`${BASE}/teacher/classes/${selectedClassId}/settings`, {
@@ -1114,7 +1017,7 @@ function SettingsTab({ token, classes }: { token: string; classes: { id: number;
       setShowToast(true);
       setTimeout(() => setShowToast(false), 2000);
     } catch {
-      // ignore
+      setSaveError("설정을 저장하지 못했습니다. 다시 시도해주세요.");
     } finally {
       setSaving(false);
     }
@@ -1145,6 +1048,20 @@ function SettingsTab({ token, classes }: { token: string; classes: { id: number;
       </div>
 
       {/* AI 핸디캡 */}
+      {selectedClassId === "global" && (
+        <div className={styles.card}>
+          <label className={styles.masterLabel} htmlFor="teacher-subject">담당 과목</label>
+          <select
+            id="teacher-subject"
+            className={styles.subjectSelect}
+            value={subject ?? ""}
+            onChange={e => setSubject(e.target.value || null)}
+          >
+            <option value="">미설정</option>
+            {TEACHER_SUBJECTS.map(value => <option key={value} value={value}>{value}</option>)}
+          </select>
+        </div>
+      )}
       <div className={styles.card}>
         <div className={styles.masterRow}>
           <div>
@@ -1219,6 +1136,8 @@ function SettingsTab({ token, classes }: { token: string; classes: { id: number;
           {saving ? "저장 중..." : "저장"}
         </button>
       </div>
+
+      {saveError && <div className={styles.errorMsg} role="alert">{saveError}</div>}
 
       <div className={`${styles.toast} ${showToast ? "" : styles["toast--hidden"]}`}>
         설정이 저장되었습니다 ✓
