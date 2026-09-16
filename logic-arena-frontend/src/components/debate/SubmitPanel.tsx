@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useRoomStore } from '../../store/useRoomStore';
 import { socket } from '../../lib/socket';
 
 interface Props {
@@ -26,23 +27,16 @@ export function SubmitPanel({
 }: Props) {
   const [text, setText] = useState('');
   const [submitted, setSubmitted] = useState(alreadySubmitted);
-  const textRef = useRef('');
-  textRef.current = text;
-
+  const [timeExpired, setTimeExpired] = useState(false);
+  const phase = useRoomStore(state => state.room?.phase);
   useEffect(() => {
-    if (!phaseEndAt || submitted || alreadySubmitted) return;
-    const delay = phaseEndAt - Date.now();
-    const fire = () => {
-      const trimmed = textRef.current.trim();
-      if (trimmed || optional) {
-        socket.emit('submit_content', { roomId, text: trimmed, skip: optional && !trimmed });
-        setSubmitted(true);
-      }
-    };
-    if (delay <= 0) { fire(); return; }
-    const id = setTimeout(fire, delay);
-    return () => clearTimeout(id);
-  }, [phaseEndAt, submitted, alreadySubmitted, optional, roomId]);
+    if (phase && !alreadySubmitted) socket.emit('save_draft', { roomId, phase, text: text });
+  }, [phase, roomId, alreadySubmitted, text]);
+  useEffect(() => {
+    if (!phaseEndAt) return;
+    const timer = setTimeout(() => setTimeExpired(true), Math.max(0, phaseEndAt - Date.now()));
+    return () => clearTimeout(timer);
+  }, [phaseEndAt]);
 
   if (submitted || alreadySubmitted) {
     return (
@@ -57,11 +51,11 @@ export function SubmitPanel({
         <div style={{ fontSize: '11px', color: '#fff', fontWeight: 700, marginBottom: '6px', textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
           제출 완료
         </div>
-        {submittedText ? (
-          <p style={{ fontSize: '14px', lineHeight: 1.6, color: '#fff', margin: 0, fontWeight: 500 }}>{submittedText}</p>
+        {(submittedText || text) ? (
+          <p style={{ fontSize: '14px', lineHeight: 1.6, color: '#fff', margin: 0, fontWeight: 500 }}>{submittedText || text}</p>
         ) : (
           <p style={{ fontSize: '13px', lineHeight: 1.6, color: 'rgba(255,255,255,0.85)', margin: 0 }}>
-            입력 없이 이 단계를 넘겼습니다.
+            {alreadySubmitted ? '제출이 완료되었습니다. 양측 제출 후 내용이 공개됩니다.' : '입력 없이 이 단계를 넘겼습니다.'}
           </p>
         )}
       </div>
@@ -70,8 +64,8 @@ export function SubmitPanel({
 
   const handleSubmit = () => {
     const trimmed = text.trim();
-    if (!trimmed && !optional) return;
-    socket.emit('submit_content', { roomId, text: trimmed, skip: optional && !trimmed });
+    if (timeExpired || (!trimmed && !optional)) return;
+    socket.emit('submit_content', { roomId, phase, text: trimmed, skip: optional && !trimmed });
     setSubmitted(true);
   };
 

@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useRoomStore } from '../../store/useRoomStore';
 import { socket } from '../../lib/socket';
 import type { VoteOption } from '../../types/room';
 
@@ -53,6 +54,16 @@ const SECTION_CONFIG = [
   },
 ];
 
+function combineSections(s: ArgumentSections): string {
+    return [
+      s.claim && `【주장】 ${s.claim}`,
+      s.evidence && `【근거】 ${s.evidence}`,
+      s.explanation && `【예시】 ${s.explanation}`,
+      s.counterArgument && `【예상 반론】 ${s.counterArgument}`,
+      s.rebuttal && `【재반론】 ${s.rebuttal}`,
+    ].filter(Boolean).join('\n\n');
+}
+
 export function StructuredArgumentPanel({
   roomId,
   alreadySubmitted = false,
@@ -73,30 +84,15 @@ export function StructuredArgumentPanel({
   );
   const [submitting, setSubmitting] = useState(false);
   const [timeExpired, setTimeExpired] = useState(false);
-  const sectionsRef = useRef(sections);
-  sectionsRef.current = sections;
-
-  // 타이머 만료 감지 및 자동 제출
+  const phase = useRoomStore(state => state.room?.phase);
   useEffect(() => {
-    if (!phaseEndAt || submitting || alreadySubmitted) return;
-    const delay = phaseEndAt - Date.now();
-    const fire = () => {
-      const combined = combineSections(sectionsRef.current);
-      if (combined.trim()) {
-        socket.emit('submit_content', {
-          roomId,
-          text: combined,
-          // 향후 백엔드 스키마 확장 시 구조화 데이터 전송
-          // structured: sectionsRef.current,
-        });
-        setSubmitting(true);
-      }
-      setTimeExpired(true); // 타이머 만료 표시
-    };
-    if (delay <= 0) { fire(); return; }
-    const id = setTimeout(fire, delay);
-    return () => clearTimeout(id);
-  }, [phaseEndAt, submitting, alreadySubmitted, roomId]);
+    if (phase && !alreadySubmitted) socket.emit('save_draft', { roomId, phase, text: combineSections(sections) });
+  }, [phase, roomId, alreadySubmitted, sections]);
+  useEffect(() => {
+    if (!phaseEndAt) return;
+    const timer = setTimeout(() => setTimeExpired(true), Math.max(0, phaseEndAt - Date.now()));
+    return () => clearTimeout(timer);
+  }, [phaseEndAt]);
 
   useEffect(() => {
     if (!submitting || alreadySubmitted) return;
@@ -117,28 +113,18 @@ export function StructuredArgumentPanel({
         <div style={{ fontSize: '11px', color: '#fff', fontWeight: 700, marginBottom: '6px', textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
           제출 완료
         </div>
-        {submittedText ? (
+        {(submittedText || combineSections(sections)) ? (
           <p style={{ fontSize: '14px', lineHeight: 1.6, color: '#fff', margin: 0, fontWeight: 500, whiteSpace: 'pre-wrap' }}>
-            {submittedText}
+            {submittedText || combineSections(sections)}
           </p>
         ) : (
           <p style={{ fontSize: '13px', lineHeight: 1.6, color: 'rgba(255,255,255,0.85)', margin: 0 }}>
-            입력 없이 이 단계를 넘겼습니다.
+            제출이 완료되었습니다. 양측 제출 후 내용이 공개됩니다.
           </p>
         )}
       </div>
     );
   }
-
-  const combineSections = (s: ArgumentSections): string => {
-    return [
-      s.claim && `【주장】 ${s.claim}`,
-      s.evidence && `【근거】 ${s.evidence}`,
-      s.explanation && `【예시】 ${s.explanation}`,
-      s.counterArgument && `【예상 반론】 ${s.counterArgument}`,
-      s.rebuttal && `【재반론】 ${s.rebuttal}`,
-    ].filter(Boolean).join('\n\n');
-  };
 
   const handleSubmit = () => {
     const combined = combineSections(sections);
@@ -146,6 +132,7 @@ export function StructuredArgumentPanel({
 
     socket.emit('submit_content', {
       roomId,
+      phase,
       text: combined,
       // 향후 백엔드 스키마 확장 시 구조화 데이터 전송
       // structured: sections,

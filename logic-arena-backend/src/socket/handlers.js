@@ -62,7 +62,14 @@ function startPhaseTimer(io, roomId, phase) {
 
   clearPhaseTimer(roomId);
   setPhaseEndAt(roomId, Date.now() + duration);
-  const timer = setTimeout(() => advancePhase(io, roomId), duration);
+  const timer = setTimeout(() => {
+    const current = getRoom(roomId);
+    if (!current || current.phase !== phase) return;
+    for (const key of Object.values(PHASE_SUBMIT_KEY[phase] ?? {})) {
+      if (!current.content[key]) setContent(roomId, key, current.drafts?.[key]?.trim() || null);
+    }
+    advancePhase(io, roomId).catch(error => console.error('[phase timeout]', error));
+  }, duration);
   phaseTimers.set(roomId, timer);
   return true;
 }
@@ -105,7 +112,7 @@ async function startPhase(io, roomId, phase) {
   setPhase(roomId, phase);
   const waitsForAiTopic = phase === 'topic_selection' && room.topicMode === 'ai_auto';
   const waitsForAiJudging = phase === 'judging';
-  if (waitsForAiTopic || waitsForAiJudging) {
+  if (waitsForAiTopic || waitsForAiJudging || phase === 'coaching') {
     pausePhaseTimer(roomId);
   } else {
     startPhaseTimer(io, roomId, phase);
@@ -346,8 +353,23 @@ async function handleAiAutoPhase(io, roomId, phase) {
       contentKey = 'con_a_counter';
       break;
     case 'coaching': {
-      const coachingResult = await generateCoaching({ topic: room.topic, content: c });
-      if (getRoom(roomId)) {
+      let coachingResult;
+      let deadline;
+      try {
+        coachingResult = await Promise.race([
+          generateCoaching({ topic: room.topic, content: c }),
+          new Promise((_, reject) => {
+            deadline = setTimeout(() => reject(new Error('Coaching timed out')), 60_000);
+          }),
+        ]);
+      } catch (error) {
+        console.error('[coaching]', error);
+      } finally {
+        clearTimeout(deadline);
+      }
+      const fallback = 'AI 훈수를 불러오지 못했습니다. 자신의 핵심 주장과 근거, 상대 반론에 대한 답변을 정리해 최종 변론을 작성해 주세요.';
+      coachingResult = { pro: coachingResult?.pro || fallback, con: coachingResult?.con || fallback };
+      if (getRoom(roomId)?.phase === 'coaching') {
         setContent(roomId, 'coaching_pro', coachingResult.pro);
         setContent(roomId, 'coaching_con', coachingResult.con);
         io.to(roomId).emit('ai_content', {
@@ -761,12 +783,23 @@ export function registerHandlers(io, socket) {
   });
 
   // ── submit_content (콘텐츠 제출) ───────────────────────────
-  socket.on('submit_content', ({ roomId, text, skip }) => {
+  socket.on('save_draft', ({ roomId, phase, text }) => {
+    const room = getRoom(roomId);
+    if (!room || room.phase !== phase || typeof text !== 'string') return;
+    if (room.phaseEndAt && Date.now() > room.phaseEndAt) return;
+    const key = PHASE_SUBMIT_KEY[phase]?.[getPlayerRole(roomId, socket.id)];
+    if (!key || room.content[key]) return;
+    room.drafts ??= {};
+    room.drafts[key] = text;
+  });
+
+  socket.on('submit_content', ({ roomId, text, skip, phase: submittedPhase }) => {
 
     const room = getRoom(roomId);
     if (!room) return socket.emit('error', { message: '방을 찾을 수 없습니다' });
 
     const phase = room.phase;
+    if (submittedPhase && submittedPhase !== phase) return;
     const phaseKeys = PHASE_SUBMIT_KEY[phase];
     if (!phaseKeys) return socket.emit('error', { message: '지금은 제출할 수 없습니다' });
 
@@ -779,6 +812,7 @@ export function registerHandlers(io, socket) {
     const contentKey = phaseKeys[role];
     if (!contentKey) return socket.emit('error', { message: '지금 당신의 차례가 아닙니다' });
 
+    if (room.content[contentKey]) return;
     const trimmed = text?.trim?.() ?? '';
     const optionalPhases = new Set(['pro_a_defense', 'con_a_defense']);
     if (!trimmed && !(skip && optionalPhases.has(phase))) {

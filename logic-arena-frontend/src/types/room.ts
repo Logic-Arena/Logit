@@ -121,6 +121,7 @@ export interface Room {
   conPlayer: Player | null;
   observers: Array<{ socketId: string; userId: string; username: string }>;
   content: RoomContent;
+  submittedKeys?: string[];
   result: DebateResult | null;
   createdAt: string;
   sideSelectionAttempts: number;
