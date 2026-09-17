@@ -541,7 +541,10 @@ function ClassSummaryPanel({ summary, className }: { summary: ClassSummary; clas
               ))}
             </div>
             <ResponsiveContainer width="100%" height={160}>
-              <RadarChart data={catEntries.map(e => ({ axis: e.label, value: e.value }))}>
+              {/* outerRadius/margin을 명시하지 않으면 recharts 기본값(반지름 80%, 여백 5px)이
+                  적용되는데, "표현 명확성"처럼 긴 라벨은 이 여백으로는 부족해 좌우로 잘린다.
+                  반지름을 줄이고 여백을 넓혀 라벨이 들어갈 공간을 확보한다. */}
+              <RadarChart data={catEntries.map(e => ({ axis: e.label, value: e.value }))} outerRadius="60%" margin={{ top: 8, right: 24, bottom: 8, left: 24 }}>
                 <PolarGrid gridType="polygon" stroke="var(--color-text-muted)" strokeOpacity={0.35} />
                 <PolarAngleAxis dataKey="axis" tick={{ fontSize: 10, fill: 'var(--color-text-muted)' }} />
                 <PolarRadiusAxis domain={[0, 20]} tick={false} axisLine={false} />
@@ -660,7 +663,7 @@ function StudentDetailView({ student, onBack, token, summary }: {
               )}
             </div>
             <ResponsiveContainer width="100%" height={160}>
-              <RadarChart data={radarData}>
+              <RadarChart data={radarData} outerRadius="60%" margin={{ top: 8, right: 24, bottom: 8, left: 24 }}>
                 <PolarGrid gridType="polygon" stroke="var(--color-border)" />
                 <PolarAngleAxis dataKey="axis" tick={{ fontSize: 10, fill: 'var(--color-text-muted)' }} />
                 <PolarRadiusAxis domain={[0, 20]} tick={false} axisLine={false} />

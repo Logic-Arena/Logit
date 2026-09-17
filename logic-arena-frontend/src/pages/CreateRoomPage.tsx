@@ -185,26 +185,28 @@ export function CreateRoomModal({ isOpen, onClose }: Props) {
             </div>
           )}
 
-          {/* 훈수 AI 토글 영역 */}
-          <div className={`coaching-toggle-section${coachingEnabled ? ' coaching-toggle-section--on' : ''}`}>
-            <div className="coaching-toggle-section__text">
-              <label className="coaching-toggle-section__label" htmlFor="coachingToggle">
-                훈수 AI <span className={`coaching-toggle-badge${coachingEnabled ? ' coaching-toggle-badge--on' : ''}`}>{coachingEnabled ? 'ON' : 'OFF'}</span>
-              </label>
-              <p className="coaching-toggle-section__desc">
-                최종 변론 전, AI가 논점·근거 힌트를 제공합니다. 끄면 힌트 없이 바로 최종 변론으로 넘어갑니다.
-              </p>
+          {/* 훈수 AI 토글 영역 — 개인 논술은 상대가 없어 훈수 기능이 없으므로 숨김 */}
+          {mode !== 'solo_essay' && (
+            <div className={`coaching-toggle-section${coachingEnabled ? ' coaching-toggle-section--on' : ''}`}>
+              <div className="coaching-toggle-section__text">
+                <label className="coaching-toggle-section__label" htmlFor="coachingToggle">
+                  훈수 AI <span className={`coaching-toggle-badge${coachingEnabled ? ' coaching-toggle-badge--on' : ''}`}>{coachingEnabled ? 'ON' : 'OFF'}</span>
+                </label>
+                <p className="coaching-toggle-section__desc">
+                  최종 변론 전, AI가 논점·근거 힌트를 제공합니다. 끄면 힌트 없이 바로 최종 변론으로 넘어갑니다.
+                </p>
+              </div>
+              <button
+                type="button"
+                id="coachingToggle"
+                className={`toggle-switch${coachingEnabled ? ' toggle-switch--on' : ''}`}
+                onClick={() => setCoachingEnabled(!coachingEnabled)}
+                aria-label="훈수 AI 토글"
+              >
+                <span className="toggle-switch__slider" />
+              </button>
             </div>
-            <button
-              type="button"
-              id="coachingToggle"
-              className={`toggle-switch${coachingEnabled ? ' toggle-switch--on' : ''}`}
-              onClick={() => setCoachingEnabled(!coachingEnabled)}
-              aria-label="훈수 AI 토글"
-            >
-              <span className="toggle-switch__slider" />
-            </button>
-          </div>
+          )}
 
           <div className={`coaching-toggle-section${structuredArgumentEnabled ? ' coaching-toggle-section--on' : ''}`}>
             <div className="coaching-toggle-section__text">

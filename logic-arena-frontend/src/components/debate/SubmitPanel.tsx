@@ -31,13 +31,18 @@ export function SubmitPanel({
 
   useEffect(() => {
     if (!phaseEndAt || submitted || alreadySubmitted) return;
-    const delay = phaseEndAt - Date.now();
+    // 서버도 phaseEndAt과 같은 시각에 독립적으로 다음 단계로 강제 전환하는 타이머를 갖고 있다.
+    // 클라이언트 제출이 그보다 늦게 도착하면 서버가 이미 다음 단계로 넘어간 뒤라 이 제출이
+    // 거부되거나 엉뚱한 단계의 값으로 저장돼 "작성한 내용이 빈칸으로 제출"된 것처럼 보인다.
+    // 약간 앞당겨 보내 서버 자체 타이머보다 먼저 도착하게 한다(도착 즉시 서버가 자체 타이머를 취소함).
+    const CLIENT_SUBMIT_LEAD_MS = 400;
+    const delay = phaseEndAt - Date.now() - CLIENT_SUBMIT_LEAD_MS;
     const fire = () => {
+      // 시간 초과 시에는 내용이 비어 있어도(optional 여부와 무관하게) 반드시 제출해
+      // 다음 단계로 넘어가야 한다 — 그렇지 않으면 진행이 영구히 멈춘다.
       const trimmed = textRef.current.trim();
-      if (trimmed || optional) {
-        socket.emit('submit_content', { roomId, text: trimmed, skip: optional && !trimmed });
-        setSubmitted(true);
-      }
+      socket.emit('submit_content', { roomId, text: trimmed, skip: !trimmed });
+      setSubmitted(true);
     };
     if (delay <= 0) { fire(); return; }
     const id = setTimeout(fire, delay);

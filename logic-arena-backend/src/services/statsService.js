@@ -51,8 +51,9 @@ export async function saveDebateHistory(participants, result, topic) {
     dbParticipants.map(async (p) => {
       const userId = parseInt(p.userId, 10);
 
-      // solo_essay: position='solo', result='solo', winner 없음
+      // solo_essay: position='pro'|'con'(실제 선택한 입장), result='solo', winner 없음
       // 2인 토론: position='pro'|'con', result='win'|'lose'|'draw'
+      // solo/2인 구분은 result만으로 충분하므로 position은 항상 실제 입장을 그대로 저장한다.
       const isSolo = p.isSolo === true;
       const isWinner = !isSolo && result.winner !== 'draw' && p.vote === result.winner;
       const isDraw = !isSolo && result.winner === 'draw';
@@ -65,7 +66,7 @@ export async function saveDebateHistory(participants, result, topic) {
         data: {
           user_id: userId,
           topic: safeTopic,
-          position: isSolo ? 'solo' : p.vote,
+          position: p.vote,
           score,
           logic: scoreData?.logic ?? 0,
           evidence: scoreData?.evidence ?? 0,
@@ -84,7 +85,7 @@ export async function saveDebateHistory(participants, result, topic) {
           const summary = await generateTeacherDebateSummary({
             studentName: user?.name ?? '학생',
             topic: safeTopic,
-            position: isSolo ? 'solo' : p.vote,
+            position: p.vote,
             result: resultLabel,
             score,
             logic: scoreData?.logic ?? 0,
