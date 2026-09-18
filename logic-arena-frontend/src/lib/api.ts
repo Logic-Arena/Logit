@@ -446,9 +446,30 @@ export interface SetukDraft {
   text: string;
 }
 
-export async function generateSetukDraft(token: string, userId: number): Promise<{ drafts: SetukDraft[] }> {
+export interface SetukContext {
+  schoolYear: number;
+  schoolLevel: 'middle' | 'high';
+  grade: number;
+  subject: string;
+  activity: string;
+  observations: string;
+  observedByTeacher: boolean;
+  schoolCurriculum: boolean;
+}
+
+export async function getTeacherSubject(token: string, signal?: AbortSignal): Promise<{ subject: string | null }> {
+  const res = await fetch(`${BASE}/teacher/settings`, {
+    headers: { Authorization: `Bearer ${token}` },
+    signal,
+  });
+  if (!res.ok) throw new Error('담당 과목을 불러오지 못했습니다.');
+  return res.json();
+}
+
+export async function generateSetukDraft(token: string, userId: number, context: SetukContext): Promise<{ drafts: SetukDraft[]; subject: string }> {
   const res = await fetch(`${BASE}/teacher/students/${userId}/setuk-draft`, {
     method: 'POST',
+    body: JSON.stringify(context),
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
   });
   if (!res.ok) {
@@ -458,11 +479,11 @@ export async function generateSetukDraft(token: string, userId: number): Promise
   return res.json();
 }
 
-export async function summarizeSetuk(token: string, userId: number, text: string): Promise<{ summarized: string }> {
+export async function summarizeSetuk(token: string, userId: number, text: string, context: SetukContext): Promise<{ summarized: string; subject: string }> {
   const res = await fetch(`${BASE}/teacher/students/${userId}/setuk-summarize`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text }),
+    body: JSON.stringify({ ...context, text }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../db/prisma.js';
 import { requireAuth } from '../middleware/auth.js';
+import { SOLO_ESSAY_WHERE, DEBATE_WHERE } from '../utils/soloEssay.js';
 
 const router = Router();
 
@@ -41,8 +42,8 @@ router.get('/averages', requireAuth, async (_req, res) => {
   try {
     const [all, debate, soloEssay] = await Promise.all([
       getAverages(),
-      getAverages({ position: { not: 'solo' } }),
-      getAverages({ position: 'solo' }),
+      getAverages(DEBATE_WHERE),
+      getAverages(SOLO_ESSAY_WHERE),
     ]);
     res.json({ all, debate, soloEssay });
   } catch (error) {
@@ -56,8 +57,8 @@ router.get('/summary', requireAuth, async (req, res) => {
     const userId = req.user.id;
     const [totalActivities, debateCount, soloEssayCount] = await Promise.all([
       prisma.debateHistory.count({ where: { user_id: userId } }),
-      prisma.debateHistory.count({ where: { user_id: userId, position: { not: 'solo' } } }),
-      prisma.debateHistory.count({ where: { user_id: userId, position: 'solo' } }),
+      prisma.debateHistory.count({ where: { user_id: userId, ...DEBATE_WHERE } }),
+      prisma.debateHistory.count({ where: { user_id: userId, ...SOLO_ESSAY_WHERE } }),
     ]);
     res.json({ totalActivities, debateCount, soloEssayCount });
   } catch (error) {

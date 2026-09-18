@@ -9,6 +9,7 @@ import {
   type GlobalAnalyticsAverages,
   type TrainingRecommendation,
 } from "../lib/api";
+import { isSoloRecord } from "../lib/historyClassification";
 import { useUserStore } from "../store/useUserStore";
 import {
   RadarChart,
@@ -53,8 +54,8 @@ function historyResultLabel(result: DebateHistoryItem["result"]): string {
   return "무승부";
 }
 
-function historyPositionLabel(position: DebateHistoryItem["position"]): Position {
-  if (position === "solo") return "개인 논술";
+function historyPositionLabel(position: DebateHistoryItem["position"], result: DebateHistoryItem["result"]): Position {
+  if (isSoloRecord({ position, result })) return "개인 논술";
   return position === "pro" ? "찬성" : "반대";
 }
 
@@ -242,11 +243,11 @@ function RecommendationSection() {
 
 
 function DetailModal({ item, onClose }: { item: DebateHistoryItem; onClose: () => void }) {
-  const isSolo = item.result === 'solo' || item.position === 'solo';
+  const isSolo = isSoloRecord(item);
   const resultLabel = historyResultLabel(item.result);
   const resultEmoji = isSolo ? '📝' : item.result === 'win' ? '🏆' : item.result === 'lose' ? '⚖️' : '🤝';
   const resultColor = isSolo ? 'var(--color-primary)' : item.result === 'win' ? 'var(--color-primary)' : item.result === 'lose' ? 'var(--color-con-orange)' : 'var(--color-text-muted)';
-  const positionLabel = historyPositionLabel(item.position);
+  const positionLabel = historyPositionLabel(item.position, item.result);
   const positionStyle = historyPositionStyle(positionLabel);
   const positionColor = isSolo ? 'var(--color-primary)' : item.position === 'pro' ? 'var(--color-pro)' : 'var(--color-con)';
 
@@ -490,7 +491,7 @@ export function AnalyticsDashboardSection({ hideKpi = false }: { hideKpi?: boole
   useEffect(() => { loadDashboardData(); }, []);
 
   const filteredHistory = useMemo(() => history.filter((item) => {
-    const isSolo = item.position === 'solo' || item.result === 'solo';
+    const isSolo = isSoloRecord(item);
     if (activityFilter === 'solo') return isSolo;
     if (activityFilter === 'debate') return !isSolo;
     return true;
@@ -815,7 +816,7 @@ function toReportItem(h: DebateHistoryItem): ReportItem {
     score: h.score,
     result: h.result,
     category: "자유",
-    position: historyPositionLabel(h.position),
+    position: historyPositionLabel(h.position, h.result),
     best: h.advice ?? "",
     needsImprovement: "",
   };

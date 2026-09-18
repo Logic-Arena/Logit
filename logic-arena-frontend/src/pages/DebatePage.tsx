@@ -12,6 +12,7 @@ import type { EssayFeedback } from "../components/debate/StructuredArgumentPanel
 import { Popover } from "../components/common/Popover";
 import DotSphereLoader from "../components/common/DotSphereLoader";
 import { parseStructuredArgument } from "../utils/parseStructuredArgument";
+import { playerAuthor, stageStatus } from "../lib/debatePresentation";
 import type { Room, Phase, PlayerRole, RoomContent, ParticipantScore, DebateResult, VoteOption } from "../types/room";
 
 // ─── 상수 ──────────────────────────────────────────────────────
@@ -557,7 +558,7 @@ function DebateChatView({
     // 훈수: 플레이어는 자신의 진영 훈수만 표시, 관전자는 둘 다 표시
     if (item.key === "coaching_pro" && myRole === "con_player") return [];
     if (item.key === "coaching_con" && myRole === "pro_player") return [];
-    return [{ ...item, text }];
+    return [{ ...item, text, author: item.variant === "player" ? playerAuthor(room.mode, room.essaySide, item.author) : item.author }];
   });
 
   const hasSubmitRole = Object.keys(PHASE_SUBMIT_MAP[phase] ?? {}).length > 0;
@@ -2559,7 +2560,16 @@ export function DebatePage() {
         password: password ?? undefined,
       });
     };
+    // Socket.IO fires "connect" again after every reconnect (network blip,
+    // background-tab throttling, idle timeout, ...). A reconnect creates a
+    // brand-new server-side socket that isn't in the room's Socket.IO room
+    // until it re-emits join_room, so didJoin must reset on disconnect or
+    // this client silently stops receiving phase/content broadcasts.
+    const onDisconnect = () => {
+      didJoin.current = false;
+    };
     socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
 
     if (socket.connected && !didJoin.current) {
       didJoin.current = true;
@@ -2573,6 +2583,7 @@ export function DebatePage() {
 
     return () => {
       socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
       if (!isLeavingRef.current) socket.emit("leave_room");
       resetRoom();
       socket.disconnect();
@@ -2712,7 +2723,7 @@ export function DebatePage() {
                 {debateStages.map((_, i) => (
                   <div
                     key={i}
-                    className={`slim-phase-bar__seg slim-phase-bar__seg--${i < stageIdx ? "done" : i === stageIdx ? "active" : "upcoming"}`}
+                    className={`slim-phase-bar__seg slim-phase-bar__seg--${stageStatus(i, stageIdx, phase === "ended")}`}
                     style={{ flex: 1 }}
                   />
                 ))}

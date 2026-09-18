@@ -849,7 +849,14 @@ export function registerHandlers(io, socket) {
     if (!room) return socket.emit('error', { message: '방을 찾을 수 없습니다' });
 
     const phase = room.phase;
-    if (submittedPhase && submittedPhase !== phase) return;
+    if (submittedPhase && submittedPhase !== phase) {
+      // 클라이언트가 재접속 등으로 이전 단계 화면에 멈춰있던 경우: 조용히 무시하면
+      // 화면이 영영 갱신되지 않으므로 최신 방 상태를 다시 내려준다.
+      return socket.emit('room_state', {
+        room: getRoomSerialized(roomId),
+        myRole: getPlayerRole(roomId, socket.id),
+      });
+    }
     const phaseKeys = PHASE_SUBMIT_KEY[phase];
     if (!phaseKeys) return socket.emit('error', { message: '지금은 제출할 수 없습니다' });
 

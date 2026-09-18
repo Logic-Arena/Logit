@@ -1,3 +1,4 @@
+import { createSetukService } from './setuk.js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -303,3 +304,5 @@ export async function generateAiResponse({ topic, vote, chatHistory, triggerMess
     `위 발언에 대해 ${stance} 입장에서 1-3문장으로 답변하세요.`;
   return await ask(prompt);
 }
+
+export const { generateSetukDraft, summarizeSetuk } = createSetukService(ask);
