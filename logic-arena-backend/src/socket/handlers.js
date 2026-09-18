@@ -112,7 +112,8 @@ async function startPhase(io, roomId, phase) {
   setPhase(roomId, phase);
   const waitsForAiTopic = phase === 'topic_selection' && room.topicMode === 'ai_auto';
   const waitsForAiJudging = phase === 'judging';
-  if (waitsForAiTopic || waitsForAiJudging || phase === 'coaching') {
+  const waitsForUserAction = phase === 'essay_feedback'; // AI 피드백 확인 후 수동으로 퇴고 시작
+  if (waitsForAiTopic || waitsForAiJudging || waitsForUserAction || phase === 'coaching') {
     pausePhaseTimer(roomId);
   } else {
     startPhaseTimer(io, roomId, phase);
@@ -249,13 +250,14 @@ async function finalizePeerVoting(io, roomId) {
   result.scores = result.scores.map((s) => {
     const normalizedAi = s.aiScore ?? Math.round(s.total * 0.7);
     if (!hadObservers) {
-      return { ...s, peerVotes: 0, peerScore: 0, aiScore: s.total, finalScore: s.total };
+      // totalPeerVotes: 0 — 프론트에서 "투표 자체가 없었음(동점 아님)"을 구분하는 데 사용
+      return { ...s, peerVotes: 0, peerScore: 0, totalPeerVotes: 0, aiScore: s.total, finalScore: s.total };
     }
     const votes = pv[s.vote] ?? 0;
     const peerScore = s.type === 'player' && totalVotesCast > 0
       ? Math.round((votes / totalVotesCast) * 30)
       : 0;
-    return { ...s, peerVotes: votes, peerScore, aiScore: normalizedAi, finalScore: normalizedAi + peerScore };
+    return { ...s, peerVotes: votes, peerScore, totalPeerVotes: totalVotesCast, aiScore: normalizedAi, finalScore: normalizedAi + peerScore };
   });
 
   // winner는 인간 플레이어의 finalScore 기준으로 재계산
@@ -782,6 +784,54 @@ export function registerHandlers(io, socket) {
     }
   });
 
+  // ── retry_essay_feedback (AI 피드백 생성 실패 시 재요청) ──────
+  // field가 주어지면 해당 항목만 교체하고 나머지 항목은 기존 값을 유지한다.
+  // (백엔드가 한 번의 AI 호출로 6개 항목을 함께 생성하는 구조라 "그 항목만 다시 생성"은
+  //  불가능하지만, 새로 받은 결과에서 요청된 필드만 반영해 사용자 입장에서는 개별 재시도처럼 동작한다.)
+  const FEEDBACK_FIELDS = new Set(['claim', 'evidence', 'example', 'counterArgument', 'rebuttal', 'overall']);
+  socket.on('retry_essay_feedback', async ({ roomId, field }) => {
+    const room = getRoom(roomId);
+    if (!room) return socket.emit('error', { message: '방을 찾을 수 없습니다' });
+    if (room.mode !== 'solo_essay' || !['essay_feedback', 'essay_revision'].includes(room.phase)) {
+      return socket.emit('error', { message: '지금은 피드백을 다시 요청할 수 없습니다' });
+    }
+
+    const role = getPlayerRole(roomId, socket.id);
+    if (role !== 'pro_player') {
+      return socket.emit('error', { message: '논술 작성자만 피드백을 다시 요청할 수 있습니다' });
+    }
+
+    const targetField = FEEDBACK_FIELDS.has(field) ? field : null;
+
+    try {
+      const essayText = room.content.pro_argument ?? '';
+      const feedbackResult = await generateSoloFeedback({
+        topic: room.topic,
+        essaySide: room.essaySide,
+        essayText,
+        structuredArgumentEnabled: room.structuredArgumentEnabled,
+      });
+      const currentRoom = getRoom(roomId);
+      if (!currentRoom) return;
+
+      let merged = feedbackResult;
+      if (targetField) {
+        let prev = null;
+        try { prev = currentRoom.content.essay_feedback ? JSON.parse(currentRoom.content.essay_feedback) : null; } catch { /* 무시 */ }
+        merged = prev ? { ...prev, [targetField]: feedbackResult[targetField] } : feedbackResult;
+      }
+
+      setContent(roomId, 'essay_feedback', JSON.stringify(merged));
+      io.to(roomId).emit('ai_content', {
+        essay_feedback: merged,
+        room: getRoomSerialized(roomId),
+      });
+    } catch (error) {
+      console.error('[retry_essay_feedback] 재생성 실패:', error.message);
+      socket.emit('error', { message: 'AI 피드백을 다시 불러오지 못했습니다. 잠시 후 다시 시도해 주세요' });
+    }
+  });
+
   // ── submit_content (콘텐츠 제출) ───────────────────────────
   socket.on('save_draft', ({ roomId, phase, text }) => {
     const room = getRoom(roomId);
@@ -804,7 +854,10 @@ export function registerHandlers(io, socket) {
     if (!phaseKeys) return socket.emit('error', { message: '지금은 제출할 수 없습니다' });
 
     // 타이머 검증: phaseEndAt이 있고 이미 지났다면 제출 거부
-    if (room.phaseEndAt && Date.now() > room.phaseEndAt) {
+    // 프론트엔드는 phaseEndAt 시점에 자동 제출하는데, 네트워크 지연으로 서버 도착 시각이
+    // phaseEndAt을 미세하게 넘기는 경우가 대부분이라 유예 시간을 둔다.
+    const SUBMIT_GRACE_MS = 3_000;
+    if (room.phaseEndAt && Date.now() > room.phaseEndAt + SUBMIT_GRACE_MS) {
       return socket.emit('error', { message: '제출 시간이 지났습니다' });
     }
 
@@ -814,7 +867,8 @@ export function registerHandlers(io, socket) {
 
     if (room.content[contentKey]) return;
     const trimmed = text?.trim?.() ?? '';
-    const optionalPhases = new Set(['pro_a_defense', 'con_a_defense']);
+    // essay_revision: 퇴고를 하지 않아도 초안(essay_final 미설정 시 judging에서 pro_argument로 대체)으로 넘어갈 수 있어야 한다.
+    const optionalPhases = new Set(['pro_a_defense', 'con_a_defense', 'essay_revision']);
     if (!trimmed && !(skip && optionalPhases.has(phase))) {
       return socket.emit('error', { message: '내용을 입력해주세요' });
     }

@@ -8,6 +8,7 @@ import { useUserStore } from "../store/useUserStore";
 import { PhaseTimer } from "../components/debate/PhaseTimer";
 import { SubmitPanel } from "../components/debate/SubmitPanel";
 import { StructuredArgumentPanel } from "../components/debate/StructuredArgumentPanel";
+import type { EssayFeedback } from "../components/debate/StructuredArgumentPanel";
 import { Popover } from "../components/common/Popover";
 import DotSphereLoader from "../components/common/DotSphereLoader";
 import { parseStructuredArgument } from "../utils/parseStructuredArgument";
@@ -213,6 +214,12 @@ const CONTENT_FLOW: Array<{
       author: "반대 플레이어",
       align: "con",
       variant: "player",
+    },
+    {
+      key: "essay_feedback",
+      author: "AI 피드백",
+      align: "con",
+      variant: "ai",
     },
   ];
 
@@ -498,6 +505,11 @@ function DebateChatView({
     if (isHumanMode && item.variant === "ai" && item.key !== "coaching_pro" && item.key !== "coaching_con") {
       return [];
     }
+    // essay_revision 단계(구조화 입론 on): AI 피드백과 초안을 채팅에서 숨김 (카드 폼에서 표시)
+    // off(자유 서술) 모드는 채팅 화면을 그대로 유지하므로 숨기지 않는다.
+    if (room.structuredArgumentEnabled && phase === "essay_revision" && (item.key === "essay_feedback" || item.key === "pro_argument")) {
+      return [];
+    }
     if (phase === "arguing") {
       const both = !!(content.pro_argument && content.con_argument);
       if (!both) {
@@ -568,23 +580,29 @@ function DebateChatView({
           </div>
         )}
 
-        {messages.length === 0 && (
-          <div
-            style={{
-              textAlign: "center",
-              color: isAutoPhase ? "var(--color-ai)" : "var(--color-text-muted)",
-              padding: "40px 0",
-              fontSize: "13px",
-              fontStyle: "italic",
-            }}
-          >
-            {isAutoPhase
-              ? "AI가 자동으로 생성 중입니다... 잠시 기다려 주세요"
-              : "아직 작성된 내용이 없습니다."}
-          </div>
-        )}
+        {/* essay_revision 단계(구조화 입론 on만): 채팅 영역에 카드형 퇴고 폼 표시.
+            off(자유 서술) 모드는 채팅 화면을 그대로 유지하고 하단 패널만 입력창으로 바뀐다. */}
+        {phase === "essay_revision" && myKey && room.structuredArgumentEnabled ? (
+          <EssayRevisionView room={room} myKey={myKey} alreadySubmitted={alreadySubmitted} />
+        ) : (
+          <>
+            {messages.length === 0 && (
+              <div
+                style={{
+                  textAlign: "center",
+                  color: isAutoPhase ? "var(--color-ai)" : "var(--color-text-muted)",
+                  padding: "40px 0",
+                  fontSize: "13px",
+                  fontStyle: "italic",
+                }}
+              >
+                {isAutoPhase
+                  ? "AI가 자동으로 생성 중입니다... 잠시 기다려 주세요"
+                  : "아직 작성된 내용이 없습니다."}
+              </div>
+            )}
 
-        {messages.map((item) => {
+            {messages.map((item) => {
           const isOnMySide = mySide === item.align;
           const avatarChar =
             item.variant === "ai"
@@ -636,7 +654,9 @@ function DebateChatView({
                   className={`debate-bubble debate-bubble--${item.align}-${item.variant}`}
                 >
                   <div className="debate-bubble__body">
-                    {item.variant === "ai" ? (
+                    {item.key === "essay_feedback" ? (
+                      <EssayFeedbackBubble feedbackRaw={item.text} structuredArgumentEnabled={room.structuredArgumentEnabled} />
+                    ) : item.variant === "ai" ? (
                       <TypewriterText
                         key={`${item.key}:${item.text}`}
                         text={item.text}
@@ -651,6 +671,8 @@ function DebateChatView({
             </div>
           );
         })}
+          </>
+        )}
       </div>
 
       {/* 하단 입력 패널 */}
@@ -663,7 +685,21 @@ function DebateChatView({
         }}
       >
         {phase === "essay_feedback" ? (
-          <EssayFeedbackView room={room} />
+          myRole === "pro_player" ? <EssayFeedbackView room={room} /> : null
+        ) : phase === "essay_revision" ? (
+          // 구조화 입론 on은 EssayRevisionView 카드 폼 안에 입력창이 포함되어 있으므로 하단 패널은 비움.
+          // off(자유 서술)는 화면 전체가 그대로 유지되므로 버튼 자리에 입력창만 표시한다.
+          !room.structuredArgumentEnabled && myKey ? (
+            <SubmitPanel
+              key="essay_revision_freeform"
+              roomId={room.id}
+              label="퇴고 완료"
+              placeholder="AI 피드백을 참고해 논술문을 퇴고하세요."
+              alreadySubmitted={alreadySubmitted}
+              submittedText={alreadySubmitted ? content[myKey] : null}
+              phaseEndAt={room.phaseEndAt}
+            />
+          ) : null
         ) : myKey ? (
           ((phase === "arguing" || phase === "essay_writing") && room.structuredArgumentEnabled) ? (
             <StructuredArgumentPanel
@@ -674,8 +710,6 @@ function DebateChatView({
               submittedText={alreadySubmitted ? content[myKey] : null}
               phaseEndAt={room.phaseEndAt}
             />
-          ) : phase === "essay_revision" ? (
-            <EssayRevisionView room={room} myKey={myKey} alreadySubmitted={alreadySubmitted} structuredArgumentEnabled={room.structuredArgumentEnabled} />
           ) : (
             <SubmitPanel
               key={phase}
@@ -714,8 +748,7 @@ function DebateChatView({
 
 // ─── Phase 별 뷰 (특수 케이스) ──────────────────────────────────
 
-function EssayFeedbackView({ room }: { room: Room }) {
-  const feedbackRaw = room.content.essay_feedback;
+function EssayFeedbackBubble({ feedbackRaw, structuredArgumentEnabled }: { feedbackRaw: string; structuredArgumentEnabled: boolean }) {
   let feedback: {
     claim?: string;
     evidence?: string;
@@ -728,20 +761,15 @@ function EssayFeedbackView({ room }: { room: Room }) {
   try {
     feedback = feedbackRaw ? JSON.parse(feedbackRaw) : null;
   } catch {
-    // 파싱 실패 시 null 유지
+    return <div>피드백을 불러올 수 없습니다.</div>;
   }
 
   if (!feedback) {
-    return (
-      <div style={{ padding: "20px", textAlign: "center", color: "var(--color-text-muted)" }}>
-        AI가 피드백을 준비 중입니다...
-      </div>
-    );
+    return <div>피드백이 준비 중입니다...</div>;
   }
 
-  const isStructured = room.structuredArgumentEnabled !== false;
+  const isStructured = structuredArgumentEnabled ?? true;
 
-  // 구조화 모드: 5개 섹션별 헤더 + 박스 구분
   if (isStructured) {
     const sections = [
       { label: "① 주장", key: "claim" as const },
@@ -752,125 +780,65 @@ function EssayFeedbackView({ room }: { room: Room }) {
     ];
 
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "16px 0" }}>
-        <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--color-text)" }}>
-          AI 피드백
-        </div>
-        <div
-          style={{
-            background: "var(--color-surface-2)",
-            border: "1px solid var(--color-border)",
-            borderRadius: "var(--radius-md)",
-            padding: "16px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "14px",
-          }}
-        >
-          {sections.map(({ label, key }) => (
-            <div key={key} style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-              <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--color-text-muted)" }}>
-                {label}
-              </div>
-              <div style={{ fontSize: "13px", lineHeight: 1.6, color: "var(--color-text)" }}>
-                {feedback?.[key] || "피드백이 없습니다."}
-              </div>
-            </div>
-          ))}
-          {feedback.overall && (
-            <div
-              style={{
-                marginTop: "8px",
-                paddingTop: "14px",
-                borderTop: "1px solid var(--color-border)",
-                display: "flex",
-                flexDirection: "column",
-                gap: "4px",
-              }}
-            >
-              <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--color-text-muted)" }}>
-                총평
-              </div>
-              <div style={{ fontSize: "13px", lineHeight: 1.6, color: "var(--color-text)" }}>
-                {feedback.overall}
-              </div>
-            </div>
-          )}
-        </div>
-        <div style={{ fontSize: "12px", color: "var(--color-text-muted)", textAlign: "center" }}>
-          피드백을 충분히 읽은 뒤 퇴고를 시작하세요. 남은 시간이 끝나면 자동으로 이동합니다.
-        </div>
-        <button
-          type="button"
-          className="btn btn--primary"
-          onClick={() => socket.emit('continue_solo_revision', { roomId: room.id })}
-          style={{ alignSelf: "center", minWidth: "180px" }}
-        >
-          퇴고 시작하기
-        </button>
+      <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+        {sections.map(({ label, key }) => (
+          <div key={key} style={{ fontSize: "13px", lineHeight: 1.6 }}>
+            <span style={{ fontWeight: 600, color: "var(--color-text-muted)" }}>{label}:</span>{" "}
+            <span>{feedback?.[key] || "피드백이 없습니다."}</span>
+          </div>
+        ))}
+        {feedback.overall && (
+          <div style={{ fontSize: "13px", lineHeight: 1.6, marginTop: "4px", paddingTop: "8px", borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+            <span style={{ fontWeight: 600, color: "var(--color-text-muted)" }}>총평:</span>{" "}
+            <span>{feedback.overall}</span>
+          </div>
+        )}
       </div>
     );
   }
 
-  // 자유 서술형 모드: 헤더 없이 이어지는 문단 형태
+  // 자유 서술형
   const feedbackParts = [
     feedback.claim,
     feedback.evidence,
     feedback.example,
     feedback.counterArgument,
     feedback.rebuttal,
-  ].filter(Boolean); // 빈 값 제거
+  ].filter(Boolean);
 
   return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+      {feedbackParts.map((text, index) => (
+        <div key={index} style={{ fontSize: "13px", lineHeight: 1.6 }}>
+          {text}
+        </div>
+      ))}
+      {feedback.overall && (
+        <div style={{ fontSize: "13px", lineHeight: 1.6, marginTop: "4px", paddingTop: "8px", borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+          <span style={{ fontWeight: 600, color: "var(--color-text-muted)" }}>총평:</span>{" "}
+          <span>{feedback.overall}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EssayFeedbackView({ room }: { room: Room }) {
+  const feedbackRaw = room.content.essay_feedback;
+
+  if (!feedbackRaw) {
+    return (
+      <div style={{ padding: "20px", textAlign: "center", color: "var(--color-text-muted)" }}>
+        AI가 피드백을 준비 중입니다...
+      </div>
+    );
+  }
+
+  // AI 피드백은 채팅 영역에 말풍선으로 표시되므로, 여기서는 버튼만 표시
+  return (
     <div style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "16px 0" }}>
-      <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--color-text)" }}>
-        AI 피드백
-      </div>
-      <div
-        style={{
-          background: "var(--color-surface-2)",
-          border: "1px solid var(--color-border)",
-          borderRadius: "var(--radius-md)",
-          padding: "16px",
-          display: "flex",
-          flexDirection: "column",
-          gap: "12px",
-        }}
-      >
-        {feedbackParts.map((text, index) => (
-          <div
-            key={index}
-            style={{
-              fontSize: "13px",
-              lineHeight: 1.6,
-              color: "var(--color-text)",
-            }}
-          >
-            {text}
-          </div>
-        ))}
-        {feedback.overall && (
-          <div
-            style={{
-              marginTop: "8px",
-              paddingTop: "14px",
-              borderTop: "1px solid var(--color-border)",
-              display: "flex",
-              flexDirection: "column",
-              gap: "4px",
-            }}
-          >
-            <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--color-text-muted)" }}>
-              총평
-            </div>
-            <div style={{ fontSize: "13px", lineHeight: 1.6, color: "var(--color-text)" }}>
-              {feedback.overall}
-            </div>
-          </div>
-        )}
-      </div>
       <div style={{ fontSize: "12px", color: "var(--color-text-muted)", textAlign: "center" }}>
-        피드백을 충분히 읽은 뒤 퇴고를 시작하세요. 남은 시간이 끝나면 자동으로 이동합니다.
+        AI 피드백을 충분히 읽은 뒤, 준비가 되면 아래 버튼을 눌러 퇴고를 시작하세요.
       </div>
       <button
         type="button"
@@ -884,49 +852,27 @@ function EssayFeedbackView({ room }: { room: Room }) {
   );
 }
 
+// EssayRevisionView는 구조화 입론(on) 전용이다. off(자유 서술)는 DebateChatView가
+// 채팅 화면을 그대로 유지한 채 하단 패널만 SubmitPanel로 바꿔서 처리한다.
 function EssayRevisionView({
   room,
   myKey,
   alreadySubmitted,
-  structuredArgumentEnabled,
 }: {
   room: Room;
   myKey: keyof RoomContent;
   alreadySubmitted: boolean;
-  structuredArgumentEnabled: boolean;
 }) {
+  const [showOriginal, setShowOriginal] = useState(true);
   const originalEssay = room.content.pro_argument ?? "";
   const parsedSections = parseStructuredArgument(originalEssay);
   const feedbackRaw = room.content.essay_feedback;
-
-  let feedback: {
-    claim?: string;
-    evidence?: string;
-    example?: string;
-    counterArgument?: string;
-    rebuttal?: string;
-    overall?: string;
-  } | null = null;
-  let feedbackState: 'loading' | 'error' | 'success' = 'loading';
-
-  if (feedbackRaw) {
-    try {
-      feedback = JSON.parse(feedbackRaw);
-      feedbackState = 'success';
-    } catch (error) {
-      // 파싱 실패 시 에러 로그
-      console.error('[EssayRevisionView] 피드백 파싱 실패:', feedbackRaw, error);
-      feedbackState = 'error';
-    }
+  let feedback: EssayFeedback | null = null;
+  try {
+    feedback = feedbackRaw ? JSON.parse(feedbackRaw) : null;
+  } catch (error) {
+    console.error('[EssayRevisionView] 피드백 파싱 실패:', feedbackRaw, error);
   }
-
-  const sections = [
-    { label: "① 주장", key: "claim" as const },
-    { label: "② 근거", key: "evidence" as const },
-    { label: "③ 예시", key: "example" as const },
-    { label: "④ 예상 반론", key: "counterArgument" as const },
-    { label: "⑤ 재반론", key: "rebuttal" as const },
-  ];
 
   if (alreadySubmitted) {
     return (
@@ -965,76 +911,39 @@ function EssayRevisionView({
     );
   }
 
-  if (!structuredArgumentEnabled) {
-    return (
-      <SubmitPanel
-        key="essay_revision_freeform"
-        roomId={room.id}
-        label="퇴고 완료"
-        placeholder="AI 피드백을 참고해 논술문을 퇴고하세요."
-        alreadySubmitted={false}
-        phaseEndAt={room.phaseEndAt}
-      />
-    );
-  }
-
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "8px 0" }}>
-      {/* 피드백 영역 (접기 가능, 기본 펼침) */}
-      {feedbackState === 'loading' ? (
-        <div
-          style={{
-            background: "var(--color-surface-2)",
-            border: "1px solid var(--color-border)",
-            borderRadius: "var(--radius-md)",
-            padding: "20px",
-            textAlign: "center",
-            color: "var(--color-text-muted)",
-            fontSize: "13px",
-          }}
-        >
-          AI 피드백을 불러오는 중입니다...
+      {/* 초안 보기 */}
+      {originalEssay && (
+        <div style={{ background: "var(--color-surface-2)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", overflow: "hidden" }}>
+          <button
+            onClick={() => setShowOriginal(!showOriginal)}
+            style={{
+              width: "100%",
+              padding: "12px 16px",
+              background: "transparent",
+              border: "none",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              cursor: "pointer",
+              fontSize: "13px",
+              fontWeight: 700,
+              color: "var(--color-text)",
+            }}
+          >
+            <span>📝 내가 작성한 초안</span>
+            <span style={{ fontSize: "12px" }}>{showOriginal ? "▲ 접기" : "▼ 펼치기"}</span>
+          </button>
+          {showOriginal && (
+            <div style={{ padding: "0 16px 16px", fontSize: "13px", lineHeight: 1.6, color: "var(--color-text)", whiteSpace: "pre-wrap" }}>
+              {originalEssay}
+            </div>
+          )}
         </div>
-      ) : feedbackState === 'error' ? (
-        <div
-          style={{
-            background: "var(--color-surface-2)",
-            border: "1px solid var(--color-border)",
-            borderRadius: "var(--radius-md)",
-            padding: "20px",
-            textAlign: "center",
-            color: "var(--color-con)",
-            fontSize: "13px",
-          }}
-        >
-          ⚠️ 피드백을 불러오지 못했습니다.
-          <div style={{ marginTop: "8px", fontSize: "12px", color: "var(--color-text-muted)" }}>
-            잠시 후 다시 시도하거나 페이지를 새로고침해보세요.
-          </div>
-        </div>
-      ) : feedback ? (
-        <details open style={{ background: "var(--color-surface-2)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", padding: "12px 14px" }}>
-          <summary style={{ cursor: "pointer", fontSize: "13px", fontWeight: 700, color: "var(--color-text)", userSelect: "none" }}>
-            AI 피드백 (클릭하여 접기/펼치기)
-          </summary>
-          <div style={{ marginTop: "12px", display: "flex", flexDirection: "column", gap: "10px" }}>
-            {sections.map(({ label, key }) => (
-              <div key={key} style={{ fontSize: "12px", lineHeight: 1.6 }}>
-                <span style={{ fontWeight: 600, color: "var(--color-text-muted)" }}>{label}:</span>{" "}
-                <span style={{ color: "var(--color-text)" }}>{feedback[key]}</span>
-              </div>
-            ))}
-            {feedback.overall && (
-              <div style={{ fontSize: "12px", lineHeight: 1.6, marginTop: "4px", paddingTop: "8px", borderTop: "1px solid var(--color-border)" }}>
-                <span style={{ fontWeight: 600, color: "var(--color-text-muted)" }}>총평:</span>{" "}
-                <span style={{ color: "var(--color-text)" }}>{feedback.overall}</span>
-              </div>
-            )}
-          </div>
-        </details>
-      ) : null}
+      )}
 
-      {/* 퇴고 폼 */}
+      {/* 항목별 카드: ①~⑤ 각 카드 안에 입력창 + 해당 항목 AI 피드백을 함께 표시 */}
       {parsedSections ? (
         <StructuredArgumentPanel
           key="essay_revision"
@@ -1044,6 +953,7 @@ function EssayRevisionView({
           phaseEndAt={room.phaseEndAt}
           initialSections={parsedSections}
           submitLabel="퇴고 완료"
+          feedback={feedback}
         />
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -1079,6 +989,7 @@ function EssayRevisionView({
             alreadySubmitted={false}
             phaseEndAt={room.phaseEndAt}
             submitLabel="퇴고 완료"
+            feedback={feedback}
           />
         </div>
       )}
@@ -1778,23 +1689,26 @@ function DecisiveEdgeBadge({ scores }: { scores: ParticipantScore[] }) {
   const pro = scores.find(s => s.vote === 'pro' && s.type === 'player');
   const con = scores.find(s => s.vote === 'con' && s.type === 'player');
   if (!pro || !con) return null;
-  let maxDiff = 0;
-  let bestLabel = '논리성';
-  let bestKey: typeof SCORE_CRITERIA[0]['key'] = 'logic';
-  let winner: 'pro' | 'con' = 'pro';
-  SCORE_CRITERIA.forEach(({ key, label }) => {
-    const diff = (pro[key] ?? 0) - (con[key] ?? 0);
-    if (Math.abs(diff) > maxDiff) {
-      maxDiff = Math.abs(diff);
-      bestLabel = label;
-      bestKey = key;
-      winner = diff >= 0 ? 'pro' : 'con';
-    }
-  });
+
+  // 1) 5축 전체의 |차이|를 계산해 최댓값을 구한다.
+  const diffs = SCORE_CRITERIA.map(({ key, label }) => ({
+    key, label,
+    diff: (pro[key] ?? 0) - (con[key] ?? 0),
+  }));
+  const maxDiff = Math.max(...diffs.map(d => Math.abs(d.diff)));
   if (maxDiff === 0) return null;
-  const color = winner === 'pro' ? 'var(--color-pro)' : 'var(--color-con)';
-  const proScore = pro[bestKey] ?? 0;
-  const conScore = con[bestKey] ?? 0;
+
+  // 2) 최댓값과 동률인 축을 전부 모은다 (하나만 고르지 않음 — 임의로 첫 축이 이기는 걸 방지).
+  const decisive = diffs.filter(d => Math.abs(d.diff) === maxDiff);
+  const bestKeys = new Set(decisive.map(d => d.key));
+  const bestLabel = decisive.map(d => d.label).join('·');
+
+  // 동률 축들의 승자 방향이 전부 같을 때만 "찬성/반대 +N" 배지를 단정적으로 표시.
+  // 방향이 갈리면(드문 경우) 어느 한쪽이 우세하다고 단정할 수 없으므로 중립 표기.
+  const winners = new Set(decisive.map(d => (d.diff >= 0 ? 'pro' : 'con')));
+  const winner: 'pro' | 'con' | null = winners.size === 1 ? [...winners][0] as 'pro' | 'con' : null;
+  const color = winner === 'pro' ? 'var(--color-pro)' : winner === 'con' ? 'var(--color-con)' : 'var(--color-text-muted)';
+
   return (
     <div style={{ padding: '12px 14px', background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1803,22 +1717,32 @@ function DecisiveEdgeBadge({ scores }: { scores: ParticipantScore[] }) {
           <strong style={{ color }}>{bestLabel}</strong>에서 승부가 갈렸습니다
         </span>
       </div>
-      {/* 결정적 항목 점수 비교 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
-        <span style={{ fontWeight: 700, color: 'var(--color-pro)', minWidth: '60px' }}>{pro.name}</span>
-        <span style={{ fontWeight: 700, color: 'var(--color-pro)', fontSize: '18px' }}>{proScore}</span>
-        <span style={{ color: 'var(--color-text-muted)', fontSize: '11px' }}>vs</span>
-        <span style={{ fontWeight: 700, color: 'var(--color-con)', fontSize: '18px' }}>{conScore}</span>
-        <span style={{ fontWeight: 700, color: 'var(--color-con)', minWidth: '60px' }}>{con.name}</span>
-        <span style={{ marginLeft: 'auto', fontWeight: 700, color, fontSize: '12px', background: `${color}22`, padding: '2px 8px', borderRadius: '999px' }}>
-          {winner === 'pro' ? `찬성 +${maxDiff}` : `반대 +${maxDiff}`}
-        </span>
+      {/* 결정적 항목(들) 점수 비교 */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        {decisive.map(({ key, label, diff }) => {
+          const rowWinner: 'pro' | 'con' = diff >= 0 ? 'pro' : 'con';
+          const rowColor = rowWinner === 'pro' ? 'var(--color-pro)' : 'var(--color-con)';
+          return (
+            <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
+              {decisive.length > 1 && (
+                <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', minWidth: '48px' }}>{label}</span>
+              )}
+              <span style={{ fontWeight: 700, color: 'var(--color-pro)', minWidth: '60px' }}>{pro.name}</span>
+              <span style={{ fontWeight: 700, color: 'var(--color-pro)', fontSize: '18px' }}>{pro[key] ?? 0}</span>
+              <span style={{ color: 'var(--color-text-muted)', fontSize: '11px' }}>vs</span>
+              <span style={{ fontWeight: 700, color: 'var(--color-con)', fontSize: '18px' }}>{con[key] ?? 0}</span>
+              <span style={{ fontWeight: 700, color: 'var(--color-con)', minWidth: '60px' }}>{con.name}</span>
+              <span style={{ marginLeft: 'auto', fontWeight: 700, color: rowColor, fontSize: '12px', background: `${rowColor}22`, padding: '2px 8px', borderRadius: '999px' }}>
+                {rowWinner === 'pro' ? `찬성 +${Math.abs(diff)}` : `반대 +${Math.abs(diff)}`}
+              </span>
+            </div>
+          );
+        })}
       </div>
       {/* 전체 항목 차이 요약 */}
       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-        {SCORE_CRITERIA.map(({ key, label }) => {
-          const diff = (pro[key] ?? 0) - (con[key] ?? 0);
-          const isDecisive = key === bestKey;
+        {diffs.map(({ key, label, diff }) => {
+          const isDecisive = bestKeys.has(key);
           const chipColor = diff > 0 ? 'var(--color-pro)' : diff < 0 ? 'var(--color-con)' : 'var(--color-text-muted)';
           return (
             <span key={key} style={{
@@ -1860,7 +1784,12 @@ function RpChangeCard({ result, myRole }: { result: DebateResult; myRole: Player
 }
 
 function RadarChart({ pro, con }: { pro: ParticipantScore; con: ParticipantScore }) {
-  const cx = 130, cy = 120, r = 85;
+  // 라벨은 중심에서 r*1.32(≈112px) 떨어진 정점에 그려지는데, 그 거리는 "텍스트가 시작되는
+  // 좌표"일 뿐 텍스트 자체의 폭은 포함하지 않는다. 기존 viewBox(260x240)는 정점까지의
+  // 거리만 겨우 담을 만큼 좁아서, "일관성"처럼 3~5글자짜리 라벨이 anchor 방향(start/end)으로
+  // 퍼져나갈 때 캔버스 밖으로 나가 잘렸다. 그래프 반지름(r)은 그대로 두고 캔버스와 중심만
+  // 넉넉히 넓혀 라벨이 들어갈 여백을 확보한다.
+  const cx = 160, cy = 140, r = 85;
   const axes = SCORE_CRITERIA.map(({ key, label }, i) => ({
     key, label,
     deg: (i / SCORE_CRITERIA.length) * 360,
@@ -1879,7 +1808,7 @@ function RadarChart({ pro, con }: { pro: ParticipantScore; con: ParticipantScore
         항목별 비교
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-        <svg width="260" height="240" viewBox="0 0 260 240">
+        <svg width="320" height="280" viewBox="0 0 320 280">
           {[1, 0.75, 0.5, 0.25].map(lvl => {
             const pts = axes.map(a => toXY(lvl, a.deg));
             const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ') + 'Z';
@@ -1963,6 +1892,9 @@ function EndedView({
 
   const getPeerLabel = (s: (typeof sorted)[0]) => {
     if (s.type !== "player") return null;
+    // 투표 자체가 0건이면(관전자가 없었거나 아무도 투표하지 않음) 0=0이 되어
+    // 실제 동점과 구분이 안 되므로, 진짜로 투표가 있었을 때만 "동점"을 쓴다.
+    if (!s.totalPeerVotes) return { text: "동료평가 없음", color: "var(--color-text-muted)" };
     const myVotes = s.vote === "pro" ? proPlayerVotes : conPlayerVotes;
     const oppVotes = s.vote === "pro" ? conPlayerVotes : proPlayerVotes;
     if (myVotes > oppVotes) return { text: "우세", color: "var(--color-pro, #4caf50)" };
@@ -2240,6 +2172,7 @@ function EndedView({
           {playerScores
             .filter((s) => s.advice)
             .filter((s) => {
+              if (isSoloEssay) return true; // 개인논술은 입장(pro/con)과 무관하게 본인 조언 표시
               if (myRole === "pro_player") return s.vote === "pro";
               if (myRole === "con_player") return s.vote === "con";
               return true; // observer는 모두 표시
@@ -2373,9 +2306,18 @@ function DebateSidebar({
         </div>
 
         {/* 최초 주장 요약 */}
+        {/* 내가 아직 최초 주장을 제출하지 않았고 arguing 단계가 끝나지도 않았다면,
+            상대가 먼저 제출했더라도 그 내용을 미리 볼 수 없게 막는다(스포일러 방지). */}
+        {(() => {
+          const mySubmittedArguing =
+            mySide === "pro" ? !!content.pro_argument :
+            mySide === "con" ? !!content.con_argument :
+            false;
+          const argumentsRevealed = isSoloEssay || phase !== "arguing" || mySubmittedArguing;
+          return (
         <div className="sidebar-section">
           <div className="sidebar-section__title">{isSoloEssay ? (mySide === null ? "논술 초안" : "내 논술 초안") : "최초 주장 요약"}</div>
-          {content.pro_argument ? (
+          {argumentsRevealed && content.pro_argument ? (
             <Popover
               width={300}
               content={
@@ -2406,7 +2348,7 @@ function DebateSidebar({
               </p>
             </div>
           )}
-          {!isSoloEssay && (content.con_argument ? (
+          {!isSoloEssay && (argumentsRevealed && content.con_argument ? (
             <Popover
               width={300}
               content={
@@ -2438,6 +2380,8 @@ function DebateSidebar({
             </div>
           ))}
         </div>
+          );
+        })()}
       </div>
     </>
   );

@@ -98,6 +98,9 @@ export interface ParticipantScore {
   peerVotes: number;
   peerScore: number;
   finalScore: number;
+  // 관전자 투표 총합. 0이면 애초에 동료평가가 이뤄지지 않은 것이므로
+  // peerVotes가 양쪽 다 같아도(0=0) "동점"이 아니라 "평가 없음"으로 표시해야 한다.
+  totalPeerVotes?: number;
 }
 
 export interface DebateResult {

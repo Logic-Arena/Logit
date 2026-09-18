@@ -7,6 +7,7 @@ export interface ClientToServerEvents {
   start_game: (payload: { roomId: string }) => void;
   select_side: (payload: { roomId: string; side: 'pro' | 'con' }) => void;
   continue_solo_revision: (payload: { roomId: string }) => void;
+  retry_essay_feedback: (payload: { roomId: string; field?: string }) => void;
   save_draft: (payload: { roomId: string; phase: string; text: string }) => void;
   submit_content: (payload: { roomId: string; text: string; phase?: string; skip?: boolean }) => void;
   peer_vote: (payload: { votedFor: 'pro' | 'con' }) => void;
