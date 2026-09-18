@@ -719,6 +719,8 @@ function DebateChatView({
           borderTop: "1px solid var(--color-border)",
           padding: "10px 20px",
           background: "var(--color-surface)",
+          maxHeight: "70vh",
+          overflowY: "auto",
         }}
       >
         {phase === "essay_feedback" ? (
