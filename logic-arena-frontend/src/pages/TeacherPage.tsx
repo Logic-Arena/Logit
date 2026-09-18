@@ -13,6 +13,7 @@ import type {
   ClassSummary,
   TeacherDebateSummary,
 } from "../lib/api";
+import { isSoloRecord } from "../lib/historyClassification";
 import {
   getTeacherClasses,
   createClass,
@@ -153,7 +154,7 @@ function DebateSummaryModal({ debate, token, onClose }: {
 
   useEffect(() => { load(); }, [load]);
 
-  const isSolo = debate.position === 'solo';
+  const isSolo = isSoloRecord(debate);
   const positionLabel = isSolo ? '개인 논술' : (debate.position === 'pro' ? '찬성' : '반대');
   const positionColor = isSolo ? 'var(--color-primary)' : (debate.position === 'pro' ? 'var(--color-pro)' : 'var(--color-con)');
   const resultLabel = isSolo ? '논술' : (debate.result === 'win' ? '승리' : debate.result === 'lose' ? '패배' : '무승부');

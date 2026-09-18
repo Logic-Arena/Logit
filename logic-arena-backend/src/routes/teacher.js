@@ -4,6 +4,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { prisma } from '../db/prisma.js';
 import { generateTeacherDebateSummary, generateSetukDraft, summarizeSetuk } from '../services/ai.js';
 import { TEACHER_SUBJECTS } from '../saedeuk.js';
+import { isSoloRecord } from '../utils/soloEssay.js';
 
 const router = express.Router();
 
@@ -295,8 +296,8 @@ router.get('/classes/:classId/summary', requireAuth, requireTeacher, async (req,
     });
 
     const totalActivities = histories.length;
-    const debateCount = histories.filter(h => h.position !== 'solo').length;
-    const soloEssayCount = histories.filter(h => h.position === 'solo').length;
+    const soloEssayCount = histories.filter(isSoloRecord).length;
+    const debateCount = histories.filter(h => !isSoloRecord(h)).length;
     const n = totalActivities || 1;
     const avgScore = totalActivities > 0 ? Math.round(histories.reduce((s, h) => s + h.score, 0) / totalActivities) : 0;
 

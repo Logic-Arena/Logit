@@ -1,5 +1,6 @@
 import { createSetukService } from './setuk.js';
 import OpenAI from 'openai';
+import { isSoloRecord } from '../utils/soloEssay.js';
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
@@ -714,7 +715,7 @@ export async function generateCommunityTopicForSlot(slot) {
 }
 
 export async function generateTeacherDebateSummary({ studentName, topic, position, result, score, logic, evidence, persuasion, rebuttal, consistency, advice }) {
-  const isSolo = position === 'solo';
+  const isSolo = isSoloRecord({ result, position });
   const resultLabel = isSolo ? '개인 논술' : (result === 'win' ? '승리' : result === 'lose' ? '패배' : '무승부');
   const positionLabel = isSolo ? '1인 논술' : (position === 'pro' ? '찬성' : '반대');
 

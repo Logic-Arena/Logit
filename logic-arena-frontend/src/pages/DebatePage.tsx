@@ -12,6 +12,7 @@ import type { EssayFeedback } from "../components/debate/StructuredArgumentPanel
 import { Popover } from "../components/common/Popover";
 import DotSphereLoader from "../components/common/DotSphereLoader";
 import { parseStructuredArgument } from "../utils/parseStructuredArgument";
+import { playerAuthor, stageStatus } from "../lib/debatePresentation";
 import type { Room, Phase, PlayerRole, RoomContent, ParticipantScore, DebateResult, VoteOption } from "../types/room";
 
 // ─── 상수 ──────────────────────────────────────────────────────
@@ -522,7 +523,7 @@ function DebateChatView({
     // 훈수: 플레이어는 자신의 진영 훈수만 표시, 관전자는 둘 다 표시
     if (item.key === "coaching_pro" && myRole === "con_player") return [];
     if (item.key === "coaching_con" && myRole === "pro_player") return [];
-    return [{ ...item, text }];
+    return [{ ...item, text, author: item.variant === "player" ? playerAuthor(room.mode, room.essaySide, item.author) : item.author }];
   });
 
   const hasSubmitRole = Object.keys(PHASE_SUBMIT_MAP[phase] ?? {}).length > 0;
@@ -2278,14 +2279,7 @@ function DebateSidebar({
           <div className="sidebar-section__title">진행 단계</div>
           {(isSoloEssay ? soloStages : DEBATE_STAGES).map((stage, i) => {
             const activeStageIdx = isSoloEssay ? soloStageIdx : stageIdx;
-            const status =
-              activeStageIdx < 0
-                ? "upcoming"
-                : i < activeStageIdx
-                  ? "done"
-                  : i === activeStageIdx
-                    ? "active"
-                    : "upcoming";
+            const status = stageStatus(i, activeStageIdx, phase === "ended");
             return (
               <div key={i} className={`stage-item stage-item--${status}`}>
                 <span className="stage-item__dot" />
@@ -2618,7 +2612,7 @@ export function DebatePage() {
                 {DEBATE_STAGES.map((_, i) => (
                   <div
                     key={i}
-                    className={`slim-phase-bar__seg slim-phase-bar__seg--${i < stageIdx ? "done" : i === stageIdx ? "active" : "upcoming"}`}
+                    className={`slim-phase-bar__seg slim-phase-bar__seg--${stageStatus(i, stageIdx, phase === "ended")}`}
                     style={{ flex: 1 }}
                   />
                 ))}
