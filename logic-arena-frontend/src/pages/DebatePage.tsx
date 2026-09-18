@@ -389,37 +389,72 @@ function TypewriterText({
   );
 }
 
-// 4단계 매핑
-const DEBATE_STAGES: Array<{ label: string; phases: Set<Phase> }> = [
-  { label: "최초 주장", phases: new Set<Phase>(["arguing"]) },
-  {
-    label: "반론",
-    phases: new Set<Phase>([
-      "pro_p_rebuttal",
-      "pro_p_defense",
-      "con_p_rebuttal",
-      "con_p_defense",
-      "pro_a_rebuttal",
-      "pro_a_defense",
-      "con_a_rebuttal",
-      "con_a_defense",
-    ]),
-  },
-  {
-    label: "재반박",
-    phases: new Set<Phase>([
-      "pro_p_counter",
-      "con_p_counter",
-      "pro_a_counter",
-      "con_a_counter",
-      "coaching",
-    ]),
-  },
-  { label: "최종 주장", phases: new Set<Phase>(["final_argument"]) },
-];
+// ─── 진행 단계 (라운드 기반) ─────────────────────────────────
+// 백엔드 rooms.js의 실제 phase 진행 순서(PHASE_SEQUENCE)와 1:1로 맞춘 매크로 단계.
+// "반론/변론/재반론" 종류가 라운드 안에서 순서대로 바뀌므로, 종류별 버킷으로 묶으면
+// (구) 반론 ↔ 재반박 단계가 왔다갔다 역행하는 문제가 있어 "누구와 공방하는 라운드인지"
+// 기준으로 묶고, 라벨은 활성 상태일 때 종류+대상을 조합해 보여준다.
+type PhaseKind = "rebuttal" | "defense" | "counter";
+const PHASE_KIND: Partial<Record<Phase, PhaseKind>> = {
+  pro_p_rebuttal: "rebuttal", pro_p_defense: "defense", pro_p_counter: "counter",
+  con_p_rebuttal: "rebuttal", con_p_defense: "defense", con_p_counter: "counter",
+  pro_a_rebuttal: "rebuttal", pro_a_defense: "defense", pro_a_counter: "counter",
+  con_a_rebuttal: "rebuttal", con_a_defense: "defense", con_a_counter: "counter",
+};
+const PHASE_KIND_LABEL: Record<PhaseKind, string> = {
+  rebuttal: "반론",
+  defense: "변론",
+  counter: "재반론",
+};
 
-function getStageIndex(phase: Phase): number {
-  return DEBATE_STAGES.findIndex((s) => s.phases.has(phase));
+type DebateOpponent = "상대 토론자" | "AI 토론자";
+
+interface DebateStage {
+  key: string;
+  opponent: DebateOpponent | null;
+  /** 비활성(완료/예정) 상태일 때 쓰는 고정 라벨 */
+  collapsedLabel: string;
+  phases: Phase[];
+}
+
+// mode별로 실제 등장하는 phase만 포함해 매크로 단계를 구성한다.
+function getDebateStages(mode: Room["mode"]): DebateStage[] {
+  const stages: DebateStage[] = [
+    { key: "arguing", opponent: null, collapsedLabel: "최초 주장", phases: ["arguing"] },
+    { key: "player-1", opponent: "상대 토론자", collapsedLabel: "찬성 공세 (상대 토론자)", phases: ["pro_p_rebuttal", "pro_p_defense", "pro_p_counter"] },
+    { key: "player-2", opponent: "상대 토론자", collapsedLabel: "반대 공세 (상대 토론자)", phases: ["con_p_rebuttal", "con_p_defense", "con_p_counter"] },
+  ];
+  if (mode === "ai_debate") {
+    stages.push(
+      { key: "ai-1", opponent: "AI 토론자", collapsedLabel: "찬성AI 공세 (AI 토론자)", phases: ["pro_a_rebuttal", "pro_a_defense", "pro_a_counter"] },
+      { key: "ai-2", opponent: "AI 토론자", collapsedLabel: "반대AI 공세 (AI 토론자)", phases: ["con_a_rebuttal", "con_a_defense", "con_a_counter"] },
+    );
+  }
+  stages.push({ key: "closing", opponent: null, collapsedLabel: "마무리", phases: ["coaching", "final_argument"] });
+  return stages;
+}
+
+// 현재 phase 기준 표시 라벨: 라운드 단계는 "종류 (대상)" 조합(예: "반론 (상대 토론자)")으로,
+// 그 외는 고정 라벨을 반환한다.
+function getStageActiveLabel(stage: DebateStage, phase: Phase): string {
+  if (phase === "coaching") return "AI 훈수 (자동)";
+  if (phase === "final_argument") return "최종 주장";
+  const kind = PHASE_KIND[phase];
+  if (stage.opponent && kind) {
+    return `${PHASE_KIND_LABEL[kind]} (${stage.opponent})`;
+  }
+  return stage.collapsedLabel;
+}
+
+function findStagePosition(
+  stages: DebateStage[],
+  phase: Phase,
+): { stageIdx: number; subIdx: number } {
+  for (let i = 0; i < stages.length; i++) {
+    const subIdx = stages[i].phases.indexOf(phase);
+    if (subIdx !== -1) return { stageIdx: i, subIdx };
+  }
+  return { stageIdx: -1, subIdx: -1 };
 }
 
 // ─── 공통 UI ────────────────────────────────────────────────────
@@ -614,24 +649,25 @@ function DebateChatView({
                   ? "찬"
                   : "반";
 
-          // 훈수 AI는 중앙 배치
+          // 훈수 AI는 토론자 발언이 아닌 시스템 코멘트이므로, 좌/우 말풍선 흐름과
+          // 분리된 전체 폭 카드(점선 구분선)로 표시한다.
           if (item.variant === "coach") {
             return (
-              <div key={item.key} className="bubble-row bubble-row--coach">
-                <article className="debate-bubble debate-bubble--coach">
-                  <div className="debate-bubble__meta">
-                    <strong>{item.author}</strong>
-                    <span>{CONTENT_LABELS[item.key]}</span>
-                  </div>
-                  <div className="debate-bubble__body">
-                    <TypewriterText
-                      key={`${item.key}:${item.text}`}
-                      text={item.text}
-                      animationKey={`${item.key}:${item.text}`}
-                      thinkingLabel="논점을 정리 중입니다..."
-                    />
-                  </div>
-                </article>
+              <div key={item.key} className="coach-note">
+                <div className="coach-note__header">
+                  <span className="coach-note__icon" aria-hidden="true">💡</span>
+                  <span className="coach-note__label">
+                    AI 훈수 · {item.align === "pro" ? "찬성" : "반대"} 측에게
+                  </span>
+                </div>
+                <div className="coach-note__body">
+                  <TypewriterText
+                    key={`${item.key}:${item.text}`}
+                    text={item.text}
+                    animationKey={`${item.key}:${item.text}`}
+                    thinkingLabel="논점을 정리 중입니다..."
+                  />
+                </div>
               </div>
             );
           }
@@ -2234,7 +2270,8 @@ function DebateSidebar({
     myRole === "pro_player" ? "pro" : myRole === "con_player" ? "con" : null;
   const { phase, content } = room;
   const isSoloEssay = room.mode === "solo_essay";
-  const stageIdx = getStageIndex(phase);
+  const debateStages = getDebateStages(room.mode);
+  const { stageIdx, subIdx } = findStagePosition(debateStages, phase);
   const soloStages = [
     { label: "초안 작성", phases: ["essay_writing"] },
     { label: "AI 피드백", phases: ["essay_feedback"] },
@@ -2277,26 +2314,89 @@ function DebateSidebar({
         {/* 진행 단계 */}
         <div className="sidebar-section">
           <div className="sidebar-section__title">진행 단계</div>
-          {(isSoloEssay ? soloStages : DEBATE_STAGES).map((stage, i) => {
-            const activeStageIdx = isSoloEssay ? soloStageIdx : stageIdx;
-            const status = stageStatus(i, activeStageIdx, phase === "ended");
-            return (
-              <div key={i} className={`stage-item stage-item--${status}`}>
-                <span className="stage-item__dot" />
-                <span className="stage-item__label">
-                  {i + 1}단계·{stage.label}
-                </span>
-                {status === "done" && (
-                  <span className="stage-item__badge">완료</span>
-                )}
-                {status === "active" && (
-                  <span className="stage-item__badge stage-item__badge--active">
-                    진행 중
-                  </span>
-                )}
-              </div>
-            );
-          })}
+          {isSoloEssay
+            ? soloStages.map((stage, i) => {
+                const status =
+                  soloStageIdx < 0
+                    ? "upcoming"
+                    : i < soloStageIdx
+                      ? "done"
+                      : i === soloStageIdx
+                        ? "active"
+                        : "upcoming";
+                return (
+                  <div key={i} className={`stage-item stage-item--${status}`}>
+                    <span className="stage-item__dot" />
+                    <span className="stage-item__label">
+                      {i + 1}단계·{stage.label}
+                    </span>
+                    {status === "done" && (
+                      <span className="stage-item__badge">완료</span>
+                    )}
+                    {status === "active" && (
+                      <span className="stage-item__badge stage-item__badge--active">
+                        진행 중
+                      </span>
+                    )}
+                  </div>
+                );
+              })
+            : debateStages.map((stage, i) => {
+                const status =
+                  stageIdx < 0
+                    ? "upcoming"
+                    : i < stageIdx
+                      ? "done"
+                      : i === stageIdx
+                        ? "active"
+                        : "upcoming";
+                const label =
+                  status === "active" ? getStageActiveLabel(stage, phase) : stage.collapsedLabel;
+                return (
+                  <div key={stage.key}>
+                    <div className={`stage-item stage-item--${status}`}>
+                      <span className="stage-item__dot" />
+                      <span className="stage-item__label">
+                        {i + 1}단계·{label}
+                      </span>
+                      {status === "done" && (
+                        <span className="stage-item__badge">완료</span>
+                      )}
+                      {status === "active" && (
+                        <span className="stage-item__badge stage-item__badge--active">
+                          진행 중
+                        </span>
+                      )}
+                    </div>
+                    {status === "active" && stage.phases.length > 1 && (
+                      <div className="stage-subitem-list">
+                        {stage.phases.map((subPhase, j) => {
+                          const subStatus =
+                            j < subIdx ? "done" : j === subIdx ? "active" : "upcoming";
+                          return (
+                            <div
+                              key={subPhase}
+                              className={`stage-subitem stage-subitem--${subStatus}`}
+                            >
+                              <span className="stage-subitem__dot" />
+                              <span className="stage-subitem__label">
+                                {PHASE_LABELS[subPhase]}
+                              </span>
+                              <span
+                                className={`stage-subitem__status${subStatus === "active" ? " stage-subitem__status--active" : ""}`}
+                              >
+                                {subStatus === "done" && "완료"}
+                                {subStatus === "active" && "진행 중"}
+                                {subStatus === "upcoming" && "대기"}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
         </div>
 
         {/* 최초 주장 요약 */}
@@ -2532,7 +2632,8 @@ export function DebatePage() {
 
   const { phase } = room;
   const isDebatePhase = DEBATE_PHASES.has(phase);
-  const stageIdx = getStageIndex(phase);
+  const debateStages = getDebateStages(room.mode);
+  const { stageIdx } = findStagePosition(debateStages, phase);
 
   return (
     <div className={`debate-page${phase !== "waiting" && phase !== "topic_selection" ? " debate-page--with-sidebar" : ""}`}>
@@ -2598,7 +2699,7 @@ export function DebatePage() {
             >
               {stageIdx >= 0 && (
                 <span className="slim-phase-bar__chip">
-                  {stageIdx + 1}/{DEBATE_STAGES.length}단계
+                  {stageIdx + 1}/{debateStages.length}단계
                 </span>
               )}
             </div>
@@ -2614,12 +2715,12 @@ export function DebatePage() {
                   flexShrink: 0,
                 }}
               >
-                {DEBATE_STAGES[stageIdx].label} 진행 중
+                {getStageActiveLabel(debateStages[stageIdx], phase)} 진행 중
               </div>
               <div
                 style={{ flex: 1, display: "flex", gap: "4px", minWidth: 0 }}
               >
-                {DEBATE_STAGES.map((_, i) => (
+                {debateStages.map((_, i) => (
                   <div
                     key={i}
                     className={`slim-phase-bar__seg slim-phase-bar__seg--${stageStatus(i, stageIdx, phase === "ended")}`}

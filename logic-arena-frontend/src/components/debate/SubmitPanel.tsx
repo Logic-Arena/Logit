@@ -74,8 +74,8 @@ export function SubmitPanel({
       <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text)' }}>{label}</label>
       <textarea
         style={{
-          background: 'linear-gradient(180deg, rgba(106, 201, 130, 0.15) 0%, rgba(82, 160, 104, 0.2) 100%)',
-          border: '1px solid rgba(82, 160, 104, 0.3)',
+          background: 'var(--color-surface-2)',
+          border: '1px solid var(--color-border)',
           borderRadius: 'var(--radius-sm)',
           padding: '12px 14px',
           color: 'var(--color-text)',
@@ -94,7 +94,7 @@ export function SubmitPanel({
           e.currentTarget.style.borderColor = 'var(--color-pro)';
         }}
         onBlur={(e) => {
-          e.currentTarget.style.borderColor = 'rgba(82, 160, 104, 0.3)';
+          e.currentTarget.style.borderColor = 'var(--color-border)';
         }}
       />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
