@@ -2460,7 +2460,16 @@ export function DebatePage() {
         password: password ?? undefined,
       });
     };
+    // Socket.IO fires "connect" again after every reconnect (network blip,
+    // background-tab throttling, idle timeout, ...). A reconnect creates a
+    // brand-new server-side socket that isn't in the room's Socket.IO room
+    // until it re-emits join_room, so didJoin must reset on disconnect or
+    // this client silently stops receiving phase/content broadcasts.
+    const onDisconnect = () => {
+      didJoin.current = false;
+    };
     socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
 
     if (socket.connected && !didJoin.current) {
       didJoin.current = true;
@@ -2474,6 +2483,7 @@ export function DebatePage() {
 
     return () => {
       socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
       if (!isLeavingRef.current) socket.emit("leave_room");
       resetRoom();
       socket.disconnect();
