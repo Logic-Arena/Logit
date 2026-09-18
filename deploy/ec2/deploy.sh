@@ -53,7 +53,8 @@ docker compose build --pull
 docker compose up -d postgres
 wait_for_healthy_service postgres
 
-docker compose run --rm --no-deps backend npx prisma migrate deploy
+# bash -s reads the deployment script from stdin; do not let Compose consume it.
+docker compose run --rm --no-deps -T --interactive=false backend npx prisma migrate deploy </dev/null
 # backend/frontend는 .env 변경만으로는 이미지가 안 바뀌어 compose가 재생성을 건너뛸 수 있으므로 매번 강제 재생성한다.
 docker compose up -d --remove-orphans --force-recreate backend frontend
 

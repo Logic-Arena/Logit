@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useRoomStore } from '../../store/useRoomStore';
 import { socket } from '../../lib/socket';
 import type { VoteOption } from '../../types/room';
 
@@ -50,6 +51,16 @@ const SECTION_CONFIG: {
   { key: 'rebuttal', feedbackKey: 'rebuttal', label: '⑤ 반론에 대한 답변', placeholder: '하지만 ___라는 점에서 제 주장이 더 타당합니다', minLength: 10 },
 ];
 
+function combineSections(s: ArgumentSections): string {
+    return [
+      s.claim && `【주장】 ${s.claim}`,
+      s.evidence && `【근거】 ${s.evidence}`,
+      s.explanation && `【예시】 ${s.explanation}`,
+      s.counterArgument && `【예상 반론】 ${s.counterArgument}`,
+      s.rebuttal && `【재반론】 ${s.rebuttal}`,
+    ].filter(Boolean).join('\n\n');
+}
+
 export function StructuredArgumentPanel({
   roomId,
   alreadySubmitted = false,
@@ -72,37 +83,21 @@ export function StructuredArgumentPanel({
   const [submitting, setSubmitting] = useState(false);
   const [timeExpired, setTimeExpired] = useState(false);
   const [retryingFields, setRetryingFields] = useState<Set<FeedbackKey>>(new Set());
-  const sectionsRef = useRef(sections);
-  sectionsRef.current = sections;
 
   // 새 피드백(재시도 결과 포함)이 도착하면 재시도 로딩 상태를 해제한다.
   useEffect(() => {
     setRetryingFields(new Set());
   }, [feedback]);
 
-  // 타이머 만료 감지 및 자동 제출
+  const phase = useRoomStore(state => state.room?.phase);
   useEffect(() => {
-    if (!phaseEndAt || submitting || alreadySubmitted) return;
-    // 서버의 자체 타이머보다 먼저 도착하도록 살짝 앞당겨 제출한다.
-    // (자세한 이유는 SubmitPanel.tsx의 동일 로직 주석 참고 — 늦게 도착하면 서버가 이미
-    //  다음 단계로 넘어가 있어 제출이 거부되거나 엉뚱한 단계에 저장될 수 있다.)
-    const CLIENT_SUBMIT_LEAD_MS = 400;
-    const delay = phaseEndAt - Date.now() - CLIENT_SUBMIT_LEAD_MS;
-    const fire = () => {
-      const combined = combineSections(sectionsRef.current);
-      // 내용이 있으면 제출, 없으면 skip으로 제출 (빈 제출도 허용)
-      socket.emit('submit_content', {
-        roomId,
-        text: combined.trim() || '',
-        skip: !combined.trim(), // 내용이 없으면 skip=true
-      });
-      setSubmitting(true);
-      setTimeExpired(true); // 타이머 만료 표시
-    };
-    if (delay <= 0) { fire(); return; }
-    const id = setTimeout(fire, delay);
-    return () => clearTimeout(id);
-  }, [phaseEndAt, submitting, alreadySubmitted, roomId]);
+    if (phase && !alreadySubmitted) socket.emit('save_draft', { roomId, phase, text: combineSections(sections) });
+  }, [phase, roomId, alreadySubmitted, sections]);
+  useEffect(() => {
+    if (!phaseEndAt) return;
+    const timer = setTimeout(() => setTimeExpired(true), Math.max(0, phaseEndAt - Date.now()));
+    return () => clearTimeout(timer);
+  }, [phaseEndAt]);
 
   useEffect(() => {
     if (!submitting || alreadySubmitted) return;
@@ -123,28 +118,18 @@ export function StructuredArgumentPanel({
         <div style={{ fontSize: '11px', color: '#fff', fontWeight: 700, marginBottom: '6px', textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
           제출 완료
         </div>
-        {submittedText ? (
+        {(submittedText || combineSections(sections)) ? (
           <p style={{ fontSize: '14px', lineHeight: 1.6, color: '#fff', margin: 0, fontWeight: 500, whiteSpace: 'pre-wrap' }}>
-            {submittedText}
+            {submittedText || combineSections(sections)}
           </p>
         ) : (
           <p style={{ fontSize: '13px', lineHeight: 1.6, color: 'rgba(255,255,255,0.85)', margin: 0 }}>
-            입력 없이 이 단계를 넘겼습니다.
+            제출이 완료되었습니다. 양측 제출 후 내용이 공개됩니다.
           </p>
         )}
       </div>
     );
   }
-
-  const combineSections = (s: ArgumentSections): string => {
-    return [
-      s.claim && `【주장】 ${s.claim}`,
-      s.evidence && `【근거】 ${s.evidence}`,
-      s.explanation && `【예시】 ${s.explanation}`,
-      s.counterArgument && `【예상 반론】 ${s.counterArgument}`,
-      s.rebuttal && `【재반론】 ${s.rebuttal}`,
-    ].filter(Boolean).join('\n\n');
-  };
 
   const handleSubmit = () => {
     const combined = combineSections(sections);
@@ -152,6 +137,7 @@ export function StructuredArgumentPanel({
 
     socket.emit('submit_content', {
       roomId,
+      phase,
       text: combined,
       // 향후 백엔드 스키마 확장 시 구조화 데이터 전송
       // structured: sections,

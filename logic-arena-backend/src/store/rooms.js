@@ -445,6 +445,13 @@ export function getPastTopics(roomId) {
 // ── Serialization ─────────────────────────────────────────────
 
 function serializeRoom(room) {
+  const content = { ...room.content };
+  const submittedKeys = Object.keys(content).filter(key => !!content[key]);
+  const hiddenKeys = room.phase === 'arguing' && !(content.pro_argument && content.con_argument)
+    ? ['pro_argument', 'con_argument', 'pro_ai_argument', 'con_ai_argument']
+    : room.phase === 'final_argument' && !(content.pro_final && content.con_final)
+      ? ['pro_final', 'con_final'] : [];
+  for (const key of hiddenKeys) content[key] = null;
   return {
     id: room.id,
     title: room.title,
@@ -459,7 +466,8 @@ function serializeRoom(room) {
     proPlayer: room.proPlayer,
     conPlayer: room.conPlayer,
     observers: Array.from(room.observers.entries()).map(([sid, u]) => ({ socketId: sid, ...u })),
-    content: room.content,
+    content,
+    submittedKeys,
     result: room.result,
     createdAt: room.createdAt,
     sideSelectionAttempts: room.sideSelectionAttempts,

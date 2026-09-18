@@ -440,6 +440,37 @@ export async function getStoredDebateSummary(
   return res.json();
 }
 
+export interface SetukDraft {
+  version: string;
+  label: string;
+  text: string;
+}
+
+export async function generateSetukDraft(token: string, userId: number): Promise<{ drafts: SetukDraft[] }> {
+  const res = await fetch(`${BASE}/teacher/students/${userId}/setuk-draft`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error ?? '세특 초안 생성에 실패했습니다.');
+  }
+  return res.json();
+}
+
+export async function summarizeSetuk(token: string, userId: number, text: string): Promise<{ summarized: string }> {
+  const res = await fetch(`${BASE}/teacher/students/${userId}/setuk-summarize`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error ?? '세특 축약에 실패했습니다.');
+  }
+  return res.json();
+}
+
 export async function joinClass(token: string, classCode: string): Promise<{ ok: boolean; alreadyJoined: boolean; className: string }> {
   const res = await fetch(`${BASE}/teacher/join`, {
     method: 'POST',

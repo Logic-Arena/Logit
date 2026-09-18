@@ -488,7 +488,7 @@ function DebateChatView({
 }) {
   const { phase, content } = room;
   const myKey = myRole ? PHASE_SUBMIT_MAP[phase]?.[myRole] : undefined;
-  const alreadySubmitted = myKey ? !!content[myKey] : false;
+  const alreadySubmitted = myKey ? !!content[myKey] || !!room.submittedKeys?.includes(myKey) : false;
   const mySide: AlignSide | null =
     myRole === "pro_player" ? "pro" : myRole === "con_player" ? "con" : null;
   const isAutoPhase = AUTO_PHASES.has(phase);
@@ -553,12 +553,12 @@ function DebateChatView({
           <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
             <StatusChip
               label="찬성P"
-              done={!!content.pro_argument}
+              done={!!content.pro_argument || !!room.submittedKeys?.includes("pro_argument")}
               isMe={myRole === "pro_player"}
             />
             <StatusChip
               label="반대P"
-              done={!!content.con_argument}
+              done={!!content.con_argument || !!room.submittedKeys?.includes("con_argument")}
               isMe={myRole === "con_player"}
             />
             {!isHumanMode && <StatusChip label="찬성AI" done={!!content.pro_ai_argument} />}
@@ -569,12 +569,12 @@ function DebateChatView({
           <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
             <StatusChip
               label="찬성P 최종"
-              done={!!content.pro_final}
+              done={!!content.pro_final || !!room.submittedKeys?.includes("pro_final")}
               isMe={myRole === "pro_player"}
             />
             <StatusChip
               label="반대P 최종"
-              done={!!content.con_final}
+              done={!!content.con_final || !!room.submittedKeys?.includes("con_final")}
               isMe={myRole === "con_player"}
             />
           </div>

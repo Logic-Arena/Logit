@@ -1,3 +1,4 @@
+import { analyzeForbidden, applyForbiddenFilter, analyzeNominal, convertToNominal } from "../lib/setukText";
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUserStore } from "../store/useUserStore";
@@ -11,6 +12,7 @@ import type {
   StudentStat,
   ClassSummary,
   TeacherDebateSummary,
+  SetukDraft,
 } from "../lib/api";
 import {
   getTeacherClasses,
@@ -19,9 +21,15 @@ import {
   getClassStudents,
   getClassSummary,
   getStoredDebateSummary,
+  generateSetukDraft,
+  summarizeSetuk,
 } from "../lib/api";
 
 const BASE = import.meta.env.VITE_API_URL ?? "/api";
+const TEACHER_SUBJECTS = [
+  "국어", "영어", "수학", "사회", "역사", "도덕", "과학",
+  "기술가정", "정보", "체육", "음악", "미술", "기타",
+];
 
 type Tab = "classes" | "stats" | "settings";
 
@@ -580,6 +588,90 @@ function StudentDetailView({ student, onBack, token, summary }: {
 }) {
   const [selectedDebate, setSelectedDebate] = useState<DebateRow | null>(null);
 
+  const [setukDrafts, setSetukDrafts] = useState<SetukDraft[] | null>(null);
+  const [setukLoading, setSetukLoading] = useState(false);
+  const [setukError, setSetukError] = useState("");
+  const [selectedDraft, setSelectedDraft] = useState<SetukDraft | null>(null);
+  const [editText, setEditText] = useState("");
+  const [setukCopied, setSetukCopied] = useState(false);
+  const [filterLog, setFilterLog] = useState<string[]>([]);
+  const forbiddenFindings = analyzeForbidden(editText);
+  const forbiddenDetected = [...new Set(forbiddenFindings.map(item => item.label))];
+  const autoFilterCount = forbiddenFindings.filter(item => item.replacement !== null).length;
+  const manualFilterItems = forbiddenFindings.filter(item => item.replacement === null);
+  const nominalFindings = analyzeNominal(editText);
+  const nominalWarning = nominalFindings.length > 0;
+  const autoNominalCount = nominalFindings.filter(item => item.replacement !== null).length;
+  const manualNominalItems = nominalFindings.filter(item => item.replacement === null);
+  const [summarizeLoading, setSummarizeLoading] = useState(false);
+
+  const handleGenerateSetuk = async () => {
+    setSetukLoading(true);
+    setSetukError("");
+    try {
+      const { drafts } = await generateSetukDraft(token, student.userId);
+      setSetukDrafts(drafts);
+    } catch (e) {
+      setSetukError(e instanceof Error ? e.message : "세특 초안 생성에 실패했습니다.");
+    } finally {
+      setSetukLoading(false);
+    }
+  };
+
+  const handleSelectDraft = (draft: SetukDraft) => {
+    setSelectedDraft(draft);
+    setEditText(draft.text);
+    setSetukCopied(false);
+    setFilterLog([]);
+  };
+
+  const handleBackToDraftList = () => {
+    setSelectedDraft(null);
+    setEditText("");
+    setFilterLog([]);
+    setSetukCopied(false);
+  };
+
+  const handleEditTextChange = (value: string) => {
+    setEditText(value);
+    setSetukCopied(false);
+  };
+
+  const handleApplyForbiddenFilter = () => {
+    const { result, log } = applyForbiddenFilter(editText);
+    setEditText(result);
+    setFilterLog(log);
+  };
+
+  const handleConvertNominal = () => {
+    const result = convertToNominal(editText);
+    setEditText(result);
+  };
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(editText);
+      setSetukCopied(true);
+      setTimeout(() => setSetukCopied(false), 2000);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleSummarize = async () => {
+    setSummarizeLoading(true);
+    setSetukError("");
+    try {
+      const { summarized } = await summarizeSetuk(token, student.userId, editText);
+      setEditText(summarized);
+      setSetukCopied(false);
+    } catch (e) {
+      setSetukError(e instanceof Error ? e.message : "세특 축약에 실패했습니다.");
+    } finally {
+      setSummarizeLoading(false);
+    }
+  };
+
   const categories = [
     { key: 'avgLogic' as const, label: '논리성', classKey: 'logic' as const },
     { key: 'avgEvidence' as const, label: '근거', classKey: 'evidence' as const },
@@ -703,6 +795,114 @@ function StudentDetailView({ student, onBack, token, summary }: {
           ))}
         </div>
       )}
+
+      <div className={styles.card}>
+        <div className={styles.cardTitle}>세특 작성 보조</div>
+
+        <div className={styles.setukWarningBanner}>
+          ⚠️ AI 생성 초안입니다. 교사가 직접 관찰한 내용을 추가·수정하여 사용하세요. 생성된 문장을 그대로 입력하는 것은 교육부 기재요령에 위반될 수 있습니다.
+        </div>
+
+        {!setukDrafts && !setukLoading && (
+          <button className="btn btn--primary" onClick={handleGenerateSetuk}>
+            세특 초안 보기
+          </button>
+        )}
+
+        {setukLoading && (
+          <div className={styles.loadingMsg}>AI가 초안을 생성 중입니다...</div>
+        )}
+
+        {setukError && !setukLoading && (
+          <div className={styles.errorMsg}>{setukError}</div>
+        )}
+
+        {setukDrafts && !selectedDraft && !setukLoading && (
+          <div className={styles.setukDraftGrid}>
+            {setukDrafts.map((draft) => (
+              <div key={draft.version} className={styles.setukDraftCard}>
+                <div className={styles.setukDraftHeader}>
+                  <span className={styles.setukDraftVersion}>{draft.version}</span>
+                  <span className={styles.setukDraftLabel}>{draft.label}</span>
+                </div>
+                <p className={styles.setukDraftText}>{draft.text}</p>
+                <button className="btn btn--primary" onClick={() => handleSelectDraft(draft)}>
+                  선택 →
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {selectedDraft && (
+          <div className={styles.setukEditor}>
+            <div className={styles.setukEditorHeader}>
+              <span className={styles.setukDraftVersion}>{selectedDraft.version}</span>
+              <span className={styles.setukDraftLabel}>{selectedDraft.label}</span>
+              <button className={`${styles.backBtn} ${styles.setukBackBtn}`} onClick={handleBackToDraftList}>
+                다시 선택
+              </button>
+            </div>
+
+            <textarea
+              className={styles.setukTextarea}
+              value={editText}
+              onChange={(e) => handleEditTextChange(e.target.value)}
+              rows={6}
+            />
+
+            {forbiddenDetected.length > 0 && (
+              <div className={styles.setukForbiddenBox}>
+                <span>
+                  검토할 표현: {forbiddenDetected.join(", ")}
+                  {manualFilterItems.length > 0 && <><br />직접 검토: {manualFilterItems.map(item => `${item.label} (${item.reason})`).join(" · ")}</>}
+                </span>
+                {autoFilterCount > 0 && <button className={styles.setukInlineBtn} onClick={handleApplyForbiddenFilter}>이름 일반화</button>}
+              </div>
+            )}
+
+            {filterLog.length > 0 && (
+              <div className={styles.setukSuccessBox}>
+                수정한 표현: {filterLog.join(" · ")}
+              </div>
+            )}
+
+            {nominalWarning && (
+              <div className={styles.setukNominalBox}>
+                <span>
+                  명사형으로 검토할 문장 어미가 있습니다.
+                  {manualNominalItems.length > 0 && <><br />문맥 확인 후 직접 수정: {manualNominalItems.map(item => item.text).join(", ")}</>}
+                </span>
+                {autoNominalCount > 0 && <button className={styles.setukInlineBtn} onClick={handleConvertNominal}>변환 가능한 어미 적용</button>}
+              </div>
+            )}
+
+            <div className={styles.setukCounterRow}>
+              <span className={editText.length > 500 ? styles.setukCounterOver : styles.setukCounter}>
+                {editText.length} / 500자
+              </span>
+              {editText.length > 500 && (
+                <button className={styles.setukInlineBtn} onClick={handleSummarize} disabled={summarizeLoading}>
+                  {summarizeLoading ? "축약 중..." : "축약하기"}
+                </button>
+              )}
+            </div>
+
+            <div className={styles.setukCopyRow}>
+              <button
+                className="btn btn--primary"
+                onClick={handleCopy}
+                disabled={editText === selectedDraft.text}
+              >
+                {setukCopied ? "복사됨 ✓" : "복사"}
+              </button>
+              <div className={styles.setukFooterHint}>
+                이 내용은 AI 생성 초안입니다. 직접 관찰한 내용을 보완 후 NEIS에 입력하세요.
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -756,18 +956,22 @@ function PhaseDurationEditor({
 function SettingsTab({ token, classes }: { token: string; classes: { id: number; name: string }[] }) {
   const [selectedClassId, setSelectedClassId] = useState<number | "global">("global");
   const [handicap, setHandicap] = useState<Handicap>(DEFAULT_HANDICAP);
+  const [subject, setSubject] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
   const loadSettings = (classId: number | "global") => {
     setLoading(true);
+    setSaveError("");
     const url = classId === "global"
       ? `${BASE}/teacher/settings`
       : `${BASE}/teacher/classes/${classId}/settings`;
     fetch(url, { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } })
       .then(r => r.json())
       .then(d => {
+        if (classId === "global") setSubject(d.subject ?? null);
         const raw = classId === "global" ? d : (d.settings ?? null);
         setHandicap(raw ? { ...DEFAULT_HANDICAP, ...raw } : DEFAULT_HANDICAP);
       })
@@ -791,15 +995,17 @@ function SettingsTab({ token, classes }: { token: string; classes: { id: number;
 
   const handleSave = async () => {
     setSaving(true);
+    setSaveError("");
     try {
       if (selectedClassId === "global") {
         const res = await fetch(`${BASE}/teacher/settings`, {
           method: "PUT",
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-          body: JSON.stringify(handicap),
+          body: JSON.stringify({ ...handicap, subject }),
         });
         if (!res.ok) throw new Error();
         const saved = await res.json();
+        setSubject(saved.subject ?? null);
         setHandicap({ ...DEFAULT_HANDICAP, ...saved });
       } else {
         const res = await fetch(`${BASE}/teacher/classes/${selectedClassId}/settings`, {
@@ -814,7 +1020,7 @@ function SettingsTab({ token, classes }: { token: string; classes: { id: number;
       setShowToast(true);
       setTimeout(() => setShowToast(false), 2000);
     } catch {
-      // ignore
+      setSaveError("설정을 저장하지 못했습니다. 다시 시도해주세요.");
     } finally {
       setSaving(false);
     }
@@ -845,6 +1051,20 @@ function SettingsTab({ token, classes }: { token: string; classes: { id: number;
       </div>
 
       {/* AI 핸디캡 */}
+      {selectedClassId === "global" && (
+        <div className={styles.card}>
+          <label className={styles.masterLabel} htmlFor="teacher-subject">담당 과목</label>
+          <select
+            id="teacher-subject"
+            className={styles.subjectSelect}
+            value={subject ?? ""}
+            onChange={e => setSubject(e.target.value || null)}
+          >
+            <option value="">미설정</option>
+            {TEACHER_SUBJECTS.map(value => <option key={value} value={value}>{value}</option>)}
+          </select>
+        </div>
+      )}
       <div className={styles.card}>
         <div className={styles.masterRow}>
           <div>
@@ -919,6 +1139,8 @@ function SettingsTab({ token, classes }: { token: string; classes: { id: number;
           {saving ? "저장 중..." : "저장"}
         </button>
       </div>
+
+      {saveError && <div className={styles.errorMsg} role="alert">{saveError}</div>}
 
       <div className={`${styles.toast} ${showToast ? "" : styles["toast--hidden"]}`}>
         설정이 저장되었습니다 ✓
