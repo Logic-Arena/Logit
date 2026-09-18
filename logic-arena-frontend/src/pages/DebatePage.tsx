@@ -456,30 +456,6 @@ function findStagePosition(
   return { stageIdx: -1, subIdx: -1 };
 }
 
-// 진행중 표시용 원형 스피너 (모래시계 이모지 대체 · 단색, 부모의 currentColor를 따름)
-function StageSpinner() {
-  return (
-    <svg
-      className="stage-spinner"
-      width="9"
-      height="9"
-      viewBox="0 0 10 10"
-      fill="none"
-      aria-hidden="true"
-    >
-      <circle
-        cx="5"
-        cy="5"
-        r="4"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeDasharray="7 100"
-      />
-    </svg>
-  );
-}
-
 // ─── 공통 UI ────────────────────────────────────────────────────
 
 function StatusChip({
@@ -2358,7 +2334,6 @@ function DebateSidebar({
                     )}
                     {status === "active" && (
                       <span className="stage-item__badge stage-item__badge--active">
-                        <StageSpinner />
                         진행 중
                       </span>
                     )}
@@ -2388,7 +2363,6 @@ function DebateSidebar({
                       )}
                       {status === "active" && (
                         <span className="stage-item__badge stage-item__badge--active">
-                          <StageSpinner />
                           진행 중
                         </span>
                       )}
@@ -2411,12 +2385,7 @@ function DebateSidebar({
                                 className={`stage-subitem__status${subStatus === "active" ? " stage-subitem__status--active" : ""}`}
                               >
                                 {subStatus === "done" && "완료"}
-                                {subStatus === "active" && (
-                                  <>
-                                    <StageSpinner />
-                                    진행 중
-                                  </>
-                                )}
+                                {subStatus === "active" && "진행 중"}
                                 {subStatus === "upcoming" && "대기"}
                               </span>
                             </div>

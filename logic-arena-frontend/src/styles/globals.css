@@ -4568,18 +4568,6 @@ textarea {
   font-weight: 700;
 }
 
-/* 원형 진행중 스피너 (모래시계 이모지 대체, 단색 · 텍스트 색상과 동일) */
-.stage-spinner {
-  color: currentColor;
-  flex-shrink: 0;
-  animation: stage-spinner-rotate 0.9s linear infinite;
-}
-@keyframes stage-spinner-rotate {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 /* ── Claim Summaries ────────────────────────────────────── */
 .claim-summary {
   padding: 9px 11px;
