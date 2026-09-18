@@ -10,13 +10,13 @@ export interface ForbiddenFinding {
   replacement: string | null;
   reason: string;
 }
-type TermRule = { terms: string[]; category: string; replacement: string; context?: RegExp };
+type TermRule = { terms: string[]; category: string; replacement: string | null; context?: RegExp };
 const COMPANY_CONTEXT = /기업|회사|입사|취업|채용|주식|브랜드|제품|자동차|전자|계열사/;
 const RULES: TermRule[] = [
   { terms: ['삼성전자', '현대자동차', 'LG전자', 'SK하이닉스', '네이버', '포스코'], category: '기업명', replacement: '국내 기업' },
   { terms: ['삼성', '현대', 'LG', 'SK', '롯데', '카카오', '한화', '두산', 'CJ', 'GS'], category: '기업명', replacement: '국내 기업', context: COMPANY_CONTEXT },
-  { terms: ['토익', '토플', 'TOEIC', 'TOEFL', 'HSK', 'JLPT', '텝스', 'TEPS', 'OPIc', 'JPT', 'IELTS'], category: '공인어학시험', replacement: '공인어학시험' },
-  { terms: ['정보처리기사', '컴퓨터활용능력', '한국사능력검정시험', '한자능력검정시험', '워드프로세서'], category: '자격증', replacement: '관련 자격' },
+  { terms: ['토익', '토플', 'TOEIC', 'TOEFL', 'HSK', 'JLPT', '텝스', 'TEPS', 'OPIc', 'JPT', 'IELTS'], category: '공인어학시험', replacement: null },
+  { terms: ['정보처리기사', '컴퓨터활용능력', '한국사능력검정시험', '한자능력검정시험', '워드프로세서'], category: '자격증', replacement: null },
 ];
 const AWARDS = ['최우수상', '우수상', '장려상', '금상', '은상', '동상', '대상'];
 const PARTICLES = /^(?:(?:으로부터|으로서|으로써|이라는|이라고|이라도|이랑|이나|이든|에게서|한테서|에서는|에서|에게|한테|께서|으로|부터|까지|처럼|보다|마저|조차|하고|라는|라고|라도|랑|든|은|는|이|가|을|를|의|에|로|과|와|도|만|께|나)){0,3}$/u;
@@ -83,12 +83,12 @@ export function analyzeForbidden(text: string): ForbiddenFinding[] {
       for (const term of rule.terms) {
         const suffix = suffixFor(word, term);
         if (suffix === null || (rule.context && !rule.context.test(clause))) continue;
-        add(start, end, term, rule.category, rule.context ? null : attachParticle(rule.replacement, suffix), rule.context ? '기업명인지 문맥 확인이 필요함' : '이름과 조사 경계가 일치함');
+        add(start, end, term, rule.category, rule.context || rule.replacement === null ? null : attachParticle(rule.replacement, suffix), rule.replacement === null ? '명칭을 바꿔도 참여·취득 사실이 남으므로 직접 검토가 필요함' : rule.context ? '기업명인지 문맥 확인이 필요함' : '이름과 조사 경계가 일치함');
       }
     }
     const academy = /^(.*학원)(.*)$/u.exec(word);
     if (academy && academy[1] !== '학원' && !academy[1].endsWith('대학원') && PARTICLES.test(academy[2])) {
-      add(start, end, academy[1], '사교육 기관명', attachParticle('사교육기관', academy[2]), '기관 이름과 학원 접미부가 일치함');
+      add(start, end, academy[1], '사교육 기관명', null, '사교육 활동은 이름을 바꿔도 기재할 수 없으므로 문맥 확인이 필요함');
     }
     for (const award of AWARDS) {
       const suffix = suffixFor(word, award);
@@ -105,6 +105,18 @@ export function analyzeForbidden(text: string): ForbiddenFinding[] {
   for (const match of text.matchAll(/(?:아버지|어머니|부모님?)(?:은|는|이|가|의)?\s*(?:직업|회사|대표|사장|의사|변호사|교수|공무원|연봉|재산)(?=$|[^\p{L}\p{N}]|(?:임|이다|였다|인|이고|이며|로|은|는|이|가|을|를|에|의)(?=$|[^\p{L}\p{N}]))/gu)) {
     if (match.index > 0 && /[\p{L}\p{N}]/u.test(text[match.index - 1])) continue;
     add(match.index, match.index + match[0].length, match[0], '가족 정보', null, '가족의 직업·재산 정보인지 확인이 필요함');
+  }
+  const reviewRules: [RegExp, string][] = [
+    [/(?:교내|교외)\s*대회|(?:대회|공모전|올림피아드)(?:에|에서)?\s*(?:참가|참여|입상|수상)/gu, '대회 참여·수상'],
+    [/공인\s*어학\s*시험|인증시험|자격증|관련 자격/gu, '시험·자격 사실'],
+    [/논문.{0,15}(?:투고|등재|게재|발표)|학회.{0,10}발표/gu, '논문·학회 실적'],
+    [/(?:도서|책).{0,8}출간|(?:특허|실용신안|상표|디자인).{0,8}(?:출원|등록)/gu, '출간·지식재산권'],
+    [/장학생|장학금|모의고사.{0,12}(?:점|등급|백분위|성적)/gu, '장학·모의고사 실적'],
+    [/[가-힣]+대학교|서울대|연세대|고려대|사교육기관/gu, '대학·사교육 기관'],
+    [/(?:AI|플랫폼).{0,12}(?:점수|평가|등급)|성장률\s*\d|\d+\s*점/gu, '점수·성장률의 관찰 근거'],
+  ];
+  for (const [pattern, category] of reviewRules) {
+    for (const match of text.matchAll(pattern)) add(match.index, match.index + match[0].length, match[0], category, null, '기재 금지 사실인지 수업의 탐구 대상인지 문맥과 근거를 직접 확인하세요. 이름만 바꾸어 통과시키지 마세요.');
   }
   candidates.sort((a, b) => a.start - b.start || b.end - a.end);
   const findings: ForbiddenFinding[] = [];
