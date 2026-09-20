@@ -2303,10 +2303,10 @@ function DebateSidebar({
             ) : (
               <>
                 <span className={`sidebar-badge sidebar-badge--pro${mySide === "pro" ? " sidebar-badge--me" : ""}`}>
-                  {mySide === "pro" ? "나" : mySide === "con" ? "상대" : "찬성"}·찬성
+                  {mySide === "pro" ? "나" : mySide === "con" ? "상대" : room.proPlayer?.username ?? "찬성"}·찬성
                 </span>
                 <span className={`sidebar-badge sidebar-badge--con${mySide === "con" ? " sidebar-badge--me" : ""}`}>
-                  {mySide === "con" ? "나" : mySide === "pro" ? "상대" : "반대"}·반대
+                  {mySide === "con" ? "나" : mySide === "pro" ? "상대" : room.conPlayer?.username ?? "반대"}·반대
                 </span>
               </>
             )}

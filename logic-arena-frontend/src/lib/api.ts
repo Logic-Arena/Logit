@@ -136,6 +136,23 @@ export async function createRoom(
   return res.json();
 }
 
+export interface RoomMeta {
+  id: string;
+  title: string;
+  mode: RoomMode;
+  hasPassword: boolean;
+  status: string;
+}
+
+export async function getRoomMeta(roomId: string): Promise<RoomMeta> {
+  const res = await fetch(`${BASE}/rooms/${roomId}`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error ?? '방 정보를 불러오지 못했습니다.');
+  }
+  return res.json();
+}
+
 export async function verifyRoomPassword(roomId: string, password: string): Promise<void> {
   const res = await fetch(`${BASE}/rooms/${roomId}/verify-password`, {
     method: 'POST',

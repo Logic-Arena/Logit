@@ -7,6 +7,22 @@ router.get('/', (req, res) => {
   res.json(getAllRooms());
 });
 
+// 입장 전 최소 정보 조회 — 초대 링크로 로비를 거치지 않고 바로 들어온 경우에도
+// 비밀번호 입력 필드를 정확히 렌더링하기 위해 필요 (내용은 노출하지 않음)
+router.get('/:id', (req, res) => {
+  const room = getRoom(req.params.id);
+  if (!room) {
+    return res.status(404).json({ error: '방을 찾을 수 없습니다' });
+  }
+  res.json({
+    id: room.id,
+    title: room.title,
+    mode: room.mode,
+    hasPassword: !!room.password,
+    status: room.status,
+  });
+});
+
 const VALID_MODES = ['ai_debate', 'human_debate', 'solo_essay'];
 const VALID_TOPIC_MODES = ['manual', 'ai_auto'];
 
