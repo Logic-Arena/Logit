@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { generateSetukDraft, getTeacherSubject, summarizeSetuk } from '../../lib/api';
+import { generateSetukDraft, getTeacherSubject } from '../../lib/api';
 import type { SetukContext, SetukDraft } from '../../lib/api';
 import { analyzeForbidden, analyzeNominal, convertToNominal } from '../../lib/setukText';
 import { copyBlockReason, neisBytes } from '../../lib/setukReview';
@@ -69,22 +69,15 @@ export function SetukAssistant({ token, userId }: { token: string; userId: numbe
     setAppliedSubject(null);
     invalidate();
   }
-  async function generate(shorten = false) {
+  async function generate() {
     if (!contextReady || busy) return;
     invalidate();
     setBusy(true);
     try {
-      if (shorten) {
-        const { summarized, subject } = await summarizeSetuk(token, userId, text, context);
-        setDrafts([{ version: 'S', label: '축약 제안 · 다시 검토 필요', text: summarized }]);
-        setAppliedSubject(subject);
-        setAiTexts(previous => [...previous, summarized]);
-      } else {
-        const { drafts: result, subject } = await generateSetukDraft(token, userId, context);
-        setDrafts(result);
-        setAppliedSubject(subject);
-        setAiTexts(previous => [...previous, ...result.map(d => d.text)]);
-      }
+      const { drafts: result, subject } = await generateSetukDraft(token, userId, context);
+      setDrafts(result);
+      setAppliedSubject(subject);
+      setAiTexts(previous => [...previous, ...result.map(d => d.text)]);
     } catch (e) { setError(e instanceof Error ? e.message : '윤문을 완료하지 못했습니다. 작성한 내용은 유지됩니다.'); }
     finally { setBusy(false); }
   }
@@ -135,9 +128,9 @@ export function SetukAssistant({ token, userId }: { token: string; userId: numbe
     <fieldset disabled={busy} className={ui.form}>
       <legend>2. 교사 작성·최종 검토</legend>
       <label>최종 검토할 문장<textarea ref={editorRef} className={styles.setukTextarea} rows={6} value={text} maxLength={10000} onChange={e => edit(e.target.value)} onCopy={e => { if (blocked) { e.preventDefault(); setError(blocked); } }} onCut={e => { if (blocked) { e.preventDefault(); setError(blocked); } }} onDragStart={e => { if (blocked) e.preventDefault(); }} placeholder="직접 관찰·평가한 내용을 바탕으로 작성하세요. AI 제안은 자동으로 입력되지 않습니다." /></label>
+      {neisBytes(text) > 1500 && <div className={styles.setukForbiddenBox}>1,500바이트(한글 500자 기준) 이내로 줄이세요.</div>}
       <div className={styles.setukCounterRow}>
         <span className={neisBytes(text) > 1500 ? styles.setukCounterOver : styles.setukCounter}>{text.length}자 · {neisBytes(text)} / 1,500바이트</span>
-        {neisBytes(text) > 1500 && <button className={styles.setukInlineBtn} disabled={!contextReady} onClick={() => void generate(true)}>축약 제안 보기</button>}
       </div>
       <p className={ui.hint}>한글 3바이트, 영문·숫자·줄바꿈 1바이트로 계산합니다. 이미 입력한 분량은 나이스에서 합산하여 확인하세요. {context.schoolLevel === 'high' && context.grade <= 2 ? '2026학년도 고1·2 공통과목은 과목 1·2를 합산하여 한글 500자 이내입니다.' : '과목별 한글 500자 기준입니다.'} 전공실무과목은 학기별 한도를 확인하세요.</p>
       {analyzeNominal(text).length > 0 && <div className={styles.setukNominalBox}>문체 제안: 명사형 종결을 검토할 수 있습니다. 문체 변경만으로 기재요령을 충족하지는 않습니다.<button className={styles.setukInlineBtn} onClick={() => edit(convertToNominal(text))}>변환 가능한 어미 정리</button></div>}

@@ -479,19 +479,6 @@ export async function generateSetukDraft(token: string, userId: number, context:
   return res.json();
 }
 
-export async function summarizeSetuk(token: string, userId: number, text: string, context: SetukContext): Promise<{ summarized: string; subject: string }> {
-  const res = await fetch(`${BASE}/teacher/students/${userId}/setuk-summarize`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...context, text }),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { error?: string }).error ?? '세특 축약에 실패했습니다.');
-  }
-  return res.json();
-}
-
 export async function joinClass(token: string, classCode: string): Promise<{ ok: boolean; alreadyJoined: boolean; className: string }> {
   const res = await fetch(`${BASE}/teacher/join`, {
     method: 'POST',
