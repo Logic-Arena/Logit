@@ -133,3 +133,13 @@ export interface Room {
   structuredArgumentEnabled: boolean;
   pendingSelections: Record<string, 'pro' | 'con'>;
 }
+
+export interface RoomSummary {
+  id: string;
+  title: string;
+  mode: RoomMode;
+  hasPassword: boolean;
+  phase: Phase;
+  playerCount: number;
+  observerCount: number;
+}

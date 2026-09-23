@@ -4,6 +4,8 @@
   "main": "src/server.js",
   "type": "module",
   "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "test:security": "node --test test/security.integration.test.mjs",
     "start": "node src/server.js",
     "dev": "node --env-file=.env --watch src/server.js"
   },

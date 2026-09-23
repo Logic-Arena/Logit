@@ -34,8 +34,8 @@ export function SignupPage() {
       showToast('비밀번호가 일치하지 않습니다', 'error');
       return;
     }
-    if (password.length < 6) {
-      showToast('비밀번호는 6자 이상이어야 합니다', 'error');
+    if (password.length < 12) {
+      showToast('비밀번호는 12자 이상이어야 합니다', 'error');
       return;
     }
     setLoading(true);
@@ -139,7 +139,7 @@ export function SignupPage() {
                 id="signup-password"
                 className="form-input"
                 type="password"
-                placeholder="6자 이상"
+                placeholder="12자 이상"
                 autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

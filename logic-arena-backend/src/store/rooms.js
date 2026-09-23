@@ -125,12 +125,13 @@ export function getPhaseDuration(phase, phaseDurations = null) {
   return customSec * 1_000 + bonus;
 }
 
-export function createRoom({ title, mode = 'ai_debate', topicMode = 'ai_auto', topic = null, password = null, handicap = null, coachingEnabled = true, structuredArgumentEnabled = true }) {
+export function createRoom({ title, mode = 'ai_debate', topicMode = 'ai_auto', topic = null, password = null, handicap = null, coachingEnabled = true, structuredArgumentEnabled = true, ownerId = null }) {
   const defaultHandicap = { enabled: true, vocab: true, evidenceLimit: true, rebuttalLimit: true, phaseDurations: null };
   const resolvedHandicap = (handicap && typeof handicap === 'object') ? handicap : defaultHandicap;
   const id = uuidv4();
   const room = {
     id,
+    ownerId,
     title,
     password: password || null,
     mode,
@@ -196,7 +197,19 @@ export function createRoom({ title, mode = 'ai_debate', topicMode = 'ai_auto', t
 export function getAllRooms() {
   return Array.from(rooms.values())
     .filter((room) => room.status !== 'pending')
-    .map(serializeRoom);
+    .map(room => ({
+      id: room.id, title: room.title, mode: room.mode, hasPassword: !!room.password,
+      phase: room.phase, playerCount: Number(!!room.proPlayer) + Number(!!room.conPlayer),
+      observerCount: room.observers.size,
+    }));
+}
+
+export function canCreateRoom(userId) {
+  const time = Date.now();
+  for (const [id, room] of rooms) {
+    if (room.status === 'pending' && time - new Date(room.createdAt).getTime() > 5 * 60_000) rooms.delete(id);
+  }
+  return rooms.size < 500 && Array.from(rooms.values()).filter(r => r.ownerId === userId && r.phase !== 'ended').length < 3;
 }
 
 export function getRoom(id) {
@@ -218,12 +231,12 @@ export function addPlayerToRoom(roomId, socketId, { userId, username, password }
     return { error: 'wrong_password' };
   }
 
-  // 중복 닉네임 검사
-  const taken = new Set();
-  if (room.proPlayer) taken.add(room.proPlayer.username);
-  if (room.conPlayer) taken.add(room.conPlayer.username);
-  for (const o of room.observers.values()) taken.add(o.username);
-  if (taken.has(username)) return { error: 'duplicate_name' };
+  const existingRole = getPlayerRole(roomId, socketId);
+  if (existingRole) return { role: existingRole, room: serializeRoom(room) };
+  if (room.status === 'pending' && room.ownerId !== null && String(room.ownerId) !== String(userId)) return { error: 'owner_required' };
+  if ([room.proPlayer, room.conPlayer, ...room.observers.values()].some(p => p && p.userId === userId)) return { error: 'duplicate_user' };
+
+  // Account identity is unique; different students may share a real name.
 
   let role;
   if (!room.proPlayer) {

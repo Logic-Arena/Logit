@@ -20,13 +20,18 @@ import {
   serializeAuthUser,
   createAccessToken,
   getUserWithStats,
-  createPasswordResetToken,
-  verifyPasswordResetToken,
 } from '../services/authService.js';
 import { requireAuth } from '../middleware/auth.js';
-import { createSession } from '../store/sessionStore.js';
+import { rateLimit } from '../middleware/rateLimit.js';
+import { createHash } from 'node:crypto';
+import { createSession, revokeSession } from '../store/sessionStore.js';
 
 const router = express.Router();
+const loginIpLimit = rateLimit(300, 15 * 60_000, req => req.ip);
+const loginAccountLimit = rateLimit(10, 15 * 60_000, req => createHash('sha256').update(typeof req.body?.username === 'string' ? req.body.username : '').digest('hex'));
+const recoveryLimit = rateLimit(10, 15 * 60_000, req => req.ip);
+const validCredentials = (username, password) => typeof username === 'string' && username.length > 0 && username.length <= 100 && typeof password === 'string' && password.length > 0 && Buffer.byteLength(password) <= 72;
+
 const isGoogleAuthConfigured = Boolean(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET);
 const isKakaoAuthConfigured = Boolean(KAKAO_REST_API_KEY);
 
@@ -102,19 +107,19 @@ router.get('/me', requireAuth, async (req, res) => {
   }
 });
 
-router.post('/signup', async (req, res) => {
+router.post('/signup', rateLimit(20, 60 * 60_000, req => req.ip), async (req, res) => {
   try {
     const { username, password, name, email, teacherCode } = req.body;
 
-    if (!username || !password) {
+    if (!validCredentials(username, password)) {
       return res.status(400).json({
         error: '아이디와 비밀번호는 필수입니다.',
       });
     }
 
-    if (password.length < 6) {
+    if (password.length < 12) {
       return res.status(400).json({
-        error: '비밀번호는 6자리 이상이어야 합니다.',
+        error: '비밀번호는 12자리 이상이어야 합니다.',
       });
     }
 
@@ -122,7 +127,7 @@ router.post('/signup', async (req, res) => {
     const submittedTeacherCode = typeof teacherCode === 'string' ? teacherCode.trim() : '';
     let isTeacher = false;
     if (submittedTeacherCode) {
-      if (submittedTeacherCode !== TEACHER_CODE) {
+      if (!TEACHER_CODE || submittedTeacherCode !== TEACHER_CODE) {
         return res.status(400).json({ error: '선생님 코드가 올바르지 않습니다.' });
       }
       isTeacher = true;
@@ -143,11 +148,11 @@ router.post('/signup', async (req, res) => {
   }
 });
 
-router.post('/login', async (req, res) => {
+router.post('/login', loginIpLimit, loginAccountLimit, async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    if (!username || !password) {
+    if (!validCredentials(username, password)) {
       return res.status(400).json({
         error: '아이디와 비밀번호는 필수입니다.',
       });
@@ -164,7 +169,7 @@ router.post('/login', async (req, res) => {
     });
   } catch (error) {
     return res.status(400).json({
-      error: error instanceof Error ? error.message : '로그인에 실패했습니다.',
+      error: '아이디 또는 비밀번호가 올바르지 않습니다.',
     });
   }
 });
@@ -187,74 +192,15 @@ router.patch('/profile', requireAuth, async (req, res) => {
   }
 });
 
-router.post('/find-account', async (req, res) => {
-  try {
-    const { email } = req.body;
-    if (!email || typeof email !== 'string') {
-      return res.status(400).json({ error: '이메일을 입력해주세요.' });
-    }
-    const { prisma } = await import('../db/prisma.js');
-    const user = await prisma.user.findFirst({
-      where: { email: email.trim(), provider: 'local' },
-      select: { login_id: true },
-    });
-    if (!user || !user.login_id) {
-      return res.status(404).json({ error: '해당 이메일로 가입된 계정을 찾을 수 없습니다.' });
-    }
-    const masked = user.login_id.length > 2
-      ? user.login_id.slice(0, 2) + '*'.repeat(user.login_id.length - 2)
-      : user.login_id;
-    return res.json({ loginId: masked });
-  } catch (error) {
-    return res.status(500).json({ error: '계정 찾기에 실패했습니다.' });
-  }
+// Recovery stays closed until a verified out-of-band recovery channel exists.
+// Never issue a reset credential based on publicly knowable profile fields.
+router.post(['/find-account', '/reset-password/verify', '/reset-password/confirm'], recoveryLimit, (_req, res) => {
+  res.status(403).json({ error: '자동 계정 찾기는 현재 지원하지 않습니다. 서비스 운영자에게 계정 복구를 문의해주세요.' });
 });
 
-// 1단계: 아이디 + 이름(둘 다 가입 필수 항목)으로 본인 확인 후, 짧게 유효한 재설정 토큰 발급
-router.post('/reset-password/verify', async (req, res) => {
-  try {
-    const { loginId, name } = req.body;
-    if (!loginId || !name) {
-      return res.status(400).json({ error: '아이디와 이름을 모두 입력해주세요.' });
-    }
-    const { prisma } = await import('../db/prisma.js');
-    const user = await prisma.user.findFirst({
-      where: { login_id: loginId.trim(), name: name.trim(), provider: 'local' },
-    });
-    if (!user) {
-      return res.status(404).json({ error: '아이디와 이름이 일치하는 계정을 찾을 수 없습니다.' });
-    }
-    const resetToken = createPasswordResetToken(user.user_id);
-    return res.json({ resetToken });
-  } catch (error) {
-    return res.status(500).json({ error: '계정 확인에 실패했습니다.' });
-  }
-});
-
-// 2단계: 1단계에서 발급된 토큰으로 실제 비밀번호 변경 (토큰은 10분간만 유효)
-router.post('/reset-password/confirm', async (req, res) => {
-  try {
-    const { resetToken, newPassword } = req.body;
-    if (!resetToken || !newPassword) {
-      return res.status(400).json({ error: '본인 확인 정보와 새 비밀번호를 입력해주세요.' });
-    }
-    if (newPassword.length < 6) {
-      return res.status(400).json({ error: '비밀번호는 6자리 이상이어야 합니다.' });
-    }
-    let userId;
-    try {
-      userId = verifyPasswordResetToken(resetToken);
-    } catch {
-      return res.status(401).json({ error: '본인 확인이 만료되었습니다. 처음부터 다시 시도해주세요.' });
-    }
-    const { prisma } = await import('../db/prisma.js');
-    const bcrypt = (await import('bcrypt')).default;
-    const hashed = await bcrypt.hash(newPassword, 10);
-    await prisma.user.update({ where: { user_id: userId }, data: { password: hashed } });
-    return res.json({ message: '비밀번호가 변경되었습니다.' });
-  } catch (error) {
-    return res.status(500).json({ error: '비밀번호 재설정에 실패했습니다.' });
-  }
+router.post('/logout', requireAuth, (req, res) => {
+  revokeSession(req.user.id);
+  res.json({ ok: true });
 });
 
 router.get('/kakao', (_req, res) => {

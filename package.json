@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "test:security": "node --test logic-arena-backend/test/security.integration.test.mjs",
     "start": "concurrently --kill-others --names \"BACK,FRONT\" --prefix-colors \"blue,green\" \"cd logic-arena-backend && npm run dev\" \"cd logic-arena-frontend && npm run dev\"",
     "pi:setup": "bash deploy/raspberry-pi/setup-system.sh",
     "pi:deploy": "bash deploy/raspberry-pi/deploy-app.sh",

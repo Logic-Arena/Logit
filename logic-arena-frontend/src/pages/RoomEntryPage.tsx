@@ -7,7 +7,7 @@ export function RoomEntryPage() {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, setUser } = useUserStore();
+  const { user } = useUserStore();
   // 로비에서 방 카드를 클릭해 들어온 경우 즉시 알 수 있도록 state를 우선 반영하고,
   // 초대 링크로 로비를 거치지 않고 바로 들어온 경우(state 없음)를 대비해 서버에서 재확인한다.
   const [hasPassword, setHasPassword] = useState(
@@ -15,7 +15,7 @@ export function RoomEntryPage() {
   );
   const [roomNotFound, setRoomNotFound] = useState(false);
 
-  const [username, setLocalUsername] = useState(user?.name ?? '');
+  const username = user?.name ?? '';
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [passwordError, setPasswordError] = useState('');
@@ -58,7 +58,6 @@ export function RoomEntryPage() {
       }
       setVerifying(false);
     }
-    if (user) setUser({ ...user, name: trimmed });
     navigate(`/rooms/${roomId}/debate`, { state: { password: password.trim() || undefined } });
   };
 
@@ -74,13 +73,13 @@ export function RoomEntryPage() {
             </p>
           )}
           <div className="form-field">
-            <label className="form-label" htmlFor="nickname">닉네임</label>
+            <label className="form-label" htmlFor="nickname">참가자 이름</label>
             <input
               id="nickname"
               className="form-input"
               placeholder="사용할 닉네임을 입력하세요"
               value={username}
-              onChange={(e) => setLocalUsername(e.target.value)}
+              readOnly
               autoFocus
             />
             {error && (

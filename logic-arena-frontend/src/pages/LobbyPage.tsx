@@ -8,10 +8,10 @@ import { CommunityVoteWidget } from "../components/lobby/CommunityVoteWidget";
 import { CreateRoomModal } from "../pages/CreateRoomPage";
 import { useSidebar } from "../hooks/useSidebar";
 import { useUserStore } from "../store/useUserStore";
-import type { Room } from "../types/room";
+import type { RoomSummary } from "../types/room";
 
 export function LobbyPage() {
-  const [rooms, setRooms] = useState<Room[]>([]);
+  const [rooms, setRooms] = useState<RoomSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const { sidebarOpen, closeSidebar } = useSidebar();
@@ -24,16 +24,16 @@ export function LobbyPage() {
       .catch(console.error)
       .finally(() => setLoading(false));
 
-    socket.connect();
+    if (isLoggedIn) socket.connect();
 
-    const onRoomList = (updatedRooms: Room[]) => setRooms(updatedRooms);
+    const onRoomList = (updatedRooms: RoomSummary[]) => setRooms(updatedRooms);
     socket.on("room_list", onRoomList);
 
     return () => {
       socket.off("room_list", onRoomList);
       socket.disconnect();
     };
-  }, []);
+  }, [isLoggedIn]);
 
   return (
     <div className="lobby-layout">

@@ -6,6 +6,8 @@ import { generateTeacherDebateSummary, generateSetukDraft, summarizeSetuk } from
 import { TEACHER_SUBJECTS } from '../saedeuk.js';
 import { isSoloRecord } from '../utils/soloEssay.js';
 
+import { aiRequestLimit } from '../middleware/rateLimit.js';
+
 const router = express.Router();
 
 function requireTeacher(req, res, next) {
@@ -353,6 +355,8 @@ router.get('/classes/:classId/summary', requireAuth, requireTeacher, async (req,
 
 // ─── 교사: 토론 LLM 요약 (사전 생성된 요약 조회) ─────────────────────
 
+const pendingSummaries = new Set();
+
 router.get('/debate-summary/:historyId', requireAuth, requireTeacher, async (req, res) => {
   try {
     const historyId = parseInt(req.params.historyId, 10);
@@ -374,13 +378,19 @@ router.get('/debate-summary/:historyId', requireAuth, requireTeacher, async (req
       return res.status(403).json({ error: '담당 학급 학생의 이력만 조회할 수 있습니다.' });
     }
     if (!record.teacher_summary) {
+      if (pendingSummaries.has(historyId)) return res.status(202).json({ pending: true });
+      let allowed = false;
+      aiRequestLimit(req, res, () => { allowed = true; });
+      if (!allowed) return;
+      pendingSummaries.add(historyId);
       // 사전 생성 안 된 기록은 즉시 백그라운드 생성 트리거
-      const full = await prisma.debateHistory.findUnique({
-          where: { id: historyId },
-          select: { topic: true, position: true, result: true, score: true, logic: true, evidence: true, persuasion: true, rebuttal: true, consistency: true, advice: true, user_id: true },
-        });
         ;(async () => {
           try {
+            const full = await prisma.debateHistory.findUnique({
+              where: { id: historyId },
+              select: { topic: true, position: true, result: true, score: true, logic: true, evidence: true, persuasion: true, rebuttal: true, consistency: true, advice: true, user_id: true },
+            });
+            if (!full) return;
             const user = await prisma.user.findUnique({ where: { user_id: full.user_id }, select: { name: true } });
             const summary = await generateTeacherDebateSummary({
               studentName: user?.name ?? '학생',
@@ -397,6 +407,7 @@ router.get('/debate-summary/:historyId', requireAuth, requireTeacher, async (req
             });
             await prisma.debateHistory.update({ where: { id: historyId }, data: { teacher_summary: summary } });
           } catch (e) { console.error('[debate-summary] 생성 실패:', e.message); }
+          finally { pendingSummaries.delete(historyId); }
         })();
       return res.status(202).json({ pending: true });
     }
@@ -421,7 +432,7 @@ async function requireOwnStudent(req, res, userId) {
   return true;
 }
 
-router.post('/students/:userId/setuk-draft', requireAuth, requireTeacher, async (req, res) => {
+router.post('/students/:userId/setuk-draft', requireAuth, requireTeacher, aiRequestLimit, async (req, res) => {
   try {
     const userId = parseInt(req.params.userId, 10);
     if (!Number.isFinite(userId)) return res.status(400).json({ error: '잘못된 요청입니다.' });
@@ -439,7 +450,7 @@ router.post('/students/:userId/setuk-draft', requireAuth, requireTeacher, async 
   }
 });
 
-router.post('/students/:userId/setuk-summarize', requireAuth, requireTeacher, async (req, res) => {
+router.post('/students/:userId/setuk-summarize', requireAuth, requireTeacher, aiRequestLimit, async (req, res) => {
   try {
     const userId = parseInt(req.params.userId, 10);
     if (!Number.isFinite(userId)) return res.status(400).json({ error: '잘못된 요청입니다.' });

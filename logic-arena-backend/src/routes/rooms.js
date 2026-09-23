@@ -1,5 +1,7 @@
 import { Router } from 'express';
-import { createRoom, getAllRooms, getRoom } from '../store/rooms.js';
+import { createRoom, getAllRooms, getRoom, canCreateRoom } from '../store/rooms.js';
+import { requireAuth } from '../middleware/auth.js';
+import { rateLimit } from '../middleware/rateLimit.js';
 
 const router = Router();
 
@@ -26,19 +28,21 @@ router.get('/:id', (req, res) => {
 const VALID_MODES = ['ai_debate', 'human_debate', 'solo_essay'];
 const VALID_TOPIC_MODES = ['manual', 'ai_auto'];
 
-router.post('/', (req, res) => {
+router.post('/', requireAuth, rateLimit(10, 10 * 60_000), (req, res) => {
+  if (!canCreateRoom(req.user.id)) return res.status(429).json({ error: '열려 있는 방을 정리한 후 다시 시도해주세요.' });
   const { title, mode, topicMode, topic, password, handicap, coachingEnabled, structuredArgumentEnabled } = req.body;
-  if (!title || typeof title !== 'string' || !title.trim()) {
+  if (!title || typeof title !== 'string' || !title.trim() || title.length > 200) {
     return res.status(400).json({ error: 'title은 필수입니다' });
   }
   const resolvedMode = VALID_MODES.includes(mode) ? mode : 'ai_debate';
   const resolvedTopicMode = VALID_TOPIC_MODES.includes(topicMode) ? topicMode : 'ai_auto';
   if (resolvedTopicMode === 'manual') {
-    if (!topic || typeof topic !== 'string' || !topic.trim()) {
+    if (!topic || typeof topic !== 'string' || !topic.trim() || topic.length > 2000) {
       return res.status(400).json({ error: '직접 입력 시 주제는 필수입니다' });
     }
   }
   const room = createRoom({
+    ownerId: req.user.id,
     title: title.trim(),
     mode: resolvedMode,
     topicMode: resolvedTopicMode,
@@ -55,7 +59,7 @@ router.post('/', (req, res) => {
 });
 
 // 실제 입장(소켓 join) 전에 비밀번호만 미리 확인 — 틀렸을 때 방 목록/입장 폼에서 바로 재입력할 수 있게 함
-router.post('/:id/verify-password', (req, res) => {
+router.post('/:id/verify-password', requireAuth, rateLimit(10, 60_000), (req, res) => {
   const { id } = req.params;
   const { password } = req.body;
   const room = getRoom(id);

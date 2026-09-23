@@ -1,8 +1,8 @@
-import type { Room } from '../../types/room';
+import type { RoomSummary } from '../../types/room';
 import { RoomCard } from './RoomCard';
 
 interface Props {
-  rooms: Room[];
+  rooms: RoomSummary[];
 }
 
 export function RoomList({ rooms }: Props) {

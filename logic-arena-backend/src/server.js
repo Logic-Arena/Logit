@@ -13,11 +13,16 @@ import trainingRouter from './routes/training.js';
 import adminRouter from './routes/admin.js';
 import teacherRouter from './routes/teacher.js';
 import { registerHandlers } from './socket/handlers.js';
+import { authenticateSocket, guardSocket } from './socket/security.js';
+import { sessionEvents } from './store/sessionStore.js';
 import { initializeSlots, startPollScheduler } from './scheduler/pollScheduler.js';
 
 const app = express();
 const httpServer = createServer(app);
+const allowedOrigins = new Set(Array.isArray(CORS_ORIGIN) ? CORS_ORIGIN : [CORS_ORIGIN]);
 const io = new SocketIOServer(httpServer, {
+  maxHttpBufferSize: 64 * 1024,
+  allowRequest: (req, done) => done(null, !req.headers.origin || allowedOrigins.has(req.headers.origin)),
   cors: {
     origin: CORS_ORIGIN,
     methods: ['GET', 'POST'],
@@ -61,14 +66,14 @@ app.use('/api/training-recommendation', trainingRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/teacher', teacherRouter);
 
-io.use((socket, next) => {
-  socket.data.roomId = null;
-  socket.data.userId = null;
-  socket.data.username = null;
-  next();
+io.use(authenticateSocket);
+sessionEvents.on('revoked', userId => {
+  io.in(`account:${userId}`).disconnectSockets(true);
 });
 
 io.on('connection', (socket) => {
+  socket.join(`account:${socket.data.userId}`);
+  guardSocket(socket);
   registerHandlers(io, socket);
 });
 

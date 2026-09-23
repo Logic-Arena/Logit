@@ -37,4 +37,8 @@ export const KAKAO_CALLBACK_URL =
 export const JWT_SECRET = process.env.JWT_SECRET ?? 'dev_jwt_secret';
 export const SESSION_SECRET = process.env.SESSION_SECRET ?? 'dev_session_secret';
 export const FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173';
-export const TEACHER_CODE = process.env.TEACHER_CODE || 'LOGIT_TEACHER_2025';
+export const TEACHER_CODE = process.env.TEACHER_CODE || '';
+
+if (process.env.NODE_ENV === 'production' && (!process.env.JWT_SECRET || JWT_SECRET.length < 32 || JWT_SECRET === 'dev_jwt_secret')) {
+  throw new Error('운영 환경에는 32자 이상의 JWT_SECRET이 필요합니다.');
+}

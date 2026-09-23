@@ -14,14 +14,20 @@ interface UserState {
 
 export const useUserStore = create<UserState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       token: null,
       user: null,
       isLoggedIn: false,
 
       setAuth: (token, user) => set({ token, user, isLoggedIn: true }),
       setUser: (user) => set({ user }),
-      logout: () => set({ token: null, user: null, isLoggedIn: false }),
+      logout: () => {
+        const token = get().token;
+        if (token) void fetch(`${import.meta.env.VITE_API_URL ?? '/api'}/auth/logout`, {
+          method: 'POST', headers: { Authorization: `Bearer ${token}` }, keepalive: true,
+        }).catch(() => {});
+        set({ token: null, user: null, isLoggedIn: false });
+      },
     }),
     {
       name: 'logic-arena-auth',

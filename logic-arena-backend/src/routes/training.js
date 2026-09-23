@@ -3,9 +3,11 @@ import { prisma } from '../db/prisma.js';
 import { requireAuth } from '../middleware/auth.js';
 import { generateTrainingRecommendation } from '../services/ai.js';
 
+import { aiRequestLimit } from '../middleware/rateLimit.js';
+
 const router = Router();
 
-router.get('/', requireAuth, async (req, res) => {
+router.get('/', requireAuth, aiRequestLimit, async (req, res) => {
   try {
     const userId = req.user.id;
 

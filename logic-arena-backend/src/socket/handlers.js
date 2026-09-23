@@ -655,7 +655,8 @@ async function handleLeaveInternal(io, socket) {
 
 export function registerHandlers(io, socket) {
   // ── join_room ──────────────────────────────────────────────
-  socket.on('join_room', ({ roomId, userId, username, password }) => {
+  socket.on('join_room', ({ roomId, password }) => {
+    const { userId, username } = socket.data;
     if (socket.data.roomId && socket.data.roomId !== roomId) {
       handleLeaveInternal(io, socket);
     }
@@ -667,6 +668,8 @@ export function registerHandlers(io, socket) {
         room_not_found: '방을 찾을 수 없습니다',
         wrong_password: '비밀번호가 틀렸습니다',
         duplicate_name: '이미 같은 닉네임이 사용 중입니다',
+        duplicate_user: '이미 참여 중인 계정입니다',
+        owner_required: '방 생성자가 먼저 입장해야 합니다',
       };
       return socket.emit('error', { message: messages[result.error] ?? '입장 오류' });
     }
@@ -801,6 +804,8 @@ export function registerHandlers(io, socket) {
       return socket.emit('error', { message: '논술 작성자만 피드백을 다시 요청할 수 있습니다' });
     }
 
+    if (room.feedbackInFlight) return socket.emit('error', { message: '피드백 생성 중입니다.' });
+    room.feedbackInFlight = true;
     const targetField = FEEDBACK_FIELDS.has(field) ? field : null;
 
     try {
@@ -829,6 +834,8 @@ export function registerHandlers(io, socket) {
     } catch (error) {
       console.error('[retry_essay_feedback] 재생성 실패:', error.message);
       socket.emit('error', { message: 'AI 피드백을 다시 불러오지 못했습니다. 잠시 후 다시 시도해 주세요' });
+    } finally {
+      room.feedbackInFlight = false;
     }
   });
 

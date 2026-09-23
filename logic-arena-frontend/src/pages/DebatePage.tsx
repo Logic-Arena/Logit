@@ -2515,7 +2515,6 @@ export function DebatePage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user: currentUser } = useUserStore();
-  const userId = currentUser?.id;
   const username = currentUser?.name;
   const { room, myRole, mySocketId, resetRoom } = useRoomStore();
   const didJoin = useRef(false);
@@ -2557,8 +2556,6 @@ export function DebatePage() {
       didJoin.current = true;
       socket.emit("join_room", {
         roomId: roomId!,
-        userId: userId!,
-        username,
         password: password ?? undefined,
       });
     };
@@ -2577,8 +2574,6 @@ export function DebatePage() {
       didJoin.current = true;
       socket.emit("join_room", {
         roomId: roomId!,
-        userId: userId!,
-        username,
         password: password ?? undefined,
       });
     }

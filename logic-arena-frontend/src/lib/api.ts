@@ -1,4 +1,4 @@
-import type { Room, RoomMode, TopicMode } from '../types/room';
+import type { Room, RoomSummary, RoomMode, TopicMode } from '../types/room';
 import type { User, AuthUser } from '../types/user';
 import { useUserStore } from '../store/useUserStore';
 
@@ -99,7 +99,7 @@ export async function updateProfile({ name, profileImage }: { name?: string; pro
 
 // ─── Rooms ───────────────────────────────────────────────
 
-export async function getRooms(): Promise<Room[]> {
+export async function getRooms(): Promise<RoomSummary[]> {
   const res = await authedFetch(`${BASE}/rooms`, { headers: authHeaders() });
   if (!res.ok) throw new Error('방 목록을 불러오지 못했습니다.');
   return res.json();

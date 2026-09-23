@@ -1,3 +1,4 @@
+import { createAiGuard } from './aiBudget.js';
 const provider = process.env.AI_PROVIDER || 'openai';
 
 let service;
@@ -8,6 +9,8 @@ if (provider === 'openai') {
 }
 
 console.log(`[AI] Provider: ${provider}`);
+
+const guard = createAiGuard();
 
 export const {
   generateTopic,
@@ -23,4 +26,4 @@ export const {
   generateTeacherDebateSummary,
   generateSetukDraft,
   summarizeSetuk,
-} = service;
+} = Object.fromEntries(Object.entries(service).map(([name, fn]) => [name, typeof fn === 'function' ? guard(fn) : fn]));

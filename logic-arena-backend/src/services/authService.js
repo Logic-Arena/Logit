@@ -129,15 +129,10 @@ export async function loginLocalUser({ username, password }) {
     },
   });
 
-  if (!user) {
-    throw new Error('존재하지 않는 아이디입니다.');
-  }
-
-  const isMatch = await bcrypt.compare(password, user.password ?? '');
-
-  if (!isMatch) {
-    throw new Error('비밀번호가 올바르지 않습니다.');
-  }
+  // Equal bcrypt work and a single response for unknown users / wrong passwords.
+  const dummyHash = '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
+  const isMatch = await bcrypt.compare(password, user?.password || dummyHash);
+  if (!user || !isMatch) throw new Error('아이디 또는 비밀번호가 올바르지 않습니다.');
 
   return sanitizeUser(user);
 }
@@ -164,21 +159,10 @@ export async function getUserWithStats(userId) {
   return user ? sanitizeUser(user) : null;
 }
 
-export function createPasswordResetToken(userId) {
-  return jwt.sign({ type: 'password_reset', userId }, JWT_SECRET, { expiresIn: '10m' });
-}
-
-export function verifyPasswordResetToken(token) {
-  const payload = jwt.verify(token, JWT_SECRET);
-  if (payload.type !== 'password_reset' || typeof payload.userId !== 'number') {
-    throw new Error('유효하지 않은 인증 토큰입니다.');
-  }
-  return payload.userId;
-}
-
 export function createAccessToken(user, nonce) {
   return jwt.sign(
     {
+      type: 'access',
       id: user.user_id,
       provider: user.provider,
       username: user.login_id,
@@ -188,6 +172,6 @@ export function createAccessToken(user, nonce) {
       ...(nonce ? { nonce } : {}),
     },
     JWT_SECRET,
-    { expiresIn: '7d' }
+    { expiresIn: '7d', algorithm: 'HS256', issuer: 'logit', audience: 'logit-api' }
   );
 }

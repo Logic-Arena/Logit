@@ -1,8 +1,8 @@
-import type { Room, PlayerRole, DebateResult } from './room';
+import type { Room, RoomSummary, PlayerRole, DebateResult } from './room';
 import type { CommunityTopic } from '../lib/api';
 
 export interface ClientToServerEvents {
-  join_room: (payload: { roomId: string; userId: string; username: string; password?: string }) => void;
+  join_room: (payload: { roomId: string; password?: string }) => void;
   leave_room: () => void;
   start_game: (payload: { roomId: string }) => void;
   select_side: (payload: { roomId: string; side: 'pro' | 'con' }) => void;
@@ -14,7 +14,7 @@ export interface ClientToServerEvents {
 }
 
 export interface ServerToClientEvents {
-  room_list: (rooms: Room[]) => void;
+  room_list: (rooms: RoomSummary[]) => void;
   room_state: (payload: { room: Room; myRole: PlayerRole }) => void;
   player_joined: (payload: { room: Room }) => void;
   player_left: (payload: { room: Room | null }) => void;

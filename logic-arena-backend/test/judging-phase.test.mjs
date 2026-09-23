@@ -177,7 +177,7 @@ for (const [phase, keys] of [
     const snapshot = getRoomSerialized(id);
     assert.equal(snapshot.content[keys[0]], null);
     assert.ok(snapshot.submittedKeys.includes(keys[0]));
-    assert.equal(getAllRooms().find(room => room.id === id).content[keys[0]], null);
+    assert.equal(getAllRooms().find(room => room.id === id).content, undefined);
     assert.equal(getRoom(id).content[keys[0]], 'first private text');
     setContent(id, keys[1], 'second text');
     assert.equal(getRoomSerialized(id).content[keys[0]], 'first private text');
