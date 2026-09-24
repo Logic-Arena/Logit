@@ -188,7 +188,7 @@ export function createRoom({ title, mode = 'ai_debate', topicMode = 'ai_auto', t
     topicGenerationSeq: 0,
 
     handicap: resolvedHandicap,
-    peerVotes: { pro: 0, con: 0, voters: new Set(), initialObserverCount: null },
+    peerVotes: { pro: 0, con: 0, voters: new Set(), eligibleUserIds: null, initialObserverCount: null },
   };
   rooms.set(id, room);
   return serializeRoom(room);
@@ -389,6 +389,10 @@ export function selectSide(roomId, socketId, side) {
 export function setPhase(roomId, phase) {
   const room = rooms.get(roomId);
   if (!room) return null;
+  if (phase === 'peer_voting' && room.peerVotes.eligibleUserIds === null) {
+    room.peerVotes.eligibleUserIds = new Set(Array.from(room.observers.values(), observer => String(observer.userId)));
+    room.peerVotes.initialObserverCount = room.peerVotes.eligibleUserIds.size;
+  }
   const phaseDurations = room.handicap?.phaseDurations ?? null;
   const dur = getPhaseDuration(phase, phaseDurations);
   room.phase = phase;

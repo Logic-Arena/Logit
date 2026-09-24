@@ -48,6 +48,7 @@ wait_for_healthy_service() {
 
 git fetch origin main
 git merge --ff-only origin/main
+export LOGIT_REVISION="$(git rev-parse HEAD)"
 
 docker compose build --pull
 docker compose up -d postgres
@@ -63,6 +64,7 @@ wait_for_healthy_service frontend
 
 curl -fsS --retry 10 --retry-delay 3 --retry-all-errors "$health_base_url/healthz"
 curl -fsS --retry 10 --retry-delay 3 --retry-all-errors "$health_base_url/api/health"
+docker compose exec -T backend node src/maintenance/securitySmoke.js </dev/null
 
 docker compose ps
 echo "Deployment completed successfully"

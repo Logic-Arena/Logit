@@ -6,7 +6,7 @@ const messages = createBudget(240, 60_000);
 const joins = createBudget(15, 60_000);
 const starts = createBudget(6, 60 * 60_000);
 const retries = createBudget(3, 60_000);
-const events = new Set(['join_room', 'leave_room', 'start_game', 'select_side', 'continue_solo_revision', 'retry_essay_feedback', 'save_draft', 'submit_content', 'peer_vote']);
+const events = new Set(['join_room', 'leave_room', 'start_game', 'select_side', 'continue_solo_revision', 'retry_essay_feedback', 'save_draft', 'submit_content', 'peer_vote', 'get_peer_vote_status']);
 
 export function authenticateSocket(socket, next) {
   try {

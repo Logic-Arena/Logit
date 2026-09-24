@@ -21,9 +21,10 @@ process.env.TEACHER_CODE = randomUUID();
 process.env.NODE_ENV = 'production';
 process.env.PORT = '0';
 process.env.CORS_ORIGIN = 'http://127.0.0.1';
-process.env.GOOGLE_CLIENT_ID = '';
-process.env.GOOGLE_CLIENT_SECRET = '';
-process.env.KAKAO_REST_API_KEY = '';
+process.env.FRONTEND_URL = 'http://127.0.0.1';
+process.env.GOOGLE_CLIENT_ID = 'synthetic-google-client';
+process.env.GOOGLE_CLIENT_SECRET = 'synthetic-google-secret';
+process.env.KAKAO_REST_API_KEY = 'synthetic-kakao-key';
 
 const fixturePassword = randomUUID();
 const users = [
@@ -36,6 +37,16 @@ const histories = [
   { id: 910003, user_id: 900003, topic: 'Private audit record B', score: 60, result: 'lose', teacher_summary: { summary: 'Other student summary' } },
 ];
 const calls = { historyQueries: [], statsWrites: [], historyWrites: [], ai: [] };
+const providerCalls = { google: 0, kakao: 0 };
+users.push(
+  { user_id: 900006, provider: 'google', provider_user_id: 'synthetic-google-profile', role: 'student', name: 'Synthetic Google' },
+  { user_id: 900007, provider: 'kakao', provider_user_id: 'synthetic-kakao-profile', role: 'student', name: 'Synthetic Kakao' },
+);
+globalThis.__auditAxios = {
+  post: async () => { providerCalls.kakao++; return { data: { access_token: 'synthetic-provider-token' } }; },
+  get: async () => ({ data: { id: 'synthetic-kakao-profile' } }),
+  isAxiosError: () => false,
+};
 const matches = (row, where = {}) => Object.entries(where).every(([k, v]) => v === undefined || row[k] === v);
 const unsupported = new Proxy({}, { get: (_, model) => new Proxy({}, { get: (_, method) => async () => { throw new Error(`Unmocked DB operation ${String(model)}.${String(method)}`); } }) });
 globalThis.__auditDb = Object.assign(unsupported, {});
@@ -73,6 +84,7 @@ const aiNames = ['generateTopic','generateArgument','generateRebuttal','generate
 registerHooks({
   resolve(specifier, context, next) {
     if (specifier === 'dotenv') return { url: 'data:text/javascript,export default {config(){return {}}}', shortCircuit: true };
+    if (specifier === 'axios') return { url: 'data:text/javascript,export default globalThis.__auditAxios', shortCircuit: true };
     return next(specifier, context);
   },
   load(url, context, next) {
@@ -88,6 +100,10 @@ registerHooks({
 });
 
 const { httpServer, io } = await import(new URL('src/server.js', backend));
+const passport = requireBackend('passport');
+const google = passport._strategy('google');
+google._oauth2.getOAuthAccessToken = (_code, _params, callback) => { providerCalls.google++; callback(null, 'synthetic-google-token'); };
+google.userProfile = (_token, callback) => callback(null, { id: 'synthetic-google-profile' });
 if (!httpServer.listening) await once(httpServer, 'listening');
 const base = `http://127.0.0.1:${httpServer.address().port}`;
 const { createAccessToken } = await import(new URL('src/services/authService.js', backend));
@@ -98,13 +114,13 @@ const teacherToken = createAccessToken(users[1], createSession(users[1].user_id)
 const sockets = [];
 
 
-async function request(path, { method = 'GET', body, token } = {}) {
+async function request(path, { method = 'GET', body, token, headers = {} } = {}) {
   const response = await fetch(base + path, {
-    method, headers: { 'Content-Type': 'application/json', ...(token && { Authorization: `Bearer ${token}` }) },
+    method, redirect: 'manual', headers: { 'Content-Type': 'application/json', ...(token && { Authorization: `Bearer ${token}` }), ...headers },
     ...(body && { body: JSON.stringify(body) }), signal: AbortSignal.timeout(5000),
   });
   const text = await response.text();
-  return { status: response.status, body: (() => { try { return JSON.parse(text); } catch { return text; } })() };
+  return { status: response.status, headers: response.headers, body: (() => { try { return JSON.parse(text); } catch { return text; } })() };
 }
 async function socketClient(token = studentToken, origin = 'http://127.0.0.1', expected = 'connect') {
   const s = connect(base, { transports: ['websocket'], reconnection: false, autoConnect: false, auth: { token }, extraHeaders: { Origin: origin } });
@@ -121,6 +137,65 @@ test('security regression (loopback only, no real DB or paid AI)', async t => {
   let host, outsider, roomId;
   const roomPassword = 'synthetic-room-password';
   try {
+    await t.test('Google and Kakao callbacks require one-use browser-bound state and exchange cookies', async () => {
+      for (const provider of ['google', 'kakao']) {
+        const begin = await request('/api/auth/' + provider);
+        assert.equal(begin.status, 302);
+        const location = new URL(begin.headers.get('location'));
+        const state = location.searchParams.get('state');
+        assert.match(state, /^[A-Za-z0-9_-]{43}$/);
+        const binding = begin.headers.getSetCookie()[0];
+        assert.match(binding, /HttpOnly/); assert.match(binding, /Secure/); assert.match(binding, /SameSite=Lax/);
+        const cookie = binding.split(';')[0];
+        const callback = '/api/auth/' + provider + '/callback?code=synthetic&state=' + state;
+        const before = providerCalls[provider];
+        assert.equal((await request('/api/auth/' + provider + '/callback?code=synthetic')).status, 403);
+        assert.equal((await request(callback)).status, 403);
+        const other = provider === 'google' ? 'kakao' : 'google';
+        assert.equal((await request('/api/auth/' + other + '/callback?code=synthetic&state=' + state, { headers: { Cookie: cookie } })).status, 403);
+        assert.equal(providerCalls[provider], before);
+        const completed = await request(callback, { headers: { Cookie: cookie } });
+        assert.equal(completed.status, 302);
+        assert.equal(completed.headers.get('location'), 'http://127.0.0.1/auth/callback');
+        assert.equal(providerCalls[provider], before + 1);
+        assert.equal((await request(callback, { headers: { Cookie: cookie } })).status, 403);
+        const ticket = completed.headers.getSetCookie()[0];
+        assert.match(ticket, /HttpOnly/); assert.match(ticket, /Secure/); assert.match(ticket, /Max-Age=60/);
+        const exchangeCookies = cookie + '; ' + ticket.split(';')[0];
+        const exchange = (cookies, origin = 'http://127.0.0.1') => request('/api/auth/oauth/exchange', { method: 'POST', body: {}, headers: { Cookie: cookies, Origin: origin } });
+        assert.equal((await exchange(exchangeCookies, 'https://untrusted.example')).status, 403);
+        assert.equal((await exchange(ticket.split(';')[0])).status, 401);
+        const exchanged = await exchange(exchangeCookies);
+        assert.equal(exchanged.status, 200);
+        assert.equal(exchanged.headers.get('cache-control'), 'no-store');
+        assert.equal((await request('/api/auth/me', { token: exchanged.body.token })).status, 200);
+        assert.equal((await exchange(exchangeCookies)).status, 401);
+      }
+    });
+    await t.test('expired OAuth state and exchange tickets are rejected', async () => {
+      const begin = await request('/api/auth/google');
+      const state = new URL(begin.headers.get('location')).searchParams.get('state');
+      const cookie = begin.headers.getSetCookie()[0].split(';')[0];
+      const callback = '/api/auth/google/callback?code=synthetic&state=' + state;
+      const realNow = Date.now;
+      try {
+        Date.now = () => realNow() + 11 * 60_000;
+        assert.equal((await request(callback, { headers: { Cookie: cookie } })).status, 403);
+      } finally { Date.now = realNow; }
+      const completed = await request(callback, { headers: { Cookie: cookie } });
+      const ticket = completed.headers.getSetCookie()[0].split(';')[0];
+      try {
+        Date.now = () => realNow() + 61_000;
+        assert.equal((await request('/api/auth/oauth/exchange', { method: 'POST', body: {}, headers: { Origin: 'http://127.0.0.1', Cookie: cookie + '; ' + ticket } })).status, 401);
+      } finally { Date.now = realNow; }
+    });
+    await t.test('quarantined local accounts reject their former valid password', async () => {
+      const saved = users[0].password;
+      users[0].password = null;
+      try {
+        assert.equal((await request('/api/auth/login', { method: 'POST', body: { username: users[0].login_id, password: fixturePassword } })).status, 400);
+      } finally { users[0].password = saved; }
+    });
     await t.test('normal login works and invalid credentials have identical responses', async () => {
       const login = await request('/api/auth/login', { method: 'POST', body: { username: users[0].login_id, password: fixturePassword } });
       assert.equal(login.status, 200);
@@ -324,6 +399,53 @@ test('security regression (loopback only, no real DB or paid AI)', async t => {
       assert.equal(consume('B'), 0);
       clock += 1000;
       assert.equal(consume('A'), 0);
+    });
+    await t.test('peer voting preserves one account one vote across reconnects and waits for eligible accounts', async () => {
+      const fixtures = Array.from({ length: 6 }, (_, i) => ({ ...users[2], user_id: 900101 + i, login_id: 'peer_fixture_' + i }));
+      users.push(...fixtures);
+      const tokens = fixtures.map(user => createAccessToken(user, createSession(user.user_id)));
+      const peers = [];
+      for (const token of tokens.slice(0, 5)) peers.push(await socketClient(token));
+      const created = await request('/api/rooms', { method: 'POST', token: tokens[0], body: { title: 'Peer voting fixture', mode: 'human_debate', topicMode: 'manual', topic: 'Synthetic topic' } });
+      assert.equal(created.status, 201);
+      const id = created.body.id;
+      try {
+        for (const socket of peers) await event(socket, 'join_room', { roomId: id }, 'room_state');
+        rooms.setPhase(id, 'peer_voting');
+        const room = rooms.getRoom(id);
+        rooms.setResult(id, { winner: 'draw', scores: ['pro', 'con'].map(vote => ({ vote, type: 'player', total: 70 })) });
+        assert.equal(room.peerVotes.eligibleUserIds.size, 3);
+        await event(peers[2], 'peer_vote', { votedFor: 'pro' }, 'peer_vote_progress');
+        const left = once(peers[0], 'player_left', { signal: AbortSignal.timeout(5000) });
+        peers[2].emit('leave_room'); await left;
+        const oldId = peers[2].id;
+        peers[2].disconnect();
+        const reconnected = await socketClient(tokens[2]);
+        assert.notEqual(reconnected.id, oldId);
+        await event(reconnected, 'join_room', { roomId: id }, 'room_state');
+        const status = await event(reconnected, 'get_peer_vote_status', { roomId: id }, 'peer_vote_status');
+        assert.equal(status.voted, true);
+        assert.equal(status.eligible, true);
+        const duplicate = await event(reconnected, 'peer_vote', { votedFor: 'con' }, 'peer_vote_status');
+        assert.equal(duplicate.voted, true);
+        assert.equal(room.peerVotes.pro, 1);
+        assert.equal(room.peerVotes.con, 0);
+        const late = await socketClient(tokens[5]);
+        await event(late, 'join_room', { roomId: id }, 'room_state');
+        const denied = await event(late, 'peer_vote', { votedFor: 'pro' }, 'peer_vote_status');
+        assert.equal(denied.eligible, false);
+        assert.equal(room.peerVotes.eligibleUserIds.size, 3);
+        await event(peers[3], 'peer_vote', { votedFor: 'con' }, 'peer_vote_progress');
+        assert.equal(room.phase, 'peer_voting');
+        assert.equal(room.peerVotes.voters.size, 2);
+        const ended = once(peers[0], 'debate_ended', { signal: AbortSignal.timeout(5000) });
+        peers[4].emit('peer_vote', { votedFor: 'con' });
+        const [result] = await ended;
+        assert.equal(room.peerVotes.voters.size, 3);
+        assert.equal(room.peerVotes.pro, 1);
+        assert.equal(room.peerVotes.con, 2);
+        assert.equal(result.result.winner, 'con');
+      } finally { rooms.setPhase(id, 'ended'); }
     });
   } finally {
     for (const s of sockets) s.disconnect();

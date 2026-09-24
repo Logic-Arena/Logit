@@ -11,6 +11,7 @@ export interface ClientToServerEvents {
   save_draft: (payload: { roomId: string; phase: string; text: string }) => void;
   submit_content: (payload: { roomId: string; text: string; phase?: string; skip?: boolean }) => void;
   peer_vote: (payload: { votedFor: 'pro' | 'con' }) => void;
+  get_peer_vote_status: (payload: { roomId: string }) => void;
 }
 
 export interface ServerToClientEvents {

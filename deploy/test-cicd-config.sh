@@ -75,6 +75,7 @@ assert_called "docker compose run --rm --no-deps -T --interactive=false backend 
 assert_called "docker compose up -d --remove-orphans --force-recreate backend frontend"
 assert_called "curl -fsS --retry 10 --retry-delay 3 --retry-all-errors https://logit.example.test/healthz"
 assert_called "curl -fsS --retry 10 --retry-delay 3 --retry-all-errors https://logit.example.test/api/health"
+assert_called "docker compose exec -T backend node src/maintenance/securitySmoke.js"
 grep -Fxq 'Deployment completed successfully' "$test_root/deploy-output.log" \
   || fail "streamed deployment did not reach completion"
 pass "deployment performs update, build, migration, restart, and public health checks"
@@ -150,6 +151,7 @@ ci_commands = ci.fetch("steps").map { |step| step["run"] }.compact.join("\n")
   "npm --prefix logic-arena-frontend ci",
   "npm --prefix logic-arena-frontend run build",
   "npm --prefix logic-arena-backend ci",
+  "npm --prefix logic-arena-backend test",
   "node --check",
   "./deploy/test-docker-config.sh"
 ].each do |required|

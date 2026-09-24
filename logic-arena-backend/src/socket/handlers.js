@@ -119,10 +119,7 @@ async function startPhase(io, roomId, phase) {
     startPhaseTimer(io, roomId, phase);
   }
 
-  // peer_voting 시작 시 현재 관전자 수를 스냅샷 — finalizePeerVoting에서 "관전자 있었음" 여부 판별에 사용
-  if (phase === 'peer_voting') {
-    room.peerVotes.initialObserverCount = room.observers.size;
-  }
+  // setPhase snapshots eligible account IDs; reconnects must not reset eligibility.
 
   const serialized = getRoomSerialized(roomId);
   io.to(roomId).emit('phase_changed', { phase, room: serialized });
@@ -654,6 +651,17 @@ async function handleLeaveInternal(io, socket) {
 // ── Main handler registration ─────────────────────────────────
 
 export function registerHandlers(io, socket) {
+  const sendPeerVoteStatus = () => {
+    const room = getRoom(socket.data.roomId);
+    if (!room || room.phase !== 'peer_voting') return;
+    socket.emit('peer_vote_status', {
+      eligible: room.observers.has(socket.id) && !!room.peerVotes.eligibleUserIds?.has(socket.data.userId),
+      voted: room.peerVotes.voters.has(socket.data.userId),
+      progress: { voted: room.peerVotes.voters.size, total: room.peerVotes.eligibleUserIds?.size ?? 0,
+        proVotes: room.peerVotes.pro, conVotes: room.peerVotes.con },
+    });
+  };
+  socket.on('get_peer_vote_status', sendPeerVoteStatus);
   // ── join_room ──────────────────────────────────────────────
   socket.on('join_room', ({ roomId, password }) => {
     const { userId, username } = socket.data;
@@ -937,12 +945,14 @@ export function registerHandlers(io, socket) {
 
     // 관전자만 투표 가능
     if (!room.observers.has(socket.id)) return;
-    if (room.peerVotes.voters.has(socket.id)) return; // 중복 투표 방지
+    if (!room.peerVotes.eligibleUserIds?.has(socket.data.userId)) return sendPeerVoteStatus();
+    if (room.peerVotes.voters.has(socket.data.userId)) return sendPeerVoteStatus();
 
     room.peerVotes[votedFor]++;
-    room.peerVotes.voters.add(socket.id);
+    room.peerVotes.voters.add(socket.data.userId);
+    sendPeerVoteStatus();
 
-    const totalVoters = room.observers.size;
+    const totalVoters = room.peerVotes.eligibleUserIds.size;
     io.to(roomId).emit('peer_vote_progress', {
       voted: room.peerVotes.voters.size,
       total: totalVoters,

@@ -3,6 +3,8 @@ FROM node:24-bookworm-slim
 WORKDIR /app
 
 ENV NODE_ENV=production
+ARG APP_REVISION=local
+ENV APP_REVISION=$APP_REVISION
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends openssl \

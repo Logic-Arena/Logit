@@ -1,27 +1,26 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useUserStore } from '../store/useUserStore';
-import { getMe } from '../lib/api';
+import { createHybridUser } from '../lib/api';
 
 export function AuthCallbackPage() {
   const setAuth = useUserStore((s) => s.setAuth);
+  const started = useRef(false);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('token');
-
-    if (!token) {
-      alert('로그인에 실패했습니다.');
-      window.location.replace('/');
-      return;
-    }
-
-    getMe(token)
-      .then((user) => {
-        setAuth(token, user);
+    if (started.current) return;
+    started.current = true;
+    window.history.replaceState(null, '', '/auth/callback');
+    fetch(`${import.meta.env.VITE_API_URL ?? '/api'}/auth/oauth/exchange`, {
+      method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: '{}',
+    })
+      .then(async (res) => {
+        if (!res.ok) throw new Error('로그인 요청이 만료되었습니다.');
+        const { token, user } = await res.json();
+        setAuth(token, createHybridUser(user));
         window.location.replace('/');
       })
       .catch(() => {
-        window.location.replace('/');
+        window.location.replace('/login?error=oauth_failed');
       });
   }, [setAuth]);
 

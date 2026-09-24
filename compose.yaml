@@ -28,6 +28,8 @@ services:
     build:
       context: ./logic-arena-backend
       dockerfile: Dockerfile
+      args:
+        APP_REVISION: ${LOGIT_REVISION:-local}
     restart: unless-stopped
     init: true
     environment:

@@ -25,11 +25,14 @@ import { requireAuth } from '../middleware/auth.js';
 import { rateLimit } from '../middleware/rateLimit.js';
 import { createHash } from 'node:crypto';
 import { createSession, revokeSession } from '../store/sessionStore.js';
+import { beginOAuth, verifyOAuthState, finishOAuth, exchangeOAuth } from '../services/oauthFlow.js';
 
 const router = express.Router();
+router.use((_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
 const loginIpLimit = rateLimit(300, 15 * 60_000, req => req.ip);
 const loginAccountLimit = rateLimit(10, 15 * 60_000, req => createHash('sha256').update(typeof req.body?.username === 'string' ? req.body.username : '').digest('hex'));
 const recoveryLimit = rateLimit(10, 15 * 60_000, req => req.ip);
+const oauthLimit = rateLimit(30, 15 * 60_000, req => req.ip);
 const validCredentials = (username, password) => typeof username === 'string' && username.length > 0 && username.length <= 100 && typeof password === 'string' && password.length > 0 && Buffer.byteLength(password) <= 72;
 
 const isGoogleAuthConfigured = Boolean(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET);
@@ -55,18 +58,20 @@ if (isGoogleAuthConfigured) {
   );
 }
 
-passport.serializeUser((user, done) => done(null, user));
-passport.deserializeUser((user, done) => done(null, user));
-
 router.get(
   '/google',
+  oauthLimit,
   (_req, res, next) => {
     if (!isGoogleAuthConfigured) {
       return res.status(503).json({ message: 'Google 로그인 설정이 필요합니다.' });
     }
     next();
   },
-  passport.authenticate('google', { scope: ['profile', 'email'] })
+  (req, res, next) => {
+    try {
+      passport.authenticate('google', { scope: ['profile', 'email'], state: beginOAuth(req, res, 'google'), session: false })(req, res, next);
+    } catch { res.status(503).json({ error: '잠시 후 다시 로그인해주세요.' }); }
+  }
 );
 
 router.get(
@@ -77,11 +82,10 @@ router.get(
     }
     next();
   },
-  passport.authenticate('google', { session: false, failureRedirect: '/auth/fail' }),
+  verifyOAuthState('google'),
+  passport.authenticate('google', { session: false, failureRedirect: `${FRONTEND_URL}/auth/callback?error=login_failed` }),
   (req, res) => {
-    const nonce = createSession(req.user.user_id);
-    const token = createAccessToken(req.user, nonce);
-    res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}`);
+    finishOAuth(req, res, req.user);
   }
 );
 
@@ -203,26 +207,32 @@ router.post('/logout', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
-router.get('/kakao', (_req, res) => {
+router.post('/oauth/exchange', oauthLimit, exchangeOAuth);
+
+router.get('/kakao', oauthLimit, (req, res) => {
   if (!isKakaoAuthConfigured) {
     return res.status(503).json({ message: 'Kakao 로그인 설정이 필요합니다.' });
   }
 
+  let state;
+  try { state = beginOAuth(req, res, 'kakao'); }
+  catch { return res.status(503).json({ error: '잠시 후 다시 로그인해주세요.' }); }
   const kakaoAuthUrl =
     `https://kauth.kakao.com/oauth/authorize` +
     `?client_id=${KAKAO_REST_API_KEY}` +
     `&redirect_uri=${encodeURIComponent(KAKAO_CALLBACK_URL)}` +
-    `&response_type=code`;
+    `&response_type=code&state=${encodeURIComponent(state)}`;
 
   res.redirect(kakaoAuthUrl);
 });
 
-router.get('/kakao/callback', async (req, res) => {
+router.get('/kakao/callback', verifyOAuthState('kakao'), async (req, res) => {
   if (!isKakaoAuthConfigured) {
     return res.status(503).json({ message: 'Kakao 로그인 설정이 필요합니다.' });
   }
 
-  const code = String(req.query.code ?? '');
+  const code = typeof req.query.code === 'string' ? req.query.code : '';
+  if (!code) return res.redirect(`${FRONTEND_URL}/auth/callback?error=kakao_login_failed`);
 
   try {
     const tokenResponse = await axios.post(
@@ -251,19 +261,9 @@ router.get('/kakao/callback', async (req, res) => {
     });
 
     const user = await findOrCreateKakaoUser(userResponse.data);
-    const nonce = createSession(user.user_id);
-    const token = createAccessToken(user, nonce);
-
-    res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}`);
+    finishOAuth(req, res, user);
   } catch (error) {
-    const message =
-      axios.isAxiosError(error) && error.response
-        ? JSON.stringify(error.response.data)
-        : error instanceof Error
-          ? error.message
-          : 'Unknown error';
-
-    console.error('Kakao login error:', message);
+    console.error('Kakao login failed:', axios.isAxiosError(error) ? error.response?.status ?? 'network' : 'internal');
     res.redirect(`${FRONTEND_URL}/auth/callback?error=kakao_login_failed`);
   }
 });

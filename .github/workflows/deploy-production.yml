@@ -43,6 +43,9 @@ jobs:
       - name: Check backend syntax
         run: find logic-arena-backend/src -name '*.js' -print0 | xargs -0 -n1 node --check
 
+      - name: Run backend and security tests
+        run: npm --prefix logic-arena-backend test
+
       - name: Validate Docker configuration
         run: ./deploy/test-docker-config.sh
 

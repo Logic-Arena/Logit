@@ -1483,19 +1483,30 @@ function PeerVoteView({
   myRole: PlayerRole | null;
 }) {
   const [voted, setVoted] = useState(false);
+  const [eligible, setEligible] = useState(false);
   const [voteProgress, setVoteProgress] = useState({ voted: 0, total: 0, proVotes: 0, conVotes: 0 });
-  const isObserver = myRole === "observer";
+  const isObserver = myRole === "observer" && eligible;
   const observerCount = room.observers?.length ?? 0;
 
   useEffect(() => {
     const handleProgress = (data: { voted: number; total: number; proVotes: number; conVotes: number }) => {
       setVoteProgress(data);
     };
+    const handleStatus = (data: { eligible: boolean; voted: boolean; progress: typeof voteProgress }) => {
+      setEligible(data.eligible);
+      setVoted(data.voted);
+      setVoteProgress(data.progress);
+    };
+    (socket as any).on("peer_vote_status", handleStatus);
+    socket.emit("get_peer_vote_status", { roomId: room.id });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (socket as any).on("peer_vote_progress", handleProgress);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return () => { (socket as any).off("peer_vote_progress", handleProgress); };
-  }, []);
+    return () => {
+      (socket as any).off("peer_vote_progress", handleProgress);
+      (socket as any).off("peer_vote_status", handleStatus);
+    };
+  }, [room.id]);
 
   const handleVote = (votedFor: "pro" | "con") => {
     if (voted || !isObserver) return;

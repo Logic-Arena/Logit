@@ -132,7 +132,7 @@ export async function loginLocalUser({ username, password }) {
   // Equal bcrypt work and a single response for unknown users / wrong passwords.
   const dummyHash = '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
   const isMatch = await bcrypt.compare(password, user?.password || dummyHash);
-  if (!user || !isMatch) throw new Error('아이디 또는 비밀번호가 올바르지 않습니다.');
+  if (!user?.password || !isMatch) throw new Error('아이디 또는 비밀번호가 올바르지 않습니다.');
 
   return sanitizeUser(user);
 }
