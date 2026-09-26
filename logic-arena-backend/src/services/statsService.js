@@ -1,5 +1,6 @@
 import { prisma } from '../db/prisma.js';
 import { generateTeacherDebateSummary } from './ai.js';
+import { pendingSummaries } from '../store/pendingSummaries.js';
 import { DEBATE_WHERE } from '../utils/soloEssay.js';
 
 const TIERS = [
@@ -80,6 +81,8 @@ export async function saveDebateHistory(participants, result, topic) {
       });
 
       // 교사 요약 비동기 생성 (토론 흐름 차단 안 함)
+      // 생성 중에 교사가 조회하면 202만 반환하도록 저장 직후 잠금 등록
+      pendingSummaries.add(created.id);
       ;(async () => {
         try {
           const user = await prisma.user.findUnique({ where: { user_id: userId }, select: { name: true } });
@@ -102,6 +105,8 @@ export async function saveDebateHistory(participants, result, topic) {
           });
         } catch (e) {
           console.error('[teacher_summary] 생성 실패:', e.message);
+        } finally {
+          pendingSummaries.delete(created.id);
         }
       })();
 
