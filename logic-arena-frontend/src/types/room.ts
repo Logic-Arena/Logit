@@ -107,6 +107,8 @@ export interface DebateResult {
   winner: WinnerSide;
   summary: string;
   scores: ParticipantScore[];
+  // 양측 모두 발언이 없어 무효 처리됨 (이력·RP 미반영)
+  voided?: boolean;
 }
 
 export interface Room {
