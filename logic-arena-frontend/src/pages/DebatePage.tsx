@@ -1818,7 +1818,7 @@ function RpChangeCard({ result, myRole }: { result: DebateResult; myRole: Player
   const isDraw = result.winner === 'draw';
   const isWin = !isDraw && result.winner === myVote;
   const delta = isDraw ? 0 : isWin ? WIN_RP : -LOSE_RP;
-  const label = isDraw ? '무승부 — RP 변동 없음' : isWin ? `+${WIN_RP} RP 획득` : `-${LOSE_RP} RP 차감`;
+  const label = result.voided ? '무효 — 기록·RP 반영 없음' : isDraw ? '무승부 — RP 변동 없음' : isWin ? `+${WIN_RP} RP 획득` : `-${LOSE_RP} RP 차감`;
   const color = delta > 0 ? 'var(--color-primary)' : delta < 0 ? '#dc3545' : 'var(--color-text-muted)';
   const bg = delta > 0 ? 'var(--color-primary-soft)' : delta < 0 ? 'rgba(220,53,69,0.08)' : 'var(--color-surface-2)';
   const border = delta > 0 ? 'rgba(108,99,255,0.3)' : delta < 0 ? 'rgba(220,53,69,0.3)' : 'var(--color-border)';
@@ -1922,6 +1922,8 @@ function EndedView({
 
   const winnerLabel = isSoloEssay
     ? "논술 평가 결과"
+    : result.voided
+      ? "무효 처리"
     : result.winner === "pro"
       ? "찬성 팀 승리"
       : result.winner === "con"

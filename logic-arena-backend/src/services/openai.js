@@ -340,9 +340,23 @@ export async function generateSoloFeedback({ topic, essaySide, essayText, struct
   }
 }
 
+// 학생(플레이어)이 직접 작성하는 발언 키 — buildDebateSummary의 찬성P/반대P 섹션과 동일
+const PLAYER_CONTENT_KEYS = [
+  'pro_argument', 'pro_p_rebuttal', 'pro_p_counter', 'con_p_defense_player', 'con_a_defense_player', 'pro_final',
+  'con_argument', 'con_p_rebuttal', 'con_p_counter', 'pro_p_defense_player', 'pro_a_defense_player', 'con_final',
+];
+
+export function hasPlayerContent(content) {
+  return PLAYER_CONTENT_KEYS.some((key) => typeof content?.[key] === 'string' && content[key].trim());
+}
+
 // ⚠️ 5축 기준 문구는 judgeDebate/judgeSoloEssay 동기화 유지
 export async function judgeDebate({ topic, content, mode = 'ai_debate' }) {
   const isHumanMode = mode === 'human_debate';
+  // 학생 양측 모두 발언이 없으면 AI 발언만으로 채점하지 않고 무효 처리 (이력·RP·통계 미반영)
+  if (!hasPlayerContent(content)) {
+    return { ...makeDrawResult('양측 모두 발언이 없어 무효 처리되었습니다.', isHumanMode), voided: true };
+  }
   const summary = buildDebateSummary(content, isHumanMode);
   if (!summary) return makeDrawResult('토론 내용이 없어 무승부로 처리합니다.', isHumanMode);
 

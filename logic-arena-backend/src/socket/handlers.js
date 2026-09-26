@@ -278,7 +278,9 @@ async function finalizePeerVoting(io, roomId) {
   }
 
   // 통계 및 이력 저장
-  if (room.mode === 'solo_essay') {
+  if (result.voided) {
+    // 양측 무응답 무효 판정: 이력·RP·교사 통계에 반영하지 않음
+  } else if (room.mode === 'solo_essay') {
     // solo_essay: 승패 통계는 스킵, 점수 기록만 저장
     await saveDebateHistory(participants, result, room.topic).catch((e) => console.error('[solo] saveDebateHistory 실패:', e.message));
   } else {
@@ -446,8 +448,8 @@ async function handleAiAutoPhase(io, roomId, phase) {
       const roomAfterWait = getRoom(roomId);
       if (!roomAfterWait || roomAfterWait.phase === 'ended') return;
 
-      // 관전자가 있을 때만 peer_voting, 없으면 즉시 종료
-      if (roomAfterWait.observers.size > 0) {
+      // 관전자가 있을 때만 peer_voting, 없으면 즉시 종료 (무효 판정은 투표 없이 종료)
+      if (roomAfterWait.observers.size > 0 && !result.voided) {
         await startPhase(io, roomId, 'peer_voting');
       } else {
         await finalizePeerVoting(io, roomId);
@@ -614,6 +616,11 @@ async function handleLeaveInternal(io, socket) {
       try {
         const judgeResult = await judgeDebate({ topic: room.topic ?? '', content: room.content, mode: room.mode });
         judgeResult.winner = winnerVote; // 퇴장자는 무조건 패배
+        if (judgeResult.voided) {
+          // 퇴장은 발언 여부와 무관하게 기권패로 기록
+          delete judgeResult.voided;
+          judgeResult.summary = '상대방이 퇴장하여 게임이 종료되었습니다.';
+        }
         if (updatedRoom) setResult(roomId, judgeResult);
         await updateStats(participants, judgeResult.winner).catch((e) => console.error('[earlyExit-judge] updateStats 실패:', e.message));
         await saveDebateHistory(participants, judgeResult, room.topic ?? '').catch((e) => console.error('[earlyExit-judge] saveDebateHistory 실패:', e.message));
