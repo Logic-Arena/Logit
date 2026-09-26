@@ -407,7 +407,7 @@ async function handleAiAutoPhase(io, roomId, phase) {
         const playerName = room.proPlayer?.username ?? '학생';
         // essay_final(퇴고본)이 있으면 그것을, 없으면 pro_argument(초안) 사용
         const essayText = room.content.essay_final ?? room.content.pro_argument ?? '';
-        const result = await judgeSoloEssay({ topic: room.topic, playerName, essaySide: room.essaySide, essayText });
+        const result = await judgeSoloEssay({ topic: room.topic, playerName, essaySide: room.essaySide, essayText, structuredArgumentEnabled: room.structuredArgumentEnabled });
 
         const currentRoom = getRoom(roomId);
         if (!currentRoom || currentRoom.phase === 'ended') return;
