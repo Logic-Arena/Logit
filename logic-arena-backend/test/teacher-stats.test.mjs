@@ -132,6 +132,37 @@ test('updateStats: total_games는 개인 논술을 제외한 토론 이력 + 이
   assert.equal(updated.win_count, 2);
 });
 
+test('학생 기록 페이지네이션: 담당 학생만 조회 가능, page/pageSize로 최신순으로 잘라 반환', async () => {
+  const histories = Array.from({ length: 12 }, (_, i) => h(1, i + 1, 60 + i, 'win'));
+  const prisma = {
+    debateHistory: {
+      async count({ where }) { return histories.filter(r => matches(r, where)).length; },
+      async findMany({ where, skip = 0, take }) {
+        const sorted = histories.filter(r => matches(r, where)).sort((a, b) => b.played_at - a.played_at);
+        return sorted.slice(skip, take ? skip + take : undefined);
+      },
+    },
+    debateClassMember: {
+      async findFirst({ where }) { return where.user_id === 1 ? { class_id: 1 } : null; },
+    },
+  };
+  const handler = teacherRoutes(prisma).get('GET /students/:userId/history');
+
+  const page1 = await call(handler, { params: { userId: '1' }, query: { page: '1', pageSize: '10' } });
+  assert.equal(page1.total, 12);
+  assert.equal(page1.items.length, 10);
+  assert.equal(page1.items[0].score, 71); // 최신(day 12)이 맨 앞
+
+  const page2 = await call(handler, { params: { userId: '1' }, query: { page: '2', pageSize: '10' } });
+  assert.equal(page2.items.length, 2);
+  assert.equal(page2.items[1].score, 60); // 가장 오래된(day 1) 기록이 마지막 페이지 끝
+
+  let status;
+  const res = { status(s) { status = s; return res; }, json() { return res; } };
+  await handler({ user: { id: 99, role: 'teacher' }, params: { userId: '2' }, query: {} }, res);
+  assert.equal(status, 403);
+});
+
 test('withDebateGameCount: 응답의 stats.total_games를 토론 이력 건수로 덮어씀', async () => {
   const histories = [h(5, 1, 70, 'win'), h(5, 2, 80, 'solo'), h(5, 3, 80, 'solo', 'solo')];
   const { withDebateGameCount } = loadSource('../src/services/authService.js', ['withDebateGameCount'], {

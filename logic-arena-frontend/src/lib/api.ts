@@ -442,6 +442,21 @@ export async function getClassSummary(token: string, classId: number): Promise<C
   return res.json();
 }
 
+export interface StudentHistoryPage {
+  items: StudentStat['recentDebates'];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export async function getStudentHistory(token: string, userId: number, page = 1, pageSize = 10): Promise<StudentHistoryPage> {
+  const res = await fetch(`${BASE}/teacher/students/${userId}/history?page=${page}&pageSize=${pageSize}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error('학생 기록 로드 실패');
+  return res.json();
+}
+
 export interface TeacherDebateSummary {
   summary: string;
   strengths: string[];

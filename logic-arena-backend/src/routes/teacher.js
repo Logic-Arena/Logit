@@ -287,6 +287,56 @@ router.get('/classes/:classId/students', requireAuth, requireTeacher, async (req
   }
 });
 
+// 학생 상세 화면에서 "최근 5건" 밖의 이력을 더 보기 위한 페이지네이션 조회
+router.get('/students/:userId/history', requireAuth, requireTeacher, async (req, res) => {
+  try {
+    const userId = parseInt(req.params.userId, 10);
+    if (!Number.isFinite(userId)) return res.status(400).json({ error: '잘못된 요청입니다.' });
+
+    const membership = await prisma.debateClassMember.findFirst({
+      where: { user_id: userId, class: { teacher_id: req.user.id } },
+      select: { class_id: true },
+    });
+    if (!membership) return res.status(403).json({ error: '담당 학급 학생의 기록만 조회할 수 있습니다.' });
+
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const pageSize = Math.min(50, Math.max(1, parseInt(req.query.pageSize, 10) || 10));
+
+    const [total, items] = await Promise.all([
+      prisma.debateHistory.count({ where: { user_id: userId } }),
+      prisma.debateHistory.findMany({
+        where: { user_id: userId },
+        orderBy: { played_at: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+    ]);
+
+    return res.json({
+      items: items.map(h => ({
+        id: h.id,
+        topic: h.topic,
+        position: h.position,
+        result: h.result,
+        score: h.score,
+        logic: h.logic,
+        evidence: h.evidence,
+        persuasion: h.persuasion,
+        rebuttal: h.rebuttal,
+        consistency: h.consistency,
+        advice: h.advice ?? null,
+        playedAt: h.played_at,
+      })),
+      total,
+      page,
+      pageSize,
+    });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: '학생 기록을 불러오지 못했습니다.' });
+  }
+});
+
 router.get('/classes/:classId/summary', requireAuth, requireTeacher, async (req, res) => {
   try {
     const classId = parseInt(req.params.classId, 10);
