@@ -340,9 +340,23 @@ export async function generateSoloFeedback({ topic, essaySide, essayText, struct
   }
 }
 
+// 학생(플레이어)이 직접 작성하는 발언 키 — buildDebateSummary의 찬성P/반대P 섹션과 동일
+const PLAYER_CONTENT_KEYS = [
+  'pro_argument', 'pro_p_rebuttal', 'pro_p_counter', 'con_p_defense_player', 'con_a_defense_player', 'pro_final',
+  'con_argument', 'con_p_rebuttal', 'con_p_counter', 'pro_p_defense_player', 'pro_a_defense_player', 'con_final',
+];
+
+export function hasPlayerContent(content) {
+  return PLAYER_CONTENT_KEYS.some((key) => typeof content?.[key] === 'string' && content[key].trim());
+}
+
 // ⚠️ 5축 기준 문구는 judgeDebate/judgeSoloEssay 동기화 유지
 export async function judgeDebate({ topic, content, mode = 'ai_debate' }) {
   const isHumanMode = mode === 'human_debate';
+  // 학생 양측 모두 발언이 없으면 AI 발언만으로 채점하지 않고 무효 처리 (이력·RP·통계 미반영)
+  if (!hasPlayerContent(content)) {
+    return { ...makeDrawResult('양측 모두 발언이 없어 무효 처리되었습니다.', isHumanMode), voided: true };
+  }
   const summary = buildDebateSummary(content, isHumanMode);
   if (!summary) return makeDrawResult('토론 내용이 없어 무승부로 처리합니다.', isHumanMode);
 
@@ -459,7 +473,7 @@ function makeDrawResult(reason, isHumanMode = false) {
 }
 
 // ⚠️ 5축 기준 문구는 judgeDebate/judgeSoloEssay 동기화 유지
-export async function judgeSoloEssay({ topic, playerName, essaySide, essayText }) {
+export async function judgeSoloEssay({ topic, playerName, essaySide, essayText, structuredArgumentEnabled = true }) {
   const vote = essaySide === 'con' ? 'con' : 'pro';
   const stance = vote === 'con' ? '반대' : '찬성';
   if (!essayText || !essayText.trim()) {
@@ -485,7 +499,10 @@ export async function judgeSoloEssay({ topic, playerName, essaySide, essayText }
     `논술 주제: "${topic}"\n\n` +
     `학생이 선택한 입장: ${stance}\n` +
     `학생 "${playerName ?? '학생'}"의 제출문:\n${essayText}\n\n` +
-    `당신은 논술 평가 전문가입니다. 위 제출문은 【주장】【근거】【예시】【예상 반론】【재반론】 구분자 형식으로 작성되었습니다.\n` +
+    `당신은 논술 평가 전문가입니다. ${structuredArgumentEnabled
+      ? '위 제출문은 【주장】【근거】【예시】【예상 반론】【재반론】 구분자 형식으로 작성되었습니다.\n'
+      : '위 제출문은 구분자 없이 자유 서술형으로 작성되었으며, 주장·근거·예시·예상 반론·재반론이 문단 속에 자연스럽게 녹아 있을 수 있습니다.\n'
+    }` +
     `학생이 선택한 ${stance} 입장을 기준으로 평가하세요. 선택 입장 자체의 옳고 그름이 아니라, ${stance} 입장을 얼마나 논리적이고 일관되게 전개했는지를 채점하세요.\n` +
     `학생 1명을 아래 기준으로 채점하세요.\n\n` +
     `채점 기준 (각 항목 0~20점, 합계 0~100점):\n` +
@@ -508,7 +525,10 @@ export async function judgeSoloEssay({ topic, playerName, essaySide, essayText }
     `4~7: 표현이 불명확하거나 같은 말을 반복함\n` +
     `0~3: 무슨 말을 하려는지 거의 파악하기 어려움\n\n` +
     `【반론 대응력 0~20점】\n` +
-    `제출문의 【예상 반론】【재반론】 섹션을 기준으로 채점:\n` +
+    `${structuredArgumentEnabled
+      ? '제출문의 【예상 반론】【재반론】 섹션을 기준으로 채점:\n'
+      : '제출문에서 예상 반론과 재반론에 해당하는 내용을 찾아 기준으로 채점:\n'
+    }` +
     `17~20: 예상 반론이 핵심적이고 재반론이 구체적인 근거로 뒷받침됨\n` +
     `13~16: 예상 반론은 타당하나 재반론의 논거가 다소 약함\n` +
     `8~12: 예상 반론이 형식적이거나 재반론이 "그건 틀렸다" 수준에 머묾\n` +

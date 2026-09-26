@@ -5,6 +5,7 @@ import { prisma } from '../db/prisma.js';
 import { generateTeacherDebateSummary, generateSetukDraft, summarizeSetuk } from '../services/ai.js';
 import { TEACHER_SUBJECTS } from '../saedeuk.js';
 import { isSoloRecord } from '../utils/soloEssay.js';
+import { pendingSummaries } from '../store/pendingSummaries.js';
 
 import { aiRequestLimit } from '../middleware/rateLimit.js';
 
@@ -422,8 +423,6 @@ router.get('/classes/:classId/summary', requireAuth, requireTeacher, async (req,
 
 // ─── 교사: 토론 LLM 요약 (사전 생성된 요약 조회) ─────────────────────
 
-const pendingSummaries = new Set();
-
 router.get('/debate-summary/:historyId', requireAuth, requireTeacher, async (req, res) => {
   try {
     const historyId = parseInt(req.params.historyId, 10);
@@ -542,6 +541,9 @@ router.post('/students/:userId/setuk-summarize', requireAuth, requireTeacher, ai
 
 router.post('/join', requireAuth, async (req, res) => {
   try {
+    if (req.user.role === 'teacher') {
+      return res.status(403).json({ error: '선생님 계정은 학급에 참가할 수 없습니다.' });
+    }
     const { classCode } = req.body;
     if (!classCode?.trim()) return res.status(400).json({ error: '학급 코드를 입력해주세요.' });
 
