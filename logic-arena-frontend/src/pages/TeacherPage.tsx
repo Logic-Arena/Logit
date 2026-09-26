@@ -1,5 +1,5 @@
 import { SetukAssistant } from "../components/teacher/SetukAssistant";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUserStore } from "../store/useUserStore";
 import { InvitePanel } from "../components/common/InvitePanel";
@@ -21,6 +21,7 @@ import {
   getClassStudents,
   getClassSummary,
   getStoredDebateSummary,
+  getStudentHistory,
 } from "../lib/api";
 
 const BASE = import.meta.env.VITE_API_URL ?? "/api";
@@ -466,6 +467,7 @@ function StatsTab({ token }: { token: string }) {
             {students.length === 0 ? (
               <div className={styles.emptyMsg}>아직 참가한 학생이 없습니다.</div>
             ) : (
+              <div className={styles.studentTableScroll}>
               <table className={styles.studentTable}>
                 <thead>
                   <tr>
@@ -539,6 +541,7 @@ function StatsTab({ token }: { token: string }) {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </div>
         </>
@@ -638,6 +641,51 @@ function StudentDetailView({ student, onBack, token, summary }: {
   summary: ClassSummary | null;
 }) {
   const [selectedDebate, setSelectedDebate] = useState<DebateRow | null>(null);
+
+  const HISTORY_PAGE_SIZE = 10;
+  const [history, setHistory] = useState<DebateRow[]>(student.recentDebates);
+  const [historyTotal, setHistoryTotal] = useState(student.recentDebates.length);
+  const [historyPage, setHistoryPage] = useState(0); // 0 = 아직 전체 이력 API로 교체되기 전(최근 5건만 있는 상태)
+  const [historyLoading, setHistoryLoading] = useState(false);
+  // 학생을 전환한 뒤에 이전 학생 요청의 응답이 늦게 도착해 엉뚱하게 이어붙는 것을 막기 위한 참조
+  const historyStudentIdRef = useRef(student.userId);
+
+  useEffect(() => {
+    historyStudentIdRef.current = student.userId;
+    let cancelled = false;
+    setHistory(student.recentDebates);
+    setHistoryTotal(student.recentDebates.length);
+    setHistoryPage(0);
+    setHistoryLoading(true);
+    getStudentHistory(token, student.userId, 1, HISTORY_PAGE_SIZE)
+      .then(res => {
+        if (cancelled) return;
+        setHistory(res.items);
+        setHistoryTotal(res.total);
+        setHistoryPage(1);
+      })
+      .catch(() => {
+        // 실패 시 요약 API가 이미 내려준 최근 5건을 그대로 보여준다
+      })
+      .finally(() => { if (!cancelled) setHistoryLoading(false); });
+    return () => { cancelled = true; };
+  }, [token, student.userId, student.recentDebates]);
+
+  const loadMoreHistory = () => {
+    const requestedUserId = student.userId;
+    setHistoryLoading(true);
+    getStudentHistory(token, requestedUserId, historyPage + 1, HISTORY_PAGE_SIZE)
+      .then(res => {
+        if (historyStudentIdRef.current !== requestedUserId) return; // 이미 다른 학생으로 전환됨
+        setHistory(prev => [...prev, ...res.items]);
+        setHistoryTotal(res.total);
+        setHistoryPage(p => p + 1);
+      })
+      .catch(() => {
+        // 더보기 실패는 조용히 무시 — 버튼이 그대로 남아 재시도 가능
+      })
+      .finally(() => { if (historyStudentIdRef.current === requestedUserId) setHistoryLoading(false); });
+  };
 
   const categories = [
     { key: 'avgLogic' as const, label: '논리성', classKey: 'logic' as const },
@@ -755,12 +803,12 @@ function StudentDetailView({ student, onBack, token, summary }: {
         </div>
       </div>
 
-      {student.recentDebates.length > 0 && (
+      {history.length > 0 && (
         <div className={styles.card}>
-          <div className={styles.cardTitle}>최근 토론 이력 <span style={{ fontSize: '11px', fontWeight: 400, color: 'var(--color-text-muted)' }}>— 클릭하면 AI 요약을 볼 수 있어요</span></div>
-          {student.recentDebates.map((d, i) => (
+          <div className={styles.cardTitle}>토론 이력 <span style={{ fontSize: '11px', fontWeight: 400, color: 'var(--color-text-muted)' }}>— 클릭하면 AI 요약을 볼 수 있어요 ({historyTotal}건 중 {history.length}건)</span></div>
+          {history.map((d) => (
             <div
-              key={i}
+              key={d.id}
               className={styles.debateHistoryRow}
               onClick={() => setSelectedDebate(d)}
               style={{ cursor: 'pointer' }}
@@ -773,6 +821,16 @@ function StudentDetailView({ student, onBack, token, summary }: {
               <div className={styles.debateDate}>{new Date(d.playedAt).toLocaleDateString("ko-KR")}</div>
             </div>
           ))}
+          {history.length < historyTotal && (
+            <button
+              type="button"
+              className={styles.historyLoadMoreBtn}
+              onClick={loadMoreHistory}
+              disabled={historyLoading}
+            >
+              {historyLoading ? "불러오는 중..." : "더보기"}
+            </button>
+          )}
         </div>
       )}
 
@@ -920,8 +978,8 @@ function SettingsTab({ token, classes }: { token: string; classes: { id: number;
       </div>
       <div className={styles.settingsDesc}>
         {selectedClassId === "global"
-          ? "모든 반에 적용되는 기본값입니다. 반별 설정이 없을 때 이 값이 사용됩니다."
-          : "이 반에만 적용되는 설정입니다. 저장하면 전체 기본값보다 우선 적용됩니다."}
+          ? "선생님이 직접 만드는 토론방에 적용되는 기본값입니다. 학생이 만드는 토론방에는 적용되지 않습니다."
+          : "현재는 저장만 되며, 학생이 만드는 토론방을 포함해 실제 토론방 생성에는 아직 반영되지 않습니다."}
       </div>
 
       {/* AI 핸디캡 */}

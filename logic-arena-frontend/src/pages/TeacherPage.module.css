@@ -355,6 +355,11 @@
 
 /* ─── Student table ──────────────────────────────────── */
 
+.studentTableScroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .studentTable {
   width: 100%;
   border-collapse: collapse;
@@ -730,6 +735,24 @@
 
 .debateHistoryRow:last-child {
   border-bottom: none;
+}
+
+.historyLoadMoreBtn {
+  width: 100%;
+  margin-top: 10px;
+  padding: 8px;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-caption);
+  font-weight: 700;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.historyLoadMoreBtn:disabled {
+  cursor: default;
+  opacity: 0.6;
 }
 
 .resultBadge {
