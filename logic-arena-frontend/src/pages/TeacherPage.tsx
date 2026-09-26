@@ -253,11 +253,28 @@ function DebateSummaryModal({ debate, token, onClose }: {
   );
 }
 
-function GrowthBadge({ rate }: { rate: number }) {
+const GROWTH_MIN_RECORDS = 4;
+
+function GrowthBadge({ rate }: { rate: number | null }) {
+  if (rate === null) return <span className={styles.growthNeutral}>–</span>;
   if (rate === 0) return <span className={styles.growthNeutral}>− 0%</span>;
   return rate > 0
     ? <span className={styles.growthUp}>↗ +{rate}%</span>
     : <span className={styles.growthDown}>↘ {rate}%</span>;
+}
+
+const RANK_MEDALS = ["🥇", "🥈", "🥉"];
+
+// 공동 순위(1, 2, 2, 4): 점수가 같으면 같은 순위를 부여
+function rankByScore<T>(items: T[], score: (item: T) => number): { item: T; rank: number }[] {
+  const sorted = [...items].sort((a, b) => score(b) - score(a));
+  const ranked: { item: T; rank: number }[] = [];
+  sorted.forEach((item, i) => {
+    const prev = ranked[i - 1];
+    const rank = prev && score(prev.item) === score(item) ? prev.rank : i + 1;
+    ranked.push({ item, rank });
+  });
+  return ranked;
 }
 
 // ─── Tab 1: 학급 관리 ─────────────────────────────────────────────
@@ -382,6 +399,7 @@ function StatsTab({ token }: { token: string }) {
   const [loadingClasses, setLoadingClasses] = useState(true);
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<StudentStat | null>(null);
+  const [showInactive, setShowInactive] = useState(false);
 
   useEffect(() => {
     getTeacherClasses(token)
@@ -411,6 +429,9 @@ function StatsTab({ token }: { token: string }) {
   }
 
   const selectedClass = classes.find(c => c.id === selectedId);
+  // 활동 이력이 있는 학생만 순위 대상, 이력 없는 학생은 별도 그룹
+  const rankedStudents = rankByScore(students.filter(s => s.activityCount > 0), s => s.avgScoreExact);
+  const inactiveStudents = students.filter(s => s.activityCount === 0);
 
   return (
     <div>
@@ -456,34 +477,66 @@ function StatsTab({ token }: { token: string }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {students
-                    .sort((a, b) => b.avgScore - a.avgScore)
-                    .map((s, i) => (
-                      <tr key={s.userId} className={styles.studentRow} onClick={() => setSelectedStudent(s)}>
-                        <td>
-                          <div className={styles.studentIdentity}>
-                            {i < 3 && <span className={styles.rankMedal}>{["🥇","🥈","🥉"][i]}</span>}
-                            <div>
-                              <div className={styles.studentName}>{s.name}</div>
-                              <div className={styles.studentTier}>{s.tier}</div>
-                            </div>
+                  {rankedStudents.map(({ item: s, rank }) => (
+                    <tr key={s.userId} className={styles.studentRow} onClick={() => setSelectedStudent(s)}>
+                      <td>
+                        <div className={styles.studentIdentity}>
+                          {rank <= 3 && <span className={styles.rankMedal}>{RANK_MEDALS[rank - 1]}</span>}
+                          <div>
+                            <div className={styles.studentName}>{s.name}</div>
+                            <div className={styles.studentTier}>{s.tier}</div>
                           </div>
-                        </td>
-                        <td><strong>{s.avgScore}</strong></td>
-                        <td>
-                          <MetricSparkline values={[
-                            { label: "논리성", value: s.avgLogic },
-                            { label: "근거", value: s.avgEvidence },
-                            { label: "표현 명확성", value: s.avgPersuasion },
-                            { label: "반론", value: s.avgRebuttal },
-                            { label: "일관성", value: s.avgConsistency },
-                          ]} />
-                        </td>
-                        <td><GrowthBadge rate={s.growthRate} /></td>
-                        <td>{s.totalGames}</td>
-                      </tr>
-                    ))
-                  }
+                        </div>
+                      </td>
+                      <td><strong>{s.avgScore}</strong></td>
+                      <td>
+                        <MetricSparkline values={[
+                          { label: "논리성", value: s.avgLogic },
+                          { label: "근거", value: s.avgEvidence },
+                          { label: "표현 명확성", value: s.avgPersuasion },
+                          { label: "반론", value: s.avgRebuttal },
+                          { label: "일관성", value: s.avgConsistency },
+                        ]} />
+                      </td>
+                      <td>
+                        <div className={styles.growthCell}>
+                          <span>토론 <GrowthBadge rate={s.debateGrowthRate} /></span>
+                          <span>논술 <GrowthBadge rate={s.essayGrowthRate} /></span>
+                        </div>
+                      </td>
+                      <td>{s.totalGames}</td>
+                    </tr>
+                  ))}
+                  {inactiveStudents.length > 0 && (
+                    <tr className={styles.inactiveGroupRow}>
+                      <td colSpan={5}>
+                        <button
+                          type="button"
+                          className={styles.inactiveToggle}
+                          aria-expanded={showInactive}
+                          onClick={() => setShowInactive(v => !v)}
+                        >
+                          {showInactive ? "▾" : "▸"} 아직 활동 없음 · {inactiveStudents.length}명
+                        </button>
+                      </td>
+                    </tr>
+                  )}
+                  {showInactive && inactiveStudents.map(s => (
+                    <tr key={s.userId} className={`${styles.studentRow} ${styles.inactiveRow}`} onClick={() => setSelectedStudent(s)}>
+                      <td>
+                        <div className={styles.studentIdentity}>
+                          <div>
+                            <div className={styles.studentName}>{s.name}</div>
+                            <div className={styles.studentTier}>{s.tier}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>–</td>
+                      <td>–</td>
+                      <td>–</td>
+                      <td>–</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             )}
@@ -564,9 +617,9 @@ function ClassSummaryPanel({ summary, className }: { summary: ClassSummary; clas
       {summary.topStudents.length > 0 && (
         <>
           <div className={styles.catLabel} style={{ marginTop: 16 }}>우수 학생 TOP 5</div>
-          {summary.topStudents.map((s, i) => (
+          {rankByScore(summary.topStudents, s => s.avgScoreExact).map(({ item: s, rank }) => (
             <div key={s.userId} className={styles.topStudentRow}>
-              <span className={styles.topRank}>{i + 1}</span>
+              <span className={styles.topRank}>{rank}</span>
               <span className={styles.topName}>{s.name}</span>
               <span className={styles.topScore}>평균 {s.avgScore}점</span>
               <span className={styles.topGames}>활동 {s.activityCount}회</span>
@@ -683,8 +736,21 @@ function StudentDetailView({ student, onBack, token, summary }: {
 
           <div className={styles.growthRow}>
             <span>성장률</span>
-            <GrowthBadge rate={student.growthRate} />
-            {student.growthRate === 0 && <span className={styles.growthHint}>(토론 4판 이상 시 집계)</span>}
+            {([
+              { label: "토론", rate: student.debateGrowthRate, count: student.debateRecordCount },
+              { label: "논술", rate: student.essayGrowthRate, count: student.essayRecordCount },
+            ]).map(g => (
+              <span key={g.label} className={styles.growthItem}>
+                {g.label} <GrowthBadge rate={g.rate} />
+                {g.rate === null && (
+                  <span className={styles.growthHint}>
+                    {g.count < GROWTH_MIN_RECORDS
+                      ? `(기록 부족 ${g.count}/${GROWTH_MIN_RECORDS}건)`
+                      : "(초기 점수 0점으로 계산 불가)"}
+                  </span>
+                )}
+              </span>
+            ))}
           </div>
         </div>
       </div>

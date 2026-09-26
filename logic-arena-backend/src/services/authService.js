@@ -2,12 +2,21 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../db/prisma.js';
 import { JWT_SECRET } from '../config.js';
+import { DEBATE_WHERE } from '../utils/soloEssay.js';
 
 function sanitizeUser(user) {
   if (!user) return user;
 
   const { password, ...safeUser } = user;
   return safeUser;
+}
+
+// 저장된 total_games는 과거 개인 논술이 섞여 부풀려진 값이 남아 있을 수 있으므로
+// 응답 시점에 DebateHistory의 토론 건수로 덮어쓴다 (DB 값은 다음 토론 종료 시 자연 보정).
+export async function withDebateGameCount(user) {
+  if (!user?.stats) return user;
+  const totalGames = await prisma.debateHistory.count({ where: { user_id: user.user_id, ...DEBATE_WHERE } });
+  return { ...user, stats: { ...user.stats, total_games: totalGames } };
 }
 
 export async function findOrCreateGoogleUser(profile) {
@@ -134,7 +143,7 @@ export async function loginLocalUser({ username, password }) {
   const isMatch = await bcrypt.compare(password, user?.password || dummyHash);
   if (!user?.password || !isMatch) throw new Error('아이디 또는 비밀번호가 올바르지 않습니다.');
 
-  return sanitizeUser(user);
+  return withDebateGameCount(sanitizeUser(user));
 }
 
 export function serializeAuthUser(user) {
@@ -156,7 +165,7 @@ export async function getUserWithStats(userId) {
     where: { user_id: userId },
     include: { stats: true, teacher_settings: true },
   });
-  return user ? sanitizeUser(user) : null;
+  return user ? withDebateGameCount(sanitizeUser(user)) : null;
 }
 
 export function createAccessToken(user, nonce) {
