@@ -194,6 +194,20 @@ router.delete('/classes/:classId', requireAuth, requireTeacher, async (req, res)
   }
 });
 
+const GROWTH_MIN_RECORDS = 4;
+
+// 같은 모드 기록을 시간순으로 앞/뒤 절반으로 나눠 평균 점수 변화율(%)을 계산한다.
+// 홀수 건이면 가운데 기록은 양쪽 모두에서 제외해 중복 반영을 막는다.
+function calcGrowthRate(records) {
+  if (records.length < GROWTH_MIN_RECORDS) return null;
+  const sorted = [...records].sort((a, b) => new Date(a.played_at) - new Date(b.played_at));
+  const half = Math.floor(sorted.length / 2);
+  const early = sorted.slice(0, half).reduce((s, h) => s + h.score, 0) / half;
+  const late = sorted.slice(-half).reduce((s, h) => s + h.score, 0) / half;
+  if (early <= 0) return null;
+  return Math.round(((late - early) / early) * 100);
+}
+
 router.get('/classes/:classId/students', requireAuth, requireTeacher, async (req, res) => {
   try {
     const classId = parseInt(req.params.classId, 10);
@@ -218,20 +232,15 @@ router.get('/classes/:classId/students', requireAuth, requireTeacher, async (req
       historyByStudent[h.user_id].push(h);
     });
 
-    const avg = (arr, key) => arr.length > 0 ? Math.round(arr.reduce((s, h) => s + h[key], 0) / arr.length) : 0;
+    const avgExact = (arr, key) => arr.length > 0 ? arr.reduce((s, h) => s + h[key], 0) / arr.length : 0;
+    const avg = (arr, key) => Math.round(avgExact(arr, key));
 
     return res.json(members.map(m => {
       const all = historyByStudent[m.user_id] ?? [];
       const recent = all.slice(0, 10);
 
-      let growthRate = 0;
-      if (all.length >= 4) {
-        const sorted = [...all].sort((a, b) => new Date(a.played_at) - new Date(b.played_at));
-        const half = Math.ceil(sorted.length / 2);
-        const early = sorted.slice(0, half).reduce((s, h) => s + h.score, 0) / half;
-        const late = sorted.slice(-half).reduce((s, h) => s + h.score, 0) / half;
-        growthRate = early > 0 ? Math.round(((late - early) / early) * 100) : 0;
-      }
+      const debateRecords = all.filter(h => !isSoloRecord(h));
+      const essayRecords = all.filter(h => isSoloRecord(h));
 
       return {
         userId: m.user_id,
@@ -239,15 +248,23 @@ router.get('/classes/:classId/students', requireAuth, requireTeacher, async (req
         joinedAt: m.joined_at,
         tier: m.user.stats?.tier ?? '브론즈 5',
         rankPoint: m.user.stats?.rank_point ?? 0,
-        totalGames: m.user.stats?.total_games ?? 0,
+        // 저장된 total_games 대신 이력 기준 토론 수 (개인 논술 제외)
+        totalGames: debateRecords.length,
         winCount: m.user.stats?.win_count ?? 0,
+        activityCount: all.length,
         avgScore: avg(recent, 'score'),
+        // 순위 비교용 반올림 전 평균 (반올림으로 생기는 가짜 동점 방지)
+        avgScoreExact: avgExact(recent, 'score'),
         avgLogic: avg(recent, 'logic'),
         avgEvidence: avg(recent, 'evidence'),
         avgPersuasion: avg(recent, 'persuasion'),
         avgRebuttal: avg(recent, 'rebuttal'),
         avgConsistency: avg(recent, 'consistency'),
-        growthRate,
+        // 성장률은 모드별로 따로 계산 (null = 기록 부족 또는 계산 불가)
+        debateGrowthRate: calcGrowthRate(debateRecords),
+        essayGrowthRate: calcGrowthRate(essayRecords),
+        debateRecordCount: debateRecords.length,
+        essayRecordCount: essayRecords.length,
         recentDebates: recent.slice(0, 5).map(h => ({
           id: h.id,
           topic: h.topic,
@@ -312,12 +329,12 @@ router.get('/classes/:classId/summary', requireAuth, requireTeacher, async (req,
     const topStudents = Object.entries(scoreByStudent)
       .map(([userId, d]) => {
         const recentScores = d.scores.slice(0, 10);
-        const avgScore = recentScores.length > 0
-          ? Math.round(recentScores.reduce((sum, score) => sum + score, 0) / recentScores.length)
+        const avgScoreExact = recentScores.length > 0
+          ? recentScores.reduce((sum, score) => sum + score, 0) / recentScores.length
           : 0;
-        return { userId: parseInt(userId), name: d.name, avgScore, activityCount: d.count };
+        return { userId: parseInt(userId), name: d.name, avgScore: Math.round(avgScoreExact), avgScoreExact, activityCount: d.count };
       })
-      .sort((a, b) => b.avgScore - a.avgScore)
+      .sort((a, b) => b.avgScoreExact - a.avgScoreExact)
       .slice(0, 5);
 
     const avgByCategory = {

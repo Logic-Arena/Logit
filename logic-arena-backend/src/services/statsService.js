@@ -1,5 +1,6 @@
 import { prisma } from '../db/prisma.js';
 import { generateTeacherDebateSummary } from './ai.js';
+import { DEBATE_WHERE } from '../utils/soloEssay.js';
 
 const TIERS = [
   { name: '브론즈 5', min: 0 },
@@ -142,8 +143,9 @@ export async function updateStats(participants, winner) {
       const newTier = calcTier(newRp);
 
       // total_games / win_count는 DebateHistory 실제 건수 기준으로 계산 (stats 단독 카운트 시 불일치 방지)
+      // 개인 논술(result='solo')은 토론 수에서 제외
       const [totalGames, winCount] = await Promise.all([
-        prisma.debateHistory.count({ where: { user_id: userId } }),
+        prisma.debateHistory.count({ where: { user_id: userId, ...DEBATE_WHERE } }),
         prisma.debateHistory.count({ where: { user_id: userId, result: 'win' } }),
       ]);
 

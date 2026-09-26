@@ -189,8 +189,8 @@ router.patch('/profile', requireAuth, async (req, res) => {
     if (profileImage !== undefined) data.profile_image = profileImage || null;
     if (Object.keys(data).length === 0) return res.status(400).json({ error: '변경할 항목이 없습니다.' });
     const updated = await prisma.user.update({ where: { user_id: userId }, data, include: { stats: true } });
-    const { serializeAuthUser } = await import('../services/authService.js');
-    return res.json(serializeAuthUser(updated));
+    const { serializeAuthUser, withDebateGameCount } = await import('../services/authService.js');
+    return res.json(serializeAuthUser(await withDebateGameCount(updated)));
   } catch (error) {
     return res.status(500).json({ error: '프로필 수정에 실패했습니다.' });
   }

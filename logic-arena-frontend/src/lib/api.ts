@@ -357,13 +357,19 @@ export interface StudentStat {
   rankPoint: number;
   totalGames: number;
   winCount: number;
+  activityCount: number;
   avgScore: number;
+  avgScoreExact: number;
   avgLogic: number;
   avgEvidence: number;
   avgPersuasion: number;
   avgRebuttal: number;
   avgConsistency: number;
-  growthRate: number;
+  // 모드별 성장률 (null = 해당 모드 기록 4건 미만 또는 계산 불가)
+  debateGrowthRate: number | null;
+  essayGrowthRate: number | null;
+  debateRecordCount: number;
+  essayRecordCount: number;
   recentDebates: {
     id: number;
     topic: string;
@@ -385,7 +391,7 @@ export interface ClassSummary {
   debateCount: number;
   soloEssayCount: number;
   avgScore: number;
-  topStudents: { userId: number; name: string; avgScore: number; activityCount: number }[];
+  topStudents: { userId: number; name: string; avgScore: number; avgScoreExact: number; activityCount: number }[];
   avgByCategory: { logic: number; evidence: number; persuasion: number; rebuttal: number; consistency: number };
   weakestCategory: { key: string; avg: number } | null;
   recentDebates: { topic: string; position: string; result: string; score: number; studentName: string; playedAt: string }[];
