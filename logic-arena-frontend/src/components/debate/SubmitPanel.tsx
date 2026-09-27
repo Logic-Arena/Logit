@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useRoomStore } from '../../store/useRoomStore';
 import { socket } from '../../lib/socket';
+import { useDraftSync } from '../../hooks/useDraftSync';
 
 interface Props {
   roomId: string;
@@ -29,9 +30,7 @@ export function SubmitPanel({
   const [submitted, setSubmitted] = useState(alreadySubmitted);
   const [timeExpired, setTimeExpired] = useState(false);
   const phase = useRoomStore(state => state.room?.phase);
-  useEffect(() => {
-    if (phase && !alreadySubmitted) socket.emit('save_draft', { roomId, phase, text: text });
-  }, [phase, roomId, alreadySubmitted, text]);
+  useDraftSync({ roomId, phase, text, enabled: !alreadySubmitted, phaseEndAt });
   useEffect(() => {
     if (!phaseEndAt) return;
     const timer = setTimeout(() => setTimeExpired(true), Math.max(0, phaseEndAt - Date.now()));
