@@ -3,6 +3,8 @@ import { createBudget } from '../middleware/rateLimit.js';
 import { getPlayerRole } from '../store/rooms.js';
 
 const messages = createBudget(240, 60_000);
+// 임시저장은 입력 중 자주 오므로 별도 한도를 쓰고, 초과분은 알림 없이 버린다 (제출 등 다른 요청을 막지 않도록)
+const drafts = createBudget(300, 60_000);
 const joins = createBudget(15, 60_000);
 const starts = createBudget(6, 60 * 60_000);
 const retries = createBudget(3, 60_000);
@@ -34,7 +36,9 @@ export function guardSocket(socket) {
       return;
     }
     if (!events.has(event)) return reject('지원하지 않는 요청입니다.', 'BAD_REQUEST');
-    if (messages(socket.data.userId)) return reject('요청이 너무 많습니다.', 'RATE_LIMITED');
+    if (event === 'save_draft') {
+      if (drafts(socket.data.userId)) return;
+    } else if (messages(socket.data.userId)) return reject('요청이 너무 많습니다.', 'RATE_LIMITED');
     if (event === 'leave_room') return next();
     if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return reject('잘못된 요청입니다.', 'BAD_REQUEST');
     if (event === 'peer_vote') return next();
