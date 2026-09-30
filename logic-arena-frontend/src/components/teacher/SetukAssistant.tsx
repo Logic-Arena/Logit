@@ -4,6 +4,9 @@ import type { SetukContext, SetukDraft } from '../../lib/api';
 import { analyzeForbidden, analyzeNominal, convertToNominal } from '../../lib/setukText';
 import { copyBlockReason, neisBytes } from '../../lib/setukReview';
 import { installSetukCopyGuard } from '../../lib/setukCopyGuard';
+import { appendSetukEvidence } from '../../lib/setukEvidence';
+import type { SelectedSetukEvidence } from '../../lib/setukEvidence';
+import { SetukEvidencePicker } from './SetukEvidencePicker';
 import styles from '../../pages/TeacherPage.module.css';
 import ui from './SetukAssistant.module.css';
 
@@ -14,6 +17,10 @@ const checks = [
 ];
 
 export function SetukAssistant({ token, userId }: { token: string; userId: number }) {
+  return <SetukAssistantSession key={`${userId}:${token}`} token={token} userId={userId} />;
+}
+
+function SetukAssistantSession({ token, userId }: { token: string; userId: number }) {
   const proposalsRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<HTMLTextAreaElement>(null);
   const subjectEditedRef = useRef(false);
@@ -69,6 +76,10 @@ export function SetukAssistant({ token, userId }: { token: string; userId: numbe
     setAppliedSubject(null);
     invalidate();
   }
+  function addEvidence(candidates: SelectedSetukEvidence[]) {
+    const observations = appendSetukEvidence(context.observations, candidates);
+    updateContext({ observations, observedByTeacher: false, schoolCurriculum: false });
+  }
   async function generate() {
     if (!contextReady || busy) return;
     invalidate();
@@ -107,6 +118,7 @@ export function SetukAssistant({ token, userId }: { token: string; userId: numbe
           : '저장한 담당 과목을 기본으로 채웁니다. 실제 개설 과목명을 확인·수정하세요. 미설정·기타인 경우 직접 입력하세요.'}
       </p>
       <label>수업 활동·관찰 시기<input value={context.activity} maxLength={500} onChange={e => updateContext({ activity: e.target.value })} placeholder="관찰한 날짜 또는 기간과 수업 활동을 적으세요." /></label>
+      <SetukEvidencePicker token={token} userId={userId} onAdd={addEvidence} />
       <label>교사가 직접 작성한 관찰·평가 내용<textarea className={styles.setukTextarea} rows={4} value={context.observations} maxLength={4000} onChange={e => updateContext({ observations: e.target.value })} placeholder="성취기준과 연결되는 실제 발언·산출물·학습 과정·개별 특성을 적으세요. 변화는 전후 관찰 근거가 있을 때만 적으세요." /></label>
       <p className={ui.hint}>위의 토론 점수와 AI 요약은 학습 참고 정보입니다. 그 자체가 교사의 관찰 기록은 아닙니다. 학생에게 세특 문안을 작성해 제출하도록 요구하지 마세요. 윤문 요청 시 입력한 수업 정보와 관찰 내용이 AI 서비스로 전송되므로 학생 이름 등 불필요한 개인정보를 적지 마세요.</p>
       <label className={ui.check}><input type="checkbox" checked={context.schoolCurriculum} onChange={e => updateContext({ schoolCurriculum: e.target.checked })} />해당 과목의 학교교육계획·교육과정에 따라 실시한 활동입니다.</label>

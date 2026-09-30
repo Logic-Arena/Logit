@@ -484,6 +484,40 @@ export interface SetukDraft {
   text: string;
 }
 
+export interface SetukEvidenceCandidate {
+  id: string;
+  kind: 'summary' | 'strengths' | 'improvements';
+  text: string;
+}
+
+export interface SetukEvidenceRecord {
+  historyId: number;
+  topic: string;
+  position: string;
+  playedAt: string;
+  candidates: SetukEvidenceCandidate[];
+}
+
+export interface SetukEvidenceResponse {
+  items: SetukEvidenceRecord[];
+  recentLimit: number;
+  scannedCount: number;
+  unavailableCount: number;
+  excludedCount: number;
+}
+
+export async function getSetukEvidence(token: string, userId: number, signal?: AbortSignal): Promise<SetukEvidenceResponse> {
+  const res = await fetch(`${BASE}/teacher/students/${userId}/setuk-evidence`, {
+    headers: { Authorization: `Bearer ${token}` },
+    signal,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error ?? '토론 관찰 후보를 불러오지 못했습니다.');
+  }
+  return res.json();
+}
+
 export interface SetukContext {
   schoolYear: number;
   schoolLevel: 'middle' | 'high';

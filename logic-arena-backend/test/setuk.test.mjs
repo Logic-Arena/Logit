@@ -11,11 +11,14 @@ test('관찰 없는 구형 요청과 거짓 자료형·확인 누락을 서버�
 test('점수·이름·개인 활동 이력을 전달하지 않고 교사 기록만 윤문한다', async () => {
   let prompt;
   const service = createSetukService(async p => { prompt = p; return JSON.stringify({ drafts: ['A', 'B', 'C'].map(version => ({ version, text: '자료의 조사 시점을 비교함.' })) }); });
-  const drafts = await service.generateSetukDraft({ ...context, studentName: '절대보내지않을이름', avgScore: 97, growthRate: 12345 });
+  const drafts = await service.generateSetukDraft({ ...context, studentName: '절대보내지않을이름', avgScore: 97, growthRate: 12345, teacher_summary: '미확인요약', candidates: ['미선택후보'] });
   assert.equal(drafts.length, 3);
   assert.ok(prompt.includes(context.observations));
   assert.ok(!prompt.includes('절대보내지않을이름'));
   assert.ok(!prompt.includes('12345'));
+  assert.ok(!prompt.includes('미확인요약'));
+  assert.ok(!prompt.includes('미선택후보'));
+  assert.ok(prompt.includes('개선 제안·향후 코칭을 이미 달성한 수행이나 변화로 바꾸지 않는다'));
 });
 test('빈 응답·누락·실패에는 가짜 기본 문장을 생성하지 않는다', async () => {
   for (const raw of ['{}', '{"drafts":[]}', '{"drafts":[{"version":"A","text":""}]}', 'invalid']) {

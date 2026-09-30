@@ -4,7 +4,8 @@ import { requireAuth } from '../middleware/auth.js';
 import { prisma } from '../db/prisma.js';
 import { generateTeacherDebateSummary, generateSetukDraft, summarizeSetuk } from '../services/ai.js';
 import { TEACHER_SUBJECTS } from '../saedeuk.js';
-import { isSoloRecord } from '../utils/soloEssay.js';
+import { isSoloRecord, DEBATE_WHERE } from '../utils/soloEssay.js';
+import { collectSetukEvidence, SETUK_EVIDENCE_LIMIT } from '../setukEvidence.js';
 import { pendingSummaries } from '../store/pendingSummaries.js';
 
 import { aiRequestLimit } from '../middleware/rateLimit.js';
@@ -497,6 +498,28 @@ async function requireOwnStudent(req, res, userId) {
   }
   return true;
 }
+
+// 저장된 요약만 조회한다. 요약이 없는 기록의 AI 생성은 트리거하지 않는다.
+router.get('/students/:userId/setuk-evidence', requireAuth, requireTeacher, async (req, res) => {
+  try {
+    const userId = Number(req.params.userId);
+    if (!/^\d+$/.test(req.params.userId) || !Number.isSafeInteger(userId) || userId <= 0 || userId > 2147483647) {
+      return res.status(400).json({ error: '잘못된 학생 ID입니다.' });
+    }
+    if (!(await requireOwnStudent(req, res, userId))) return;
+    const histories = await prisma.debateHistory.findMany({
+      where: { user_id: userId, ...DEBATE_WHERE },
+      orderBy: [{ played_at: 'desc' }, { id: 'desc' }],
+      take: SETUK_EVIDENCE_LIMIT,
+      select: { id: true, topic: true, position: true, played_at: true, teacher_summary: true },
+    });
+    res.set('Cache-Control', 'no-store');
+    return res.json(collectSetukEvidence(histories));
+  } catch (e) {
+    console.error('[setuk-evidence]', e);
+    return res.status(500).json({ error: '토론 관찰 후보를 불러오지 못했습니다. 다시 시도하세요.' });
+  }
+});
 
 router.post('/students/:userId/setuk-draft', requireAuth, requireTeacher, aiRequestLimit, async (req, res) => {
   try {

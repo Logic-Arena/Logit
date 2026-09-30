@@ -47,7 +47,11 @@ globalThis.__auditAxios = {
   get: async () => ({ data: { id: 'synthetic-kakao-profile' } }),
   isAxiosError: () => false,
 };
-const matches = (row, where = {}) => Object.entries(where).every(([k, v]) => v === undefined || row[k] === v);
+const matches = (row, where = {}) => Object.entries(where).every(([k, v]) => {
+  if (k === 'NOT') return !matches(row, v);
+  if (k === 'OR') return v.some(condition => matches(row, condition));
+  return v === undefined || row[k] === v;
+});
 const unsupported = new Proxy({}, { get: (_, model) => new Proxy({}, { get: (_, method) => async () => { throw new Error(`Unmocked DB operation ${String(model)}.${String(method)}`); } }) });
 globalThis.__auditDb = Object.assign(unsupported, {});
 const db = {
@@ -252,6 +256,51 @@ test('security regression (loopback only, no real DB or paid AI)', async t => {
       const before = calls.ai.length;
       for (let i = 0; i < 25; i++) assert.equal((await request('/api/teacher/debate-summary/910001', { token: teacherToken })).status, 200);
       assert.equal(calls.ai.length, before);
+    });
+    await t.test('setuk evidence requires an authenticated teacher and owned student before querying history', async () => {
+      const before = calls.historyQueries.length;
+      const path = '/api/teacher/students/900001/setuk-evidence';
+      assert.equal((await request(path)).status, 401);
+      assert.equal((await request(path, { token: studentToken })).status, 403);
+      assert.equal((await request('/api/teacher/students/900003/setuk-evidence', { token: teacherToken })).status, 403);
+      for (const id of ['0', '-1', '1x', '1.5', '99999999999999999999']) {
+        assert.equal((await request(`/api/teacher/students/${id}/setuk-evidence`, { token: teacherToken })).status, 400);
+      }
+      assert.equal(calls.historyQueries.length, before);
+    });
+    await t.test('setuk evidence reads bounded cached debates without AI, scores, solo essays or other students', async () => {
+      const before = calls.ai.length;
+      const count = histories.length;
+      histories.push(
+        { id: 910005, user_id: 900001, result: 'solo', teacher_summary: { summary: 'Excluded solo essay' } },
+        { id: 910006, user_id: 900001, position: 'solo', teacher_summary: { summary: 'Excluded legacy essay' } },
+        { id: 910007, user_id: 900001, result: 'draw', teacher_summary: null },
+      );
+      try {
+        for (let i = 0; i < 25; i++) {
+          const result = await request('/api/teacher/students/900001/setuk-evidence', { token: teacherToken });
+          assert.equal(result.status, 200);
+          assert.equal(result.headers.get('cache-control'), 'no-store');
+          assert.deepEqual(result.body.items.map(r => r.historyId), [910001]);
+          assert.equal(result.body.items[0].candidates[0].text, 'Owned student summary');
+          assert.equal(result.body.scannedCount, 2);
+          assert.equal(result.body.unavailableCount, 1);
+          assert.equal(result.body.items[0].score, undefined);
+        }
+        assert.equal(calls.ai.length, before);
+        const query = calls.historyQueries.at(-1);
+        assert.equal(query.where.user_id, 900001);
+        assert.equal(query.take, 10);
+        assert.deepEqual(query.orderBy, [{ played_at: 'desc' }, { id: 'desc' }]);
+        assert.deepEqual(Object.keys(query.select).sort(), ['id', 'played_at', 'position', 'teacher_summary', 'topic']);
+        const saved = histories[0].teacher_summary;
+        try {
+          histories[0].teacher_summary = null;
+          const empty = await request('/api/teacher/students/900001/setuk-evidence', { token: teacherToken });
+          assert.deepEqual(empty.body.items, []);
+          assert.equal(calls.ai.length, before);
+        } finally { histories[0].teacher_summary = saved; }
+      } finally { histories.splice(count); }
     });
     await t.test('concurrent summary requests share a single AI generation', async () => {
       const saved = histories[0].teacher_summary;
